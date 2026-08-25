@@ -1,697 +1,839 @@
-const teamLoadForm = document.getElementById("team-load-form");
-const teamIdInput = document.getElementById("team-id-input");
-const teamLoadStatus = document.getElementById("team-load-status");
-
-const wikiFieldsSection = document.getElementById(
-  "wiki-fields-section"
-);
-
-const wikiOutputSection = document.getElementById(
-  "wiki-output-section"
-);
-
-const wikiFieldsForm = document.getElementById(
-  "wiki-fields-form"
-);
-
-const wikiOutput = document.getElementById("wiki-output");
-const copyButton = document.getElementById("copy-wiki-output");
-const copyStatus = document.getElementById("copy-status");
-
-const TEAM_PAGE_STORAGE_KEY = "htwb_selected_team_id";
-
-const infoboxFields = [
-  ["teamname", "field-teamname", "include-teamname"],
-  ["teamid", "field-teamid", "include-teamid"],
-  ["logouri", "field-logouri", "include-logouri"],
-  ["logo-width", "field-logo-width", "include-logo-width"],
-  ["htuser", "field-htuser", "include-htuser"],
-  ["manager", "field-manager", "include-manager"],
-  ["fullname", "field-fullname", "include-fullname"],
-  ["shortname", "field-shortname", "include-shortname"],
-  ["nickname", "field-nickname", "include-nickname"],
-  ["region", "field-region", "include-region"],
-  ["country", "field-country", "include-country"],
-  ["league", "field-league", "include-league"],
-  ["league-pos", "field-league-pos", "include-league-pos"],
-  [
-    "league-pos-last",
-    "field-league-pos-last",
-    "include-league-pos-last"
-  ],
-  ["arena", "field-arena", "include-arena"],
-  ["capacity", "field-capacity", "include-capacity"],
-  ["coach", "field-coach", "include-coach"],
-  ["coach-nat", "field-coach-nat", "include-coach-nat"],
-  ["fanclub", "field-fanclub", "include-fanclub"],
-  [
-    "fanclub-size",
-    "field-fanclub-size",
-    "include-fanclub-size"
-  ],
-  ["founded", "field-founded", "include-founded"],
-  ["homekit", "field-homekit", "include-homekit"],
-  ["awaykit", "field-awaykit", "include-awaykit"],
-  ["thirdkit", "field-thirdkit", "include-thirdkit"],
-  [
-    "current-season",
-    "field-current-season",
-    "include-current-season"
-  ]
-];
-
-function setStatus(message, type = "") {
-  teamLoadStatus.hidden = false;
-  teamLoadStatus.textContent = message;
-  teamLoadStatus.className = "builder-status";
-
-  if (type) {
-    teamLoadStatus.classList.add(`builder-status-${type}`);
-  }
+function enc(value) {
+  return encodeURIComponent(String(value))
+    .replace(/!/g, "%21")
+    .replace(/'/g, "%27")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29")
+    .replace(/\*/g, "%2A");
 }
 
-function clearStatus() {
-  teamLoadStatus.hidden = true;
-  teamLoadStatus.textContent = "";
-  teamLoadStatus.className = "builder-status";
+function nonce() {
+  return crypto.randomUUID().replace(/-/g, "");
 }
 
-function ordinal(value) {
-  const number = Number(value);
+function getCookie(request, name) {
+  const cookie = request.headers.get("Cookie") || "";
 
-  if (!Number.isFinite(number) || number <= 0) {
-    return value || "";
+  for (const part of cookie.split(";")) {
+    const [key, ...value] = part.trim().split("=");
+
+    if (key === name) {
+      return decodeURIComponent(value.join("="));
+    }
   }
 
-  const mod100 = number % 100;
-
-  if (mod100 >= 11 && mod100 <= 13) {
-    return `${number}th`;
-  }
-
-  switch (number % 10) {
-    case 1:
-      return `${number}st`;
-    case 2:
-      return `${number}nd`;
-    case 3:
-      return `${number}rd`;
-    default:
-      return `${number}th`;
-  }
+  return null;
 }
 
-function formatNumber(value) {
-  const number = Number(value);
+async function hmacSha1(key, text) {
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(key),
+    {
+      name: "HMAC",
+      hash: "SHA-1"
+    },
+    false,
+    ["sign"]
+  );
 
-  if (!Number.isFinite(number)) {
-    return value || "";
-  }
+  const signature = await crypto.subtle.sign(
+    "HMAC",
+    cryptoKey,
+    new TextEncoder().encode(text)
+  );
 
-  return number.toLocaleString("en-US");
+  return btoa(
+    String.fromCharCode(...new Uint8Array(signature))
+  );
 }
 
-function formatDate(value) {
-  if (!value) {
+function decodeXml(value) {
+  return String(value || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'");
+}
+
+function xmlValue(xml, tag) {
+  if (!xml) {
     return "";
   }
 
-  const datePart = value.split(" ")[0];
-  const parts = datePart.split("-");
+  const pattern = new RegExp(
+    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+    "i"
+  );
 
-  if (parts.length !== 3) {
-    return value;
-  }
+  const match = xml.match(pattern);
 
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
-
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-  ];
-
-  if (
-    !year ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > 31
-  ) {
-    return value;
-  }
-
-  return `${day} ${months[month - 1]} ${year}`;
-}
-
-function makeSafeFilename(teamName) {
-  return String(teamName || "")
-    .trim()
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
-}
-
-function makeKitMarkup(teamName, type) {
-  const safeName = makeSafeFilename(teamName);
-
-  if (!safeName) {
+  if (!match) {
     return "";
   }
 
-  return `[[File:${safeName}_${type}.png|125px]]`;
+  return decodeXml(match[1].trim());
 }
 
-function makeSeasonLink(teamName, season) {
-  if (!teamName || !season) {
+function xmlContainer(xml, tag) {
+  if (!xml) {
     return "";
   }
 
-  return `[[${teamName}/Season ${season}|Season ${season}]]`;
+  const pattern = new RegExp(
+    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+    "i"
+  );
+
+  const match = xml.match(pattern);
+
+  return match ? match[1] : "";
 }
 
-function makePreviousSeasonResult(data) {
-  if (data.previousSeasonResult) {
-    return data.previousSeasonResult;
+function xmlContainers(xml, tag) {
+  if (!xml) {
+    return [];
   }
 
-  if (
-    data.previousLeaguePosition &&
-    data.previousLeague &&
-    data.previousSeason
-  ) {
-    return (
-      `${ordinal(data.previousLeaguePosition)}, ` +
-      `${data.previousLeague} ` +
-      `(Season ${data.previousSeason})`
+  const pattern = new RegExp(
+    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+    "gi"
+  );
+
+  return [...xml.matchAll(pattern)].map(
+    match => match[1]
+  );
+}
+
+async function chppFetch(context, query) {
+  const endpoint =
+    "https://chpp.hattrick.org/chppxml.ashx";
+
+  const accessToken =
+    getCookie(context.request, "chpp_access_token");
+
+  const accessSecret =
+    getCookie(context.request, "chpp_access_secret");
+
+  if (!accessToken || !accessSecret) {
+    const error = new Error("Not logged in");
+    error.status = 401;
+    throw error;
+  }
+
+  const oauth = {
+    oauth_consumer_key:
+      context.env.CHPP_CONSUMER_KEY,
+    oauth_nonce: nonce(),
+    oauth_signature_method: "HMAC-SHA1",
+    oauth_timestamp:
+      Math.floor(Date.now() / 1000).toString(),
+    oauth_token: accessToken,
+    oauth_version: "1.0"
+  };
+
+  const allParameters = {
+    ...query,
+    ...oauth
+  };
+
+  const parameterString =
+    Object.entries(allParameters)
+      .map(([key, value]) => [
+        enc(key),
+        enc(value)
+      ])
+      .sort((a, b) => {
+        if (a[0] === b[0]) {
+          return a[1].localeCompare(b[1]);
+        }
+
+        return a[0].localeCompare(b[0]);
+      })
+      .map(
+        ([key, value]) =>
+          `${key}=${value}`
+      )
+      .join("&");
+
+  const signatureBase =
+    `GET&${enc(endpoint)}&${enc(parameterString)}`;
+
+  const signingKey =
+    `${enc(context.env.CHPP_CONSUMER_SECRET)}&${enc(accessSecret)}`;
+
+  oauth.oauth_signature =
+    await hmacSha1(
+      signingKey,
+      signatureBase
     );
+
+  const authorization =
+    "OAuth " +
+    Object.entries(oauth)
+      .sort((a, b) =>
+        a[0].localeCompare(b[0])
+      )
+      .map(
+        ([key, value]) =>
+          `${enc(key)}="${enc(value)}"`
+      )
+      .join(", ");
+
+  const queryString =
+    Object.entries(query)
+      .map(
+        ([key, value]) =>
+          `${enc(key)}=${enc(value)}`
+      )
+      .join("&");
+
+  const response = await fetch(
+    `${endpoint}?${queryString}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: authorization,
+        "User-Agent": "HT Wiki Builder/0.1"
+      }
+    }
+  );
+
+  const xml = await response.text();
+
+  if (!response.ok) {
+    const error = new Error(
+      `CHPP request failed with status ${response.status}`
+    );
+
+    error.status = response.status;
+    throw error;
+  }
+
+  return xml;
+}
+
+async function optionalChppFetch(
+  context,
+  query
+) {
+  try {
+    return await chppFetch(
+      context,
+      query
+    );
+  } catch (error) {
+    console.error(
+      `Optional CHPP request failed for ${query.file}:`,
+      error
+    );
+
+    return "";
+  }
+}
+
+function findLeague(
+  worldXml,
+  leagueId
+) {
+  if (!worldXml || !leagueId) {
+    return null;
+  }
+
+  const leagueList =
+    xmlContainer(
+      worldXml,
+      "LeagueList"
+    );
+
+  const leagues =
+    xmlContainers(
+      leagueList,
+      "League"
+    );
+
+  for (const leagueXml of leagues) {
+    if (
+      String(
+        xmlValue(
+          leagueXml,
+          "LeagueID"
+        )
+      ) === String(leagueId)
+    ) {
+      return {
+        leagueId:
+          xmlValue(
+            leagueXml,
+            "LeagueID"
+          ),
+
+        leagueName:
+          xmlValue(
+            leagueXml,
+            "LeagueName"
+          ),
+
+        englishName:
+          xmlValue(
+            leagueXml,
+            "EnglishName"
+          ),
+
+        season:
+          xmlValue(
+            leagueXml,
+            "Season"
+          ),
+
+        countryName:
+          xmlValue(
+            xmlContainer(
+              leagueXml,
+              "Country"
+            ),
+            "CountryName"
+          )
+      };
+    }
+  }
+
+  return null;
+}
+
+function findLeaguePosition(
+  leagueDetailsXml,
+  teamId
+) {
+  if (
+    !leagueDetailsXml ||
+    !teamId
+  ) {
+    return "";
+  }
+
+  const teams =
+    xmlContainers(
+      leagueDetailsXml,
+      "Team"
+    );
+
+  for (const teamXml of teams) {
+    if (
+      String(
+        xmlValue(
+          teamXml,
+          "TeamID"
+        )
+      ) === String(teamId)
+    ) {
+      return xmlValue(
+        teamXml,
+        "Position"
+      );
+    }
   }
 
   return "";
 }
 
-function getField(id) {
-  return document.getElementById(id);
-}
-
-function setField(inputId, checkboxId, value, checked = null) {
-  const input = getField(inputId);
-  const checkbox = getField(checkboxId);
-
-  if (!input || !checkbox) {
-    return;
-  }
-
-  const finalValue =
-    value === null || value === undefined
-      ? ""
-      : String(value);
-
-  input.value = finalValue;
-
-  if (checked === null) {
-    checkbox.checked = finalValue.trim() !== "";
-  } else {
-    checkbox.checked = Boolean(checked);
-  }
-}
-
-function clearWikiFields() {
-  for (const [, inputId, checkboxId] of infoboxFields) {
-    setField(inputId, checkboxId, "", false);
-  }
-
-  setField(
-    "field-intro",
-    "include-intro",
-    "",
-    false
-  );
-}
-
-function createIntro(data) {
-  if (!data.teamName) {
+function getEconomyFanClubSize(
+  economyXml,
+  requestedTeamId
+) {
+  if (
+    !economyXml ||
+    !requestedTeamId
+  ) {
     return "";
   }
 
-  let intro = `'''${data.teamName}''' is a Hattrick club`;
+  const economyTeam =
+    xmlContainer(
+      economyXml,
+      "Team"
+    );
 
-  if (data.region && data.country) {
-    intro += ` based in [[${data.region}]], [[${data.country}]]`;
-  } else if (data.country) {
-    intro += ` based in [[${data.country}]]`;
+  if (!economyTeam) {
+    return "";
   }
 
-  if (data.managerName) {
-    intro += `, managed by ${data.managerName}`;
-  }
-
-  intro += ".";
-
-  if (data.league) {
-    intro += ` The team currently competes in ${data.league}.`;
-  }
-
-  return intro;
-}
-
-function populateWikiFields(data) {
-  clearWikiFields();
-
-  setField(
-    "field-teamname",
-    "include-teamname",
-    data.teamName
-  );
-
-  setField(
-    "field-teamid",
-    "include-teamid",
-    data.teamId
-  );
-
-  setField(
-    "field-logouri",
-    "include-logouri",
-    data.teamId
-      ? `${data.teamId}.png`
-      : "",
-    true
-  );
-
-  setField(
-    "field-manager",
-    "include-manager",
-    data.managerName
-  );
-
-  setField(
-    "field-shortname",
-    "include-shortname",
-    data.shortTeamName
-  );
-
-  setField(
-    "field-region",
-    "include-region",
-    data.region
-  );
-
-  setField(
-    "field-country",
-    "include-country",
-    data.country
-  );
-
-  setField(
-    "field-league",
-    "include-league",
-    data.league
-  );
-
-  setField(
-    "field-league-pos",
-    "include-league-pos",
-    ordinal(data.leaguePosition)
-  );
-
-  setField(
-    "field-league-pos-last",
-    "include-league-pos-last",
-    makePreviousSeasonResult(data)
-  );
-
-  setField(
-    "field-arena",
-    "include-arena",
-    data.arenaName
-  );
-
-  setField(
-    "field-capacity",
-    "include-capacity",
-    data.arenaCapacity
-      ? formatNumber(data.arenaCapacity)
-      : ""
-  );
-
-  setField(
-    "field-coach",
-    "include-coach",
-    data.coachName
-  );
-
-  setField(
-    "field-coach-nat",
-    "include-coach-nat",
-    data.coachNationality
-  );
-
-  setField(
-    "field-fanclub",
-    "include-fanclub",
-    data.fanclubName
-  );
-
-  setField(
-    "field-fanclub-size",
-    "include-fanclub-size",
-    data.fanclubSize
-      ? formatNumber(data.fanclubSize)
-      : ""
-  );
+  const economyTeamId =
+    xmlValue(
+      economyTeam,
+      "TeamID"
+    );
 
   if (
-    data.isManagedTeam &&
-    data.activationDate
+    String(economyTeamId) !==
+    String(requestedTeamId)
   ) {
-    setField(
-      "field-founded",
-      "include-founded",
-      formatDate(data.activationDate)
-    );
+    return "";
   }
 
-  setField(
-    "field-homekit",
-    "include-homekit",
-    makeKitMarkup(data.teamName, "home"),
-    true
+  return xmlValue(
+    economyTeam,
+    "FanClubSize"
   );
+}
 
-  setField(
-    "field-awaykit",
-    "include-awaykit",
-    makeKitMarkup(data.teamName, "away"),
-    true
-  );
+export async function onRequestGet(context) {
+  const url =
+    new URL(
+      context.request.url
+    );
 
-  setField(
-    "field-thirdkit",
-    "include-thirdkit",
-    makeKitMarkup(data.teamName, "third"),
-    true
-  );
+  const requestedTeamId =
+    url.searchParams.get(
+      "teamId"
+    );
 
-  setField(
-    "field-current-season",
-    "include-current-season",
-    makeSeasonLink(
-      data.teamName,
-      data.currentSeason
+  if (
+    !requestedTeamId ||
+    !/^\d+$/.test(
+      requestedTeamId
     )
-  );
-
-  setField(
-    "field-intro",
-    "include-intro",
-    createIntro(data)
-  );
-
-  wikiFieldsSection.hidden = false;
-  wikiOutputSection.hidden = true;
-}
-
-function setupAutomaticCheckboxes() {
-  const fields = document.querySelectorAll(
-    ".wiki-field input[type='text'], .wiki-field textarea"
-  );
-
-  for (const input of fields) {
-    input.addEventListener("input", () => {
-      const field = input.closest(".wiki-field");
-
-      if (!field) {
-        return;
-      }
-
-      const checkbox = field.querySelector(
-        ".wiki-field-check"
-      );
-
-      if (!checkbox) {
-        return;
-      }
-
-      checkbox.checked =
-        input.value.trim() !== "";
-    });
-  }
-}
-
-function setupManagerChoice() {
-  const managerCheck =
-    getField("include-manager");
-
-  const htuserCheck =
-    getField("include-htuser");
-
-  if (!managerCheck || !htuserCheck) {
-    return;
-  }
-
-  managerCheck.addEventListener(
-    "change",
-    () => {
-      if (managerCheck.checked) {
-        htuserCheck.checked = false;
-      }
-    }
-  );
-
-  htuserCheck.addEventListener(
-    "change",
-    () => {
-      if (htuserCheck.checked) {
-        managerCheck.checked = false;
-      }
-    }
-  );
-}
-
-function buildInfobox() {
-  const lines = ["{{Infobox club"];
-
-  for (
-    const [
-      parameter,
-      inputId,
-      checkboxId
-    ] of infoboxFields
   ) {
-    const input = getField(inputId);
-    const checkbox = getField(checkboxId);
-
-    if (
-      !input ||
-      !checkbox ||
-      !checkbox.checked
-    ) {
-      continue;
-    }
-
-    const value = input.value.trim();
-
-    if (!value) {
-      continue;
-    }
-
-    lines.push(
-      `| ${parameter} = ${value}`
-    );
-  }
-
-  lines.push("}}");
-
-  return lines.join("\n");
-}
-
-function buildWikiMarkup() {
-  const parts = [];
-
-  parts.push(buildInfobox());
-
-  const introCheck =
-    getField("include-intro");
-
-  const intro =
-    getField("field-intro")
-      .value
-      .trim();
-
-  if (
-    introCheck.checked &&
-    intro
-  ) {
-    parts.push(intro);
-  }
-
-  return parts.join("\n\n");
-}
-
-async function loadTeam(teamId) {
-  clearStatus();
-
-  setStatus(
-    "Loading team data from Hattrick..."
-  );
-
-  try {
-    const response = await fetch(
-      `/api/team?teamId=${encodeURIComponent(teamId)}`,
+    return Response.json(
       {
-        method: "GET",
+        error:
+          "A valid numeric TeamID is required."
+      },
+      {
+        status: 400,
         headers: {
-          Accept: "application/json"
+          "Cache-Control":
+            "no-store"
         }
       }
     );
-
-    const data =
-      await response.json();
-
-    if (response.status === 401) {
-      throw new Error(
-        "Your Hattrick login has expired. Please log in again."
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data.error ||
-        `Server returned ${response.status}`
-      );
-    }
-
-    populateWikiFields(data);
-
-    setStatus(
-      `Loaded ${data.teamName} - TeamID ${data.teamId}`,
-      "success"
-    );
-
-    wikiFieldsSection.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  } catch (error) {
-    setStatus(
-      error.message ||
-      "Could not load team data.",
-      "error"
-    );
   }
-}
 
-teamLoadForm.addEventListener(
-  "submit",
-  event => {
-    event.preventDefault();
+  try {
+    const teamDetailsXml =
+      await chppFetch(
+        context,
+        {
+          file: "teamdetails",
+          version: "1.7",
+          teamID:
+            requestedTeamId
+        }
+      );
+
+    const userXml =
+      xmlContainer(
+        teamDetailsXml,
+        "User"
+      );
+
+    const teamXml =
+      xmlContainer(
+        teamDetailsXml,
+        "Team"
+      );
+
+    if (!teamXml) {
+      return Response.json(
+        {
+          error:
+            "Hattrick did not return a team for that TeamID."
+        },
+        {
+          status: 404,
+          headers: {
+            "Cache-Control":
+              "no-store"
+          }
+        }
+      );
+    }
 
     const teamId =
-      teamIdInput.value.trim();
-
-    if (!/^\d+$/.test(teamId)) {
-      setStatus(
-        "Enter a valid numeric Hattrick TeamID.",
-        "error"
+      xmlValue(
+        teamXml,
+        "TeamID"
       );
 
-      return;
-    }
-
-    loadTeam(teamId);
-  }
-);
-
-wikiFieldsForm.addEventListener(
-  "submit",
-  event => {
-    event.preventDefault();
-
-    wikiOutput.value =
-      buildWikiMarkup();
-
-    wikiOutputSection.hidden = false;
-
-    wikiOutputSection.scrollIntoView({
-      behavior: "smooth",
-      block: "start"
-    });
-  }
-);
-
-copyButton.addEventListener(
-  "click",
-  async () => {
-    try {
-      await navigator.clipboard.writeText(
-        wikiOutput.value
+    const teamName =
+      xmlValue(
+        teamXml,
+        "TeamName"
       );
 
-      copyStatus.textContent =
-        "Copied.";
-    } catch (error) {
-      wikiOutput.focus();
-      wikiOutput.select();
+    const shortTeamName =
+      xmlValue(
+        teamXml,
+        "ShortTeamName"
+      );
 
-      copyStatus.textContent =
-        "Select the text and copy it manually.";
-    }
-  }
-);
+    const managerName =
+      xmlValue(
+        userXml,
+        "Loginname"
+      );
 
-function setDefaultTeamId(teamId) {
-  if (
-    teamId &&
-    /^\d+$/.test(String(teamId))
-  ) {
-    teamIdInput.value =
-      String(teamId);
-  }
-}
+    const ownerUserId =
+      xmlValue(
+        userXml,
+        "UserID"
+      );
 
-function loadDefaultTeamId() {
-  const savedTeamId =
-    localStorage.getItem(
-      TEAM_PAGE_STORAGE_KEY
+    const activationDate =
+      xmlValue(
+        userXml,
+        "ActivationDate"
+      );
+
+    const rootBeforeUser =
+      teamDetailsXml.split(
+        /<User(?:\s|>)/i
+      )[0];
+
+    const loggedInUserId =
+      xmlValue(
+        rootBeforeUser,
+        "UserID"
+      );
+
+    const isManagedTeam =
+      Boolean(
+        loggedInUserId &&
+        ownerUserId &&
+        String(loggedInUserId) ===
+          String(ownerUserId)
+      );
+
+    const arenaXml =
+      xmlContainer(
+        teamXml,
+        "Arena"
+      );
+
+    const arenaId =
+      xmlValue(
+        arenaXml,
+        "ArenaID"
+      );
+
+    const arenaName =
+      xmlValue(
+        arenaXml,
+        "ArenaName"
+      );
+
+    const leagueXml =
+      xmlContainer(
+        teamXml,
+        "League"
+      );
+
+    const leagueId =
+      xmlValue(
+        leagueXml,
+        "LeagueID"
+      );
+
+    const countryFromTeam =
+      xmlValue(
+        leagueXml,
+        "LeagueName"
+      );
+
+    const regionXml =
+      xmlContainer(
+        teamXml,
+        "Region"
+      );
+
+    const region =
+      xmlValue(
+        regionXml,
+        "RegionName"
+      );
+
+    const leagueLevelUnitXml =
+      xmlContainer(
+        teamXml,
+        "LeagueLevelUnit"
+      );
+
+    const leagueLevelUnitId =
+      xmlValue(
+        leagueLevelUnitXml,
+        "LeagueLevelUnitID"
+      );
+
+    const league =
+      xmlValue(
+        leagueLevelUnitXml,
+        "LeagueLevelUnitName"
+      );
+
+    const trainerXml =
+      xmlContainer(
+        teamXml,
+        "Trainer"
+      );
+
+    const coachId =
+      xmlValue(
+        trainerXml,
+        "PlayerID"
+      );
+
+    const coachNameFromTeam =
+      xmlValue(
+        trainerXml,
+        "PlayerName"
+      );
+
+    const fanclubXml =
+      xmlContainer(
+        teamXml,
+        "Fanclub"
+      );
+
+    const fanclubName =
+      xmlValue(
+        fanclubXml,
+        "FanclubName"
+      );
+
+    const [
+      arenaDetailsXml,
+      leagueDetailsXml,
+      playerDetailsXml,
+      worldDetailsXml,
+      economyXml
+    ] = await Promise.all([
+      arenaId
+        ? optionalChppFetch(
+            context,
+            {
+              file:
+                "arenadetails",
+              version:
+                "1.2",
+              arenaID:
+                arenaId
+            }
+          )
+        : Promise.resolve(
+            ""
+          ),
+
+      leagueLevelUnitId
+        ? optionalChppFetch(
+            context,
+            {
+              file:
+                "leaguedetails",
+              version:
+                "1.1",
+              leagueLevelUnitID:
+                leagueLevelUnitId
+            }
+          )
+        : Promise.resolve(
+            ""
+          ),
+
+      coachId
+        ? optionalChppFetch(
+            context,
+            {
+              file:
+                "playerdetails",
+              version:
+                "1.1",
+              playerID:
+                coachId
+            }
+          )
+        : Promise.resolve(
+            ""
+          ),
+
+      optionalChppFetch(
+        context,
+        {
+          file:
+            "worlddetails",
+          version:
+            "1.2"
+        }
+      ),
+
+      isManagedTeam
+        ? optionalChppFetch(
+            context,
+            {
+              file:
+                "economy",
+              version:
+                "1.0"
+            }
+          )
+        : Promise.resolve(
+            ""
+          )
+    ]);
+
+    const currentCapacityXml =
+      xmlContainer(
+        arenaDetailsXml,
+        "CurrentCapacity"
+      );
+
+    const arenaCapacity =
+      xmlValue(
+        currentCapacityXml,
+        "Total"
+      );
+
+    const leaguePosition =
+      findLeaguePosition(
+        leagueDetailsXml,
+        teamId
+      );
+
+    const coachPlayerXml =
+      xmlContainer(
+        playerDetailsXml,
+        "Player"
+      );
+
+    const coachNameFromPlayer =
+      xmlValue(
+        coachPlayerXml,
+        "PlayerName"
+      );
+
+    const coachName =
+      coachNameFromTeam ||
+      coachNameFromPlayer;
+
+    const coachNativeLeagueId =
+      xmlValue(
+        coachPlayerXml,
+        "NativeLeagueID"
+      );
+
+    const coachNativeLeagueName =
+      xmlValue(
+        coachPlayerXml,
+        "NativeLeagueName"
+      );
+
+    const teamWorldLeague =
+      findLeague(
+        worldDetailsXml,
+        leagueId
+      );
+
+    const coachWorldLeague =
+      findLeague(
+        worldDetailsXml,
+        coachNativeLeagueId
+      );
+
+    const country =
+      teamWorldLeague
+        ? (
+            teamWorldLeague.englishName ||
+            teamWorldLeague.countryName ||
+            teamWorldLeague.leagueName
+          )
+        : countryFromTeam;
+
+    const coachNationality =
+      coachWorldLeague
+        ? (
+            coachWorldLeague.englishName ||
+            coachWorldLeague.countryName ||
+            coachWorldLeague.leagueName
+          )
+        : coachNativeLeagueName;
+
+    const currentSeason =
+      teamWorldLeague
+        ? teamWorldLeague.season
+        : "";
+
+    const fanclubSize =
+      getEconomyFanClubSize(
+        economyXml,
+        teamId
+      );
+
+    return Response.json(
+      {
+        teamId,
+        teamName,
+        shortTeamName,
+        managerName,
+
+        isManagedTeam,
+
+        region,
+        country,
+
+        league,
+        leagueLevelUnitId,
+        leaguePosition,
+
+        arenaId,
+        arenaName,
+        arenaCapacity,
+
+        coachId,
+        coachName,
+        coachNationality,
+
+        fanclubName,
+        fanclubSize,
+
+        activationDate:
+          isManagedTeam
+            ? activationDate
+            : "",
+
+        currentSeason
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store"
+        }
+      }
+    );
+  } catch (error) {
+    console.error(
+      "Team builder API error:",
+      error
     );
 
-  setDefaultTeamId(
-    savedTeamId
-  );
+    const status =
+      error.status === 401
+        ? 401
+        : 502;
 
-  if (
-    window.HTWikiBuilder &&
-    window.HTWikiBuilder.getSelectedTeamId
-  ) {
-    setDefaultTeamId(
-      window.HTWikiBuilder.getSelectedTeamId()
+    return Response.json(
+      {
+        error:
+          status === 401
+            ? "Not logged in"
+            : "Could not load team data from Hattrick."
+      },
+      {
+        status,
+        headers: {
+          "Cache-Control":
+            "no-store"
+        }
+      }
     );
   }
-
-  window.addEventListener(
-    "htwb:team-selected",
-    event => {
-      setDefaultTeamId(
-        event.detail.teamId
-      );
-    }
-  );
 }
-
-setupAutomaticCheckboxes();
-setupManagerChoice();
-loadDefaultTeamId();
