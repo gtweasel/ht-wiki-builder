@@ -45,6 +45,15 @@ async function hmacSha1(key, text) {
   );
 }
 
+function decodeXml(value) {
+  return value
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'");
+}
+
 function xmlValue(xml, tag) {
   const pattern = new RegExp(
     `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
@@ -60,13 +69,51 @@ function xmlValue(xml, tag) {
   return decodeXml(match[1].trim());
 }
 
-function decodeXml(value) {
-  return value
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, "\"")
-    .replace(/&apos;/g, "'");
+function xmlValueAny(xml, tags) {
+  for (const tag of tags) {
+    const value = xmlValue(xml, tag);
+
+    if (value) {
+      return value;
+    }
+  }
+
+  return "";
+}
+
+function getTeams(xml) {
+  const teamsMatch = xml.match(
+    /<Teams(?:\s[^>]*)?>([\s\S]*?)<\/Teams>/i
+  );
+
+  if (!teamsMatch) {
+    return [];
+  }
+
+  const teamsXml = teamsMatch[1];
+
+  const teamMatches = [
+    ...teamsXml.matchAll(
+      /<Team(?:\s[^>]*)?>([\s\S]*?)<\/Team>/gi
+    )
+  ];
+
+  return teamMatches
+    .map(match => {
+      const teamXml = match[1];
+
+      return {
+        teamId: xmlValueAny(
+          teamXml,
+          ["TeamId", "TeamID"]
+        ),
+        teamName: xmlValue(
+          teamXml,
+          "TeamName"
+        )
+      };
+    })
+    .filter(team => team.teamId && team.teamName);
 }
 
 export async function onRequestGet(context) {
@@ -79,7 +126,12 @@ export async function onRequestGet(context) {
   if (!accessToken || !accessSecret) {
     return Response.json(
       { error: "Not logged in" },
-      { status: 401 }
+      {
+        status: 401,
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
     );
   }
 
@@ -87,15 +139,17 @@ export async function onRequestGet(context) {
     "https://chpp.hattrick.org/chppxml.ashx";
 
   const query = {
-    file: "teamdetails",
+    file: "managercompendium",
     version: "1.7"
   };
 
   const oauth = {
-    oauth_consumer_key: context.env.CHPP_CONSUMER_KEY,
+    oauth_consumer_key:
+      context.env.CHPP_CONSUMER_KEY,
     oauth_nonce: nonce(),
     oauth_signature_method: "HMAC-SHA1",
-    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_timestamp:
+      Math.floor(Date.now() / 1000).toString(),
     oauth_token: accessToken,
     oauth_version: "1.0"
   };
@@ -105,13 +159,14 @@ export async function onRequestGet(context) {
     ...oauth
   };
 
-  const parameterString = Object.keys(allParameters)
-    .sort()
-    .map(
-      key =>
-        `${enc(key)}=${enc(allParameters[key])}`
-    )
-    .join("&");
+  const parameterString =
+    Object.keys(allParameters)
+      .sort()
+      .map(
+        key =>
+          `${enc(key)}=${enc(allParameters[key])}`
+      )
+      .join("&");
 
   const signatureBase =
     `GET&${enc(endpoint)}&${enc(parameterString)}`;
@@ -133,7 +188,7 @@ export async function onRequestGet(context) {
       .join(", ");
 
   const requestUrl =
-    `${endpoint}?file=teamdetails&version=1.7`;
+    `${endpoint}?file=managercompendium&version=1.7`;
 
   const response = await fetch(requestUrl, {
     method: "GET",
@@ -151,22 +206,33 @@ export async function onRequestGet(context) {
         error: "CHPP request failed",
         status: response.status
       },
-      { status: 502 }
+      {
+        status: 502,
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
     );
   }
+
+  const teams = getTeams(xml);
 
   const data = {
-    teamId: xmlValue(xml, "TeamID"),
-    teamName: xmlValue(xml, "TeamName"),
-    managerName: xmlValue(xml, "Loginname")
+    managerName:
+      xmlValue(xml, "Loginname"),
+    teams: teams,
+    teamId:
+      teams.length ? teams[0].teamId : "",
+    teamName:
+      teams.length ? teams[0].teamName : ""
   };
 
-  if (!data.teamId || !data.teamName) {
-    return Response.json(
-      { error: "Could not read team information" },
-      { status: 502 }
-    );
-  }
-
-  return Response.json(data);
+  return Response.json(
+    data,
+    {
+      headers: {
+        "Cache-Control": "no-store"
+      }
+    }
+  );
 }
