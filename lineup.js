@@ -16,7 +16,9 @@
  * Player selection:
  * - Full training positions first
  * - Partial training positions second
- * - Remaining positions back to front
+ * - Remaining starting positions back to front
+ * - Substitute bench is filled after the starting XI
+ * - Substitute order: GK, DE, WB, IM, WG, FW, AVG
  */
 
 
@@ -307,6 +309,51 @@ const HTWB_LINEUP_POSITION_ORDER = [
   "CF",
   "LF",
   "RF"
+];
+
+
+/* =========================================================
+   SUBSTITUTE ORDER
+   ========================================================= */
+
+/*
+ * Substitutes are selected only after the starting XI.
+ *
+ * The first six slots use the same final position ratings
+ * as the starting lineup. SUB-AVG uses the average of all
+ * six position ratings. Each selected player is removed
+ * before the next substitute is calculated.
+ */
+
+const HTWB_LINEUP_SUBSTITUTE_ORDER = [
+  {
+    slot: "SUB-GK",
+    role: "GK"
+  },
+  {
+    slot: "SUB-DE",
+    role: "CD"
+  },
+  {
+    slot: "SUB-WB",
+    role: "WB"
+  },
+  {
+    slot: "SUB-IM",
+    role: "IM"
+  },
+  {
+    slot: "SUB-WG",
+    role: "WG"
+  },
+  {
+    slot: "SUB-FW",
+    role: "FW"
+  },
+  {
+    slot: "SUB-AVG",
+    role: "AVG"
+  }
 ];
 
 
@@ -1730,6 +1777,64 @@ function htwbLineupGetPositionRating(
 
 
 /* =========================================================
+   SUBSTITUTE RATING LOOKUP
+   ========================================================= */
+
+function htwbLineupGetAveragePositionRating(
+  htwbLineupPlayer
+) {
+  const htwbLineupPositionRatings = [
+    htwbLineupPlayer?.ratings?.GK,
+    htwbLineupPlayer?.ratings?.CD,
+    htwbLineupPlayer?.ratings?.WB,
+    htwbLineupPlayer?.ratings?.IM,
+    htwbLineupPlayer?.ratings?.WG,
+    htwbLineupPlayer?.ratings?.FW
+  ].filter(
+    htwbLineupPositionRating =>
+      Number.isFinite(
+        htwbLineupPositionRating
+      )
+  );
+
+  if (
+    htwbLineupPositionRatings.length !== 6
+  ) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  return htwbLineupAverage(
+    htwbLineupPositionRatings
+  );
+}
+
+
+function htwbLineupGetSubstituteRating(
+  htwbLineupPlayer,
+  htwbLineupSubstituteRole
+) {
+  if (
+    htwbLineupSubstituteRole === "AVG"
+  ) {
+    return htwbLineupGetAveragePositionRating(
+      htwbLineupPlayer
+    );
+  }
+
+  const htwbLineupSubstituteRating =
+    htwbLineupPlayer
+      ?.ratings
+      ?.[htwbLineupSubstituteRole];
+
+  return Number.isFinite(
+    htwbLineupSubstituteRating
+  )
+    ? htwbLineupSubstituteRating
+    : Number.NEGATIVE_INFINITY;
+}
+
+
+/* =========================================================
    SELECTION ORDER
    ========================================================= */
 
@@ -2000,6 +2105,157 @@ function htwbLineupConstructLineup(
 
 
 /* =========================================================
+   CHOOSE SUBSTITUTE
+   ========================================================= */
+
+function htwbLineupChooseBestSubstitute(
+  htwbLineupPlayers,
+  htwbLineupSubstituteRole
+) {
+  if (
+    !htwbLineupPlayers.length
+  ) {
+    return null;
+  }
+
+  const htwbLineupSubstituteSorted =
+    [...htwbLineupPlayers]
+      .sort(
+        (htwbLineupA, htwbLineupB) => {
+          const htwbLineupSubstituteRatingA =
+            htwbLineupGetSubstituteRating(
+              htwbLineupA,
+              htwbLineupSubstituteRole
+            );
+
+          const htwbLineupSubstituteRatingB =
+            htwbLineupGetSubstituteRating(
+              htwbLineupB,
+              htwbLineupSubstituteRole
+            );
+
+          if (
+            htwbLineupSubstituteRatingA !==
+            htwbLineupSubstituteRatingB
+          ) {
+            return (
+              htwbLineupSubstituteRatingB -
+              htwbLineupSubstituteRatingA
+            );
+          }
+
+          return (
+            htwbLineupNumberValue(
+              htwbLineupA.playerId,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupB.playerId,
+              0
+            )
+          );
+        }
+      );
+
+  return (
+    htwbLineupSubstituteSorted[0] ||
+    null
+  );
+}
+
+
+/* =========================================================
+   BUILD SUBSTITUTE BENCH
+   ========================================================= */
+
+function htwbLineupConstructSubstitutes(
+  htwbLineupPlayersRemaining
+) {
+  const htwbLineupSubstituteRemaining =
+    [...htwbLineupPlayersRemaining];
+
+  const htwbLineupSubstitutes = {};
+
+  const htwbLineupSubstituteSelections = [];
+
+  for (
+    const htwbLineupSubstituteSlot
+    of HTWB_LINEUP_SUBSTITUTE_ORDER
+  ) {
+    const htwbLineupSelectedSubstitute =
+      htwbLineupChooseBestSubstitute(
+        htwbLineupSubstituteRemaining,
+        htwbLineupSubstituteSlot.role
+      );
+
+    const htwbLineupSelectedSubstituteRating =
+      htwbLineupSelectedSubstitute
+        ? htwbLineupGetSubstituteRating(
+            htwbLineupSelectedSubstitute,
+            htwbLineupSubstituteSlot.role
+          )
+        : Number.NEGATIVE_INFINITY;
+
+    htwbLineupSubstituteSelections.push({
+      slot: htwbLineupSubstituteSlot.slot,
+
+      role: htwbLineupSubstituteSlot.role,
+
+      player: htwbLineupSelectedSubstitute,
+
+      rating:
+        htwbLineupSelectedSubstituteRating
+    });
+
+    if (
+      !htwbLineupSelectedSubstitute
+    ) {
+      continue;
+    }
+
+    htwbLineupSubstitutes[
+      htwbLineupSubstituteSlot.slot
+    ] = htwbLineupSelectedSubstitute;
+
+    const htwbLineupSubstituteIndex =
+      htwbLineupSubstituteRemaining.findIndex(
+        htwbLineupPlayer =>
+          String(
+            htwbLineupPlayer.playerId
+          ) ===
+          String(
+            htwbLineupSelectedSubstitute.playerId
+          )
+      );
+
+    if (
+      htwbLineupSubstituteIndex >= 0
+    ) {
+      htwbLineupSubstituteRemaining.splice(
+        htwbLineupSubstituteIndex,
+        1
+      );
+    }
+  }
+
+  return {
+    substitutes: htwbLineupSubstitutes,
+
+    selections: htwbLineupSubstituteSelections,
+
+    playersRemaining:
+      htwbLineupSubstituteRemaining,
+
+    complete:
+      Object.keys(
+        htwbLineupSubstitutes
+      ).length ===
+      HTWB_LINEUP_SUBSTITUTE_ORDER.length
+  };
+}
+
+
+/* =========================================================
    COMPLETE CALCULATION
    ========================================================= */
 
@@ -2078,7 +2334,7 @@ function htwbLineupCalculateLineup(
       );
 
   /*
-   * 5. Build lineup
+   * 5. Build starting XI
    */
 
   const htwbLineupLineupResult =
@@ -2086,6 +2342,18 @@ function htwbLineupCalculateLineup(
       htwbLineupRatedEligiblePlayers,
       htwbLineupSelectedFormation.formation,
       htwbLineupSelectedTraining
+    );
+
+  /*
+   * 6. Build substitute bench
+   *
+   * Starts with only the players left after
+   * the starting XI has been selected.
+   */
+
+  const htwbLineupSubstituteResult =
+    htwbLineupConstructSubstitutes(
+      htwbLineupLineupResult.playersRemaining
     );
 
   return {
@@ -2101,7 +2369,9 @@ function htwbLineupCalculateLineup(
 
     ratedEligiblePlayers: htwbLineupRatedEligiblePlayers,
 
-    lineupResult: htwbLineupLineupResult
+    lineupResult: htwbLineupLineupResult,
+
+    substituteResult: htwbLineupSubstituteResult
   };
 }
 
@@ -2502,6 +2772,51 @@ function htwbLineupResetPitch() {
 
 
 /* =========================================================
+   RESET SUBSTITUTES
+   ========================================================= */
+
+function htwbLineupResetSubstitutes() {
+  for (
+    const htwbLineupSubstituteSlot
+    of HTWB_LINEUP_SUBSTITUTE_ORDER
+  ) {
+    const htwbLineupSubstituteKey =
+      htwbLineupSubstituteSlot
+        .slot
+        .replace(
+          "SUB-",
+          ""
+        )
+        .toLowerCase();
+
+    const htwbLineupSubstitutePlayerElement =
+      document.getElementById(
+        `lineup-sub-player-${htwbLineupSubstituteKey}`
+      );
+
+    const htwbLineupSubstituteRatingElement =
+      document.getElementById(
+        `lineup-sub-rating-${htwbLineupSubstituteKey}`
+      );
+
+    if (
+      htwbLineupSubstitutePlayerElement
+    ) {
+      htwbLineupSubstitutePlayerElement.textContent =
+        "";
+    }
+
+    if (
+      htwbLineupSubstituteRatingElement
+    ) {
+      htwbLineupSubstituteRatingElement.textContent =
+        "";
+    }
+  }
+}
+
+
+/* =========================================================
    LINEUP DISPLAY
    ========================================================= */
 
@@ -2622,8 +2937,97 @@ function htwbLineupRenderLineup(
   if (
     htwbLineupLineupWarning
   ) {
-    htwbLineupLineupWarning.hidden =
+    const htwbLineupStartingComplete =
       htwbLineupLineupResult.complete;
+
+    const htwbLineupSubstitutesComplete =
+      htwbLineupResult
+        .substituteResult
+        .complete;
+
+    htwbLineupLineupWarning.hidden =
+      htwbLineupStartingComplete &&
+      htwbLineupSubstitutesComplete;
+
+    if (
+      !htwbLineupStartingComplete
+    ) {
+      htwbLineupLineupWarning.textContent =
+        "Not enough eligible players are available to complete the starting XI and seven-player bench.";
+    } else if (
+      !htwbLineupSubstitutesComplete
+    ) {
+      htwbLineupLineupWarning.textContent =
+        "The starting XI is complete, but not enough eligible players are available to fill all seven substitute slots.";
+    }
+  }
+}
+
+
+/* =========================================================
+   SUBSTITUTE DISPLAY
+   ========================================================= */
+
+function htwbLineupRenderSubstitutes(
+  htwbLineupResult
+) {
+  const htwbLineupSubstituteResult =
+    htwbLineupResult.substituteResult;
+
+  for (
+    const htwbLineupSubstituteSelection
+    of htwbLineupSubstituteResult.selections
+  ) {
+    const htwbLineupSubstituteKey =
+      htwbLineupSubstituteSelection
+        .slot
+        .replace(
+          "SUB-",
+          ""
+        )
+        .toLowerCase();
+
+    const htwbLineupSubstitutePlayerElement =
+      document.getElementById(
+        `lineup-sub-player-${htwbLineupSubstituteKey}`
+      );
+
+    const htwbLineupSubstituteRatingElement =
+      document.getElementById(
+        `lineup-sub-rating-${htwbLineupSubstituteKey}`
+      );
+
+    const htwbLineupSubstitutePlayer =
+      htwbLineupSubstituteSelection.player;
+
+    if (
+      htwbLineupSubstitutePlayerElement
+    ) {
+      htwbLineupSubstitutePlayerElement.textContent =
+        htwbLineupSubstitutePlayer
+          ?.name ||
+        "OPEN";
+    }
+
+    if (
+      htwbLineupSubstituteRatingElement
+    ) {
+      if (
+        !htwbLineupSubstitutePlayer ||
+        !Number.isFinite(
+          htwbLineupSubstituteSelection.rating
+        )
+      ) {
+        htwbLineupSubstituteRatingElement.textContent =
+          "No eligible player";
+      } else {
+        htwbLineupSubstituteRatingElement.textContent =
+          `Rating: ${htwbLineupRound(
+            htwbLineupSubstituteSelection.rating,
+            4
+          ).toFixed(4)}`;
+      }
+    }
   }
 }
 
@@ -2725,7 +3129,7 @@ function htwbLineupRenderEligiblePlayers(
       `
         <tr>
           <td
-            colspan="7"
+            colspan="8"
             class="empty-message"
           >
             No eligible players.
@@ -2788,6 +3192,15 @@ function htwbLineupRenderEligiblePlayers(
                 4
               ).toFixed(4)}
             </td>
+
+            <td class="number">
+              ${htwbLineupRound(
+                htwbLineupGetAveragePositionRating(
+                  htwbLineupPlayer
+                ),
+                4
+              ).toFixed(4)}
+            </td>
           </tr>
         `
       )
@@ -2819,7 +3232,7 @@ function htwbLineupRenderSelectionOrder(
       "Other"
   };
 
-  htwbLineupSelectionOrderList.innerHTML =
+  const htwbLineupStarterSelectionHtml =
     htwbLineupResult
       .lineupResult
       .selections
@@ -2849,6 +3262,37 @@ function htwbLineupRenderSelectionOrder(
         `
       )
       .join("");
+
+  const htwbLineupSubstituteSelectionHtml =
+    htwbLineupResult
+      .substituteResult
+      .selections
+      .map(
+        htwbLineupSubstituteSelection => `
+          <li>
+            <strong>
+              ${htwbLineupEscapeHtml(
+                htwbLineupSubstituteSelection.slot
+              )}
+            </strong>
+
+            -
+
+            ${htwbLineupEscapeHtml(
+              htwbLineupSubstituteSelection.player
+                ?.name ||
+              "OPEN"
+            )}
+
+            (Substitute)
+          </li>
+        `
+      )
+      .join("");
+
+  htwbLineupSelectionOrderList.innerHTML =
+    htwbLineupStarterSelectionHtml +
+    htwbLineupSubstituteSelectionHtml;
 }
 
 
@@ -2910,6 +3354,10 @@ function htwbLineupRenderEverything(
   );
 
   htwbLineupRenderLineup(
+    htwbLineupResult
+  );
+
+  htwbLineupRenderSubstitutes(
     htwbLineupResult
   );
 
@@ -2986,16 +3434,32 @@ function htwbLineupBuildLineup() {
         htwbLineupSourceData
       );
 
-    if (
+    const htwbLineupStartingComplete =
       htwbLineupCurrentCalculation
         .lineupResult
-        .complete
+        .complete;
+
+    const htwbLineupSubstitutesComplete =
+      htwbLineupCurrentCalculation
+        .substituteResult
+        .complete;
+
+    if (
+      htwbLineupStartingComplete &&
+      htwbLineupSubstitutesComplete
     ) {
       htwbLineupSetStatus(
-        `Lineup built: ${htwbLineupFormation} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - score ${htwbLineupFinalScore}.${htwbLineupWarning}`,
+        `Lineup and bench built: ${htwbLineupFormation} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - score ${htwbLineupFinalScore}.${htwbLineupWarning}`,
         htwbLineupWarning
           ? "error"
           : "success"
+      );
+    } else if (
+      htwbLineupStartingComplete
+    ) {
+      htwbLineupSetStatus(
+        `Starting XI built, but fewer than 18 eligible players were available to complete the seven-player bench.${htwbLineupWarning}`,
+        "error"
       );
     } else {
       htwbLineupSetStatus(
@@ -3064,6 +3528,8 @@ async function htwbLineupLoadTeam(
   }
 
   htwbLineupResetPitch();
+
+  htwbLineupResetSubstitutes();
 
   htwbLineupSetStatus(
     "Loading lineup data from Hattrick..."

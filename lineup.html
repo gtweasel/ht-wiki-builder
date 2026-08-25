@@ -513,7 +513,9 @@
 
               <p>
                 Training positions are filled first, followed by
-                the remaining positions from goalkeeper forward.
+                the remaining starting positions from goalkeeper forward.
+                The seven-player bench is then selected from the
+                remaining eligible players.
               </p>
             </div>
 
@@ -896,6 +898,148 @@
           </div>
 
 
+          <div class="lineup-substitutes">
+
+            <div class="lineup-substitutes-heading">
+              <div>
+                <h3>
+                  Substitutes
+                </h3>
+
+                <p>
+                  Selected after the starting XI in this order:
+                  GK, defender, wingback, inner midfielder, winger,
+                  forward, then best average across all six ratings.
+                </p>
+              </div>
+            </div>
+
+
+            <div class="lineup-substitute-grid">
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-GK
+                </div>
+
+                <div
+                  id="lineup-sub-player-gk"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-gk"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-DE
+                </div>
+
+                <div
+                  id="lineup-sub-player-de"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-de"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-WB
+                </div>
+
+                <div
+                  id="lineup-sub-player-wb"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-wb"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-IM
+                </div>
+
+                <div
+                  id="lineup-sub-player-im"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-im"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-WG
+                </div>
+
+                <div
+                  id="lineup-sub-player-wg"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-wg"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position">
+                <div class="lineup-position-name">
+                  SUB-FW
+                </div>
+
+                <div
+                  id="lineup-sub-player-fw"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-fw"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position lineup-substitute-average">
+                <div class="lineup-position-name">
+                  SUB-AVG
+                </div>
+
+                <div
+                  id="lineup-sub-player-avg"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-avg"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+            </div>
+
+          </div>
+
+
           <div class="lineup-coach-picks">
 
             <div class="lineup-summary-item">
@@ -1052,6 +1196,10 @@
                     <th class="number">
                       FW
                     </th>
+
+                    <th class="number">
+                      AVG
+                    </th>
                   </tr>
                 </thead>
 
@@ -1068,7 +1216,7 @@
           <details class="lineup-details">
 
             <summary>
-              Lineup selection order
+              Lineup and substitute selection order
             </summary>
 
             <ol
