@@ -460,6 +460,18 @@ function htwbApiLineupParsePlayers(
             "PlayerForm"
           ),
 
+        experience:
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
+            "Experience"
+          ),
+
+        leadership:
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
+            "Leadership"
+          ),
+
         stamina:
           htwbApiLineupXmlNumber(
             htwbApiLineupPlayerXml,
@@ -533,6 +545,8 @@ function htwbApiLineupParsePlayers(
       htwbApiLineupPlayer.age === null ||
       htwbApiLineupPlayer.ageDays === null ||
       htwbApiLineupPlayer.form === null ||
+      htwbApiLineupPlayer.experience === null ||
+      htwbApiLineupPlayer.leadership === null ||
       htwbApiLineupPlayer.stamina === null ||
       htwbApiLineupPlayer.keeper === null ||
       htwbApiLineupPlayer.defending === null ||

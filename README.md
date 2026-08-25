@@ -30,6 +30,16 @@ All pages use `/styles.css` as the single visual source of truth. Page-specific 
 
 After the starting XI is selected, the Lineup Builder fills seven substitute slots from the remaining eligible players in this fixed greedy order:
 
-`SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-WG`, `SUB-FW`, `SUB-AVG`.
+`SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-WG`, `SUB-FW`, `SUB-EX`.
 
-The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-AVG` uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next substitute slot is calculated.
+The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-EX` (Hattrick "Extra") uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next substitute slot is calculated. The visible bench is displayed in Hattrick order: `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-FW`, `SUB-WG`, `SUB-EX`; this display order does not change the calculation order.
+
+
+## Captain and set-pieces selection
+
+After the starting XI is complete, the Lineup Builder selects both match roles from starters only.
+
+- **Captain:** each starter is tested with the community-documented Hattrick team-experience formula: `((sum of starting XI XP + captain XP) / 12) * (1 - ((7 - captain leadership) / 20))`. The starter producing the highest predicted team experience is selected. Ties are broken by higher Experience, then higher Leadership, then PlayerID for deterministic output.
+- **Set Pieces:** Hattrick confirms that Set Pieces and Experience matter for normal direct set pieces, but does not publish their exact relative weighting. The official automatic fallback chooses the player with the highest Set Pieces skill, so HT Wiki Builder selects the highest-SP starting outfielder and uses Experience only as a tie-breaker. The player in the GK slot is excluded because goalkeepers cannot be the ordinary set-pieces taker.
+
+The lineup API includes each player's `Experience` and `Leadership` values from the CHPP `players` file so these calculations use the same source roster as the rest of the builder.

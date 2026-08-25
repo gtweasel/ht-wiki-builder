@@ -919,6 +919,14 @@ select {
   overflow-wrap: anywhere;
 }
 
+.lineup-role-detail {
+  display: block;
+  margin-top: 5px;
+  color: var(--gray-600);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .lineup-table-wrap {
   width: 100%;
   margin-top: 20px;
@@ -1150,7 +1158,7 @@ select {
   min-height: 96px;
 }
 
-.lineup-substitute-average {
+.lineup-substitute-extra {
   background: var(--blue-100);
   border-color: var(--blue-300);
 }

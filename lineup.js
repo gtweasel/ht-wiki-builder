@@ -18,7 +18,11 @@
  * - Partial training positions second
  * - Remaining starting positions back to front
  * - Substitute bench is filled after the starting XI
- * - Substitute order: GK, DE, WB, IM, WG, FW, AVG
+ * - Substitute calculation order: GK, DE, WB, IM, WG, FW, EX
+ *
+ * Match roles:
+ * - Captain is selected from the starting XI by predicted team experience
+ * - Set pieces taker is the highest-SP starting outfielder, with XP as tie-breaker
  */
 
 
@@ -94,6 +98,26 @@ const htwbLineupEligiblePlayersTableBody =
 const htwbLineupSelectionOrderList =
   document.getElementById(
     "lineup-selection-order-list"
+  );
+
+const htwbLineupCaptainNameElement =
+  document.getElementById(
+    "lineup-captain-name"
+  );
+
+const htwbLineupCaptainDetailElement =
+  document.getElementById(
+    "lineup-captain-detail"
+  );
+
+const htwbLineupSetPiecesNameElement =
+  document.getElementById(
+    "lineup-set-pieces-name"
+  );
+
+const htwbLineupSetPiecesDetailElement =
+  document.getElementById(
+    "lineup-set-pieces-detail"
   );
 
 
@@ -320,7 +344,7 @@ const HTWB_LINEUP_POSITION_ORDER = [
  * Substitutes are selected only after the starting XI.
  *
  * The first six slots use the same final position ratings
- * as the starting lineup. SUB-AVG uses the average of all
+ * as the starting lineup. SUB-EX uses the average of all
  * six position ratings. Each selected player is removed
  * before the next substitute is calculated.
  */
@@ -351,7 +375,7 @@ const HTWB_LINEUP_SUBSTITUTE_ORDER = [
     role: "FW"
   },
   {
-    slot: "SUB-AVG",
+    slot: "SUB-EX",
     role: "AVG"
   }
 ];
@@ -2273,6 +2297,283 @@ function htwbLineupConstructSubstitutes(
 
 
 /* =========================================================
+   STARTING XI MATCH ROLES
+   ========================================================= */
+
+function htwbLineupGetStartingEntries(
+  htwbLineupLineupResult
+) {
+  return Object.entries(
+    htwbLineupLineupResult?.lineup || {}
+  )
+    .map(
+      ([htwbLineupSlot, htwbLineupPlayer]) => ({
+        slot: htwbLineupSlot,
+        player: htwbLineupPlayer
+      })
+    );
+}
+
+
+/*
+ * Community-documented team-experience formula:
+ *
+ * ((sum of starting XI XP + captain XP) / 12)
+ * * (1 - ((7 - captain leadership) / 20))
+ *
+ * The captain must be one of the starting eleven.
+ */
+function htwbLineupCalculateCaptainTeamExperience(
+  htwbLineupStartingPlayers,
+  htwbLineupCaptainCandidate
+) {
+  const htwbLineupStartingExperienceTotal =
+    htwbLineupStartingPlayers.reduce(
+      (
+        htwbLineupExperienceTotal,
+        htwbLineupStartingPlayer
+      ) =>
+        htwbLineupExperienceTotal +
+        htwbLineupNumberValue(
+          htwbLineupStartingPlayer.experience,
+          0
+        ),
+      0
+    );
+
+  const htwbLineupCaptainExperience =
+    htwbLineupNumberValue(
+      htwbLineupCaptainCandidate?.experience,
+      0
+    );
+
+  const htwbLineupCaptainLeadership =
+    htwbLineupNumberValue(
+      htwbLineupCaptainCandidate?.leadership,
+      0
+    );
+
+  const htwbLineupLeadershipFactor =
+    1 -
+    (
+      (7 - htwbLineupCaptainLeadership) /
+      20
+    );
+
+  return (
+    (
+      htwbLineupStartingExperienceTotal +
+      htwbLineupCaptainExperience
+    ) /
+    12
+  ) * htwbLineupLeadershipFactor;
+}
+
+
+function htwbLineupSelectCaptain(
+  htwbLineupLineupResult
+) {
+  const htwbLineupStartingEntries =
+    htwbLineupGetStartingEntries(
+      htwbLineupLineupResult
+    );
+
+  const htwbLineupStartingPlayers =
+    htwbLineupStartingEntries.map(
+      htwbLineupStartingEntry =>
+        htwbLineupStartingEntry.player
+    );
+
+  if (
+    !htwbLineupLineupResult?.complete ||
+    htwbLineupStartingPlayers.length !== 11
+  ) {
+    return {
+      player: null,
+      teamExperience: Number.NEGATIVE_INFINITY,
+      candidates: []
+    };
+  }
+
+  const htwbLineupCaptainCandidates =
+    htwbLineupStartingPlayers
+      .map(
+        htwbLineupCaptainCandidate => ({
+          player: htwbLineupCaptainCandidate,
+          teamExperience:
+            htwbLineupCalculateCaptainTeamExperience(
+              htwbLineupStartingPlayers,
+              htwbLineupCaptainCandidate
+            )
+        })
+      )
+      .sort(
+        (htwbLineupA, htwbLineupB) => {
+          if (
+            htwbLineupA.teamExperience !==
+            htwbLineupB.teamExperience
+          ) {
+            return (
+              htwbLineupB.teamExperience -
+              htwbLineupA.teamExperience
+            );
+          }
+
+          const htwbLineupExperienceDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.player.experience,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.player.experience,
+              0
+            );
+
+          if (
+            htwbLineupExperienceDifference !== 0
+          ) {
+            return htwbLineupExperienceDifference;
+          }
+
+          const htwbLineupLeadershipDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.player.leadership,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.player.leadership,
+              0
+            );
+
+          if (
+            htwbLineupLeadershipDifference !== 0
+          ) {
+            return htwbLineupLeadershipDifference;
+          }
+
+          return (
+            htwbLineupNumberValue(
+              htwbLineupA.player.playerId,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupB.player.playerId,
+              0
+            )
+          );
+        }
+      );
+
+  return {
+    player:
+      htwbLineupCaptainCandidates[0]?.player ||
+      null,
+
+    teamExperience:
+      htwbLineupCaptainCandidates[0]
+        ?.teamExperience ??
+      Number.NEGATIVE_INFINITY,
+
+    candidates: htwbLineupCaptainCandidates
+  };
+}
+
+
+/*
+ * Hattrick does not publish an exact weighting between Set Pieces
+ * and Experience for a normal designated set-pieces taker.
+ * The official automatic choice is the highest Set Pieces skill,
+ * so use SP as the primary sort and XP only as the tie-breaker.
+ * The goalkeeper slot is excluded because a goalkeeper cannot be
+ * the ordinary set-pieces taker.
+ */
+function htwbLineupSelectSetPiecesTaker(
+  htwbLineupLineupResult
+) {
+  const htwbLineupStartingEntries =
+    htwbLineupGetStartingEntries(
+      htwbLineupLineupResult
+    );
+
+  if (
+    !htwbLineupLineupResult?.complete ||
+    htwbLineupStartingEntries.length !== 11
+  ) {
+    return {
+      player: null,
+      candidates: []
+    };
+  }
+
+  const htwbLineupSetPiecesCandidates =
+    htwbLineupStartingEntries
+      .filter(
+        htwbLineupStartingEntry =>
+          htwbLineupStartingEntry.slot !== "GK"
+      )
+      .map(
+        htwbLineupStartingEntry =>
+          htwbLineupStartingEntry.player
+      )
+      .sort(
+        (htwbLineupA, htwbLineupB) => {
+          const htwbLineupSetPiecesDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.setPieces,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.setPieces,
+              0
+            );
+
+          if (
+            htwbLineupSetPiecesDifference !== 0
+          ) {
+            return htwbLineupSetPiecesDifference;
+          }
+
+          const htwbLineupExperienceDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.experience,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.experience,
+              0
+            );
+
+          if (
+            htwbLineupExperienceDifference !== 0
+          ) {
+            return htwbLineupExperienceDifference;
+          }
+
+          return (
+            htwbLineupNumberValue(
+              htwbLineupA.playerId,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupB.playerId,
+              0
+            )
+          );
+        }
+      );
+
+  return {
+    player:
+      htwbLineupSetPiecesCandidates[0] ||
+      null,
+
+    candidates:
+      htwbLineupSetPiecesCandidates
+  };
+}
+
+
+/* =========================================================
    COMPLETE CALCULATION
    ========================================================= */
 
@@ -2363,7 +2664,21 @@ function htwbLineupCalculateLineup(
     );
 
   /*
-   * 6. Build substitute bench
+   * 6. Select starting-XI match roles
+   */
+
+  const htwbLineupCaptainResult =
+    htwbLineupSelectCaptain(
+      htwbLineupLineupResult
+    );
+
+  const htwbLineupSetPiecesResult =
+    htwbLineupSelectSetPiecesTaker(
+      htwbLineupLineupResult
+    );
+
+  /*
+   * 7. Build substitute bench
    *
    * Starts with only the players left after
    * the starting XI has been selected.
@@ -2388,6 +2703,10 @@ function htwbLineupCalculateLineup(
     ratedEligiblePlayers: htwbLineupRatedEligiblePlayers,
 
     lineupResult: htwbLineupLineupResult,
+
+    captainResult: htwbLineupCaptainResult,
+
+    setPiecesResult: htwbLineupSetPiecesResult,
 
     substituteResult: htwbLineupSubstituteResult
   };
@@ -3051,6 +3370,83 @@ function htwbLineupRenderSubstitutes(
 
 
 /* =========================================================
+   CAPTAIN AND SET PIECES DISPLAY
+   ========================================================= */
+
+function htwbLineupRenderMatchRoles(
+  htwbLineupResult
+) {
+  const htwbLineupCaptain =
+    htwbLineupResult?.captainResult;
+
+  const htwbLineupSetPieces =
+    htwbLineupResult?.setPiecesResult;
+
+  if (
+    htwbLineupCaptainNameElement
+  ) {
+    htwbLineupCaptainNameElement.textContent =
+      htwbLineupCaptain?.player?.name ||
+      "OPEN";
+  }
+
+  if (
+    htwbLineupCaptainDetailElement
+  ) {
+    if (
+      htwbLineupCaptain?.player &&
+      Number.isFinite(
+        htwbLineupCaptain.teamExperience
+      )
+    ) {
+      htwbLineupCaptainDetailElement.textContent =
+        `Team XP ${htwbLineupRound(
+          htwbLineupCaptain.teamExperience,
+          4
+        ).toFixed(4)} | XP ${htwbLineupNumberValue(
+          htwbLineupCaptain.player.experience,
+          0
+        )} | LS ${htwbLineupNumberValue(
+          htwbLineupCaptain.player.leadership,
+          0
+        )}`;
+    } else {
+      htwbLineupCaptainDetailElement.textContent =
+        "Requires a complete starting XI";
+    }
+  }
+
+  if (
+    htwbLineupSetPiecesNameElement
+  ) {
+    htwbLineupSetPiecesNameElement.textContent =
+      htwbLineupSetPieces?.player?.name ||
+      "OPEN";
+  }
+
+  if (
+    htwbLineupSetPiecesDetailElement
+  ) {
+    if (
+      htwbLineupSetPieces?.player
+    ) {
+      htwbLineupSetPiecesDetailElement.textContent =
+        `SP ${htwbLineupNumberValue(
+          htwbLineupSetPieces.player.setPieces,
+          0
+        )} | XP ${htwbLineupNumberValue(
+          htwbLineupSetPieces.player.experience,
+          0
+        )}`;
+    } else {
+      htwbLineupSetPiecesDetailElement.textContent =
+        "Requires a complete starting XI";
+    }
+  }
+}
+
+
+/* =========================================================
    EXCLUDED PLAYERS
    ========================================================= */
 
@@ -3147,7 +3543,7 @@ function htwbLineupRenderEligiblePlayers(
       `
         <tr>
           <td
-            colspan="8"
+            colspan="11"
             class="empty-message"
           >
             No eligible players.
@@ -3218,6 +3614,27 @@ function htwbLineupRenderEligiblePlayers(
                 ),
                 4
               ).toFixed(4)}
+            </td>
+
+            <td class="number">
+              ${htwbLineupNumberValue(
+                htwbLineupPlayer.experience,
+                0
+              )}
+            </td>
+
+            <td class="number">
+              ${htwbLineupNumberValue(
+                htwbLineupPlayer.leadership,
+                0
+              )}
+            </td>
+
+            <td class="number">
+              ${htwbLineupNumberValue(
+                htwbLineupPlayer.setPieces,
+                0
+              )}
             </td>
           </tr>
         `
@@ -3376,6 +3793,10 @@ function htwbLineupRenderEverything(
   );
 
   htwbLineupRenderSubstitutes(
+    htwbLineupResult
+  );
+
+  htwbLineupRenderMatchRoles(
     htwbLineupResult
   );
 

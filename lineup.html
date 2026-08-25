@@ -907,9 +907,10 @@
                 </h3>
 
                 <p>
-                  Selected after the starting XI in this order:
+                  Calculated after the starting XI in this order:
                   GK, defender, wingback, inner midfielder, winger,
-                  forward, then best average across all six ratings.
+                  forward, then Extra using the best average across all six ratings.
+                  Displayed below in Hattrick bench order.
                 </p>
               </div>
             </div>
@@ -987,23 +988,6 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-WG
-                </div>
-
-                <div
-                  id="lineup-sub-player-wg"
-                  class="lineup-player-name"
-                ></div>
-
-                <div
-                  id="lineup-sub-rating-wg"
-                  class="lineup-player-rating"
-                ></div>
-              </div>
-
-
-              <div class="lineup-position lineup-substitute-position">
-                <div class="lineup-position-name">
                   SUB-FW
                 </div>
 
@@ -1019,18 +1003,35 @@
               </div>
 
 
-              <div class="lineup-position lineup-substitute-position lineup-substitute-average">
+              <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-AVG
+                  SUB-WG
                 </div>
 
                 <div
-                  id="lineup-sub-player-avg"
+                  id="lineup-sub-player-wg"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="lineup-sub-rating-avg"
+                  id="lineup-sub-rating-wg"
+                  class="lineup-player-rating"
+                ></div>
+              </div>
+
+
+              <div class="lineup-position lineup-substitute-position lineup-substitute-extra">
+                <div class="lineup-position-name">
+                  SUB-EX
+                </div>
+
+                <div
+                  id="lineup-sub-player-ex"
+                  class="lineup-player-name"
+                ></div>
+
+                <div
+                  id="lineup-sub-rating-ex"
                   class="lineup-player-rating"
                 ></div>
               </div>
@@ -1047,8 +1048,18 @@
                 Captain
               </span>
 
-              <span class="lineup-summary-value">
-                Coach pick
+              <span
+                id="lineup-captain-name"
+                class="lineup-summary-value"
+              >
+                Build lineup
+              </span>
+
+              <span
+                id="lineup-captain-detail"
+                class="lineup-role-detail"
+              >
+                Calculated from starting XI experience and leadership
               </span>
             </div>
 
@@ -1058,8 +1069,18 @@
                 Set Pieces
               </span>
 
-              <span class="lineup-summary-value">
-                Coach pick
+              <span
+                id="lineup-set-pieces-name"
+                class="lineup-summary-value"
+              >
+                Build lineup
+              </span>
+
+              <span
+                id="lineup-set-pieces-detail"
+                class="lineup-role-detail"
+              >
+                Highest set pieces among starting outfielders
               </span>
             </div>
 
@@ -1199,6 +1220,18 @@
 
                     <th class="number">
                       AVG
+                    </th>
+
+                    <th class="number">
+                      XP
+                    </th>
+
+                    <th class="number">
+                      LS
+                    </th>
+
+                    <th class="number">
+                      SP
                     </th>
                   </tr>
                 </thead>
