@@ -1355,7 +1355,8 @@ function htwbLineupFilterEligiblePlayers(
   htwbLineupPlayers,
   htwbLineupUpcomingMatch,
   htwbLineupTraining,
-  htwbLineupPreviousTrainingMatch
+  htwbLineupPreviousTrainingMatch,
+  htwbLineupCoachId
 ) {
   const htwbLineupEligible = [];
 
@@ -1378,60 +1379,76 @@ function htwbLineupFilterEligiblePlayers(
   ) {
     const htwbLineupReasons = [];
 
-    /*
-     * -1 healthy
-     *  0 bruised but playing
-     * >0 injured
-     */
+    const htwbLineupIsCoach =
+      htwbLineupCoachId !== null &&
+      htwbLineupCoachId !== undefined &&
+      String(
+        htwbLineupPlayer.playerId
+      ) ===
+        String(
+          htwbLineupCoachId
+        );
 
-    if (
-      htwbLineupNumberValue(
-        htwbLineupPlayer.injuryLevel,
-        -1
-      ) > 0
-    ) {
+    if (htwbLineupIsCoach) {
       htwbLineupReasons.push(
-        "Injured"
+        "Coach"
       );
-    }
+    } else {
+      /*
+       * -1 healthy
+       *  0 bruised but playing
+       * >0 injured
+       */
 
-    /*
-     * Cards == 3 means suspended.
-     */
+      if (
+        htwbLineupNumberValue(
+          htwbLineupPlayer.injuryLevel,
+          -1
+        ) > 0
+      ) {
+        htwbLineupReasons.push(
+          "Injured"
+        );
+      }
 
-    if (
-      HTWB_LINEUP_SUSPENSION_MATCH_TYPES.has(
-        htwbLineupMatchType
-      ) &&
-      htwbLineupNumberValue(
-        htwbLineupPlayer.cards,
-        0
-      ) === 3
-    ) {
-      htwbLineupReasons.push(
-        "Suspended"
-      );
-    }
+      /*
+       * Cards == 3 means suspended.
+       */
 
-    /*
-     * Only the second match of the
-     * training week looks backward.
-     *
-     * ANY appearance in a training role
-     * counts as already trained.
-     */
+      if (
+        HTWB_LINEUP_SUSPENSION_MATCH_TYPES.has(
+          htwbLineupMatchType
+        ) &&
+        htwbLineupNumberValue(
+          htwbLineupPlayer.cards,
+          0
+        ) === 3
+      ) {
+        htwbLineupReasons.push(
+          "Suspended"
+        );
+      }
 
-    if (
-      htwbLineupSecondTrainingMatch &&
-      htwbLineupPlayerWasPreviouslyTrained(
-        htwbLineupPlayer,
-        htwbLineupTraining,
-        htwbLineupPreviousTrainingMatch
-      )
-    ) {
-      htwbLineupReasons.push(
-        "Already used in a training position this week"
-      );
+      /*
+       * Only the second match of the
+       * training week looks backward.
+       *
+       * ANY appearance in a training role
+       * counts as already trained.
+       */
+
+      if (
+        htwbLineupSecondTrainingMatch &&
+        htwbLineupPlayerWasPreviouslyTrained(
+          htwbLineupPlayer,
+          htwbLineupTraining,
+          htwbLineupPreviousTrainingMatch
+        )
+      ) {
+        htwbLineupReasons.push(
+          "Already used in a training position this week"
+        );
+      }
     }
 
     if (
@@ -2315,7 +2332,8 @@ function htwbLineupCalculateLineup(
       htwbLineupPlayers,
       htwbLineupData.upcomingMatch,
       htwbLineupSelectedTraining,
-      htwbLineupData.previousTrainingMatch
+      htwbLineupData.previousTrainingMatch,
+      htwbLineupData.coachId
     );
 
   /*

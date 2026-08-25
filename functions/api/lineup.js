@@ -352,10 +352,30 @@ function htwbApiLineupParseTeamDetails(
       "LeagueID"
     );
 
+  const htwbApiLineupTrainerXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamXml,
+      "Trainer"
+    );
+
+  const htwbApiLineupCoachId =
+    htwbApiLineupXmlNumber(
+      htwbApiLineupTrainerXml,
+      "PlayerID"
+    );
+
+  const htwbApiLineupCoachName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTrainerXml,
+      "PlayerName"
+    );
+
   return {
     teamId: htwbApiLineupTeamId,
     teamName: htwbApiLineupTeamName,
-    leagueId: htwbApiLineupLeagueId
+    leagueId: htwbApiLineupLeagueId,
+    coachId: htwbApiLineupCoachId,
+    coachName: htwbApiLineupCoachName
   };
 }
 
@@ -1371,6 +1391,12 @@ export async function onRequestGet(
 
         leagueId:
           htwbApiLineupTeam.leagueId,
+
+        coachId:
+          htwbApiLineupTeam.coachId,
+
+        coachName:
+          htwbApiLineupTeam.coachName,
 
         nextTrainingDate:
           htwbApiLineupLeagueSchedule.trainingDate,
