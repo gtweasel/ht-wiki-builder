@@ -285,7 +285,10 @@ function populateWikiFields(data) {
   setField(
     "field-logouri",
     "include-logouri",
-    data.logoUrl
+    data.teamId
+      ? `${data.teamId}.png`
+      : "",
+    true
   );
 
   setField(
