@@ -1,5 +1,5 @@
-function enc(value) {
-  return encodeURIComponent(String(value))
+function htwbApiTeamEnc(htwbApiTeamValue) {
+  return encodeURIComponent(String(htwbApiTeamValue))
     .replace(/!/g, "%21")
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
@@ -7,28 +7,28 @@ function enc(value) {
     .replace(/\*/g, "%2A");
 }
 
-function nonce() {
+function htwbApiTeamNonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function getCookie(request, name) {
-  const cookie = request.headers.get("Cookie") || "";
+function htwbApiTeamGetCookie(htwbApiTeamRequest, htwbApiTeamName) {
+  const htwbApiTeamCookie = htwbApiTeamRequest.headers.get("Cookie") || "";
 
-  for (const part of cookie.split(";")) {
-    const [key, ...value] = part.trim().split("=");
+  for (const htwbApiTeamPart of htwbApiTeamCookie.split(";")) {
+    const [htwbApiTeamKey, ...htwbApiTeamValue] = htwbApiTeamPart.trim().split("=");
 
-    if (key === name) {
-      return decodeURIComponent(value.join("="));
+    if (htwbApiTeamKey === htwbApiTeamName) {
+      return decodeURIComponent(htwbApiTeamValue.join("="));
     }
   }
 
   return null;
 }
 
-async function hmacSha1(key, text) {
-  const cryptoKey = await crypto.subtle.importKey(
+async function htwbApiTeamHmacSha1(htwbApiTeamKey, htwbApiTeamText) {
+  const htwbApiTeamCryptoKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(key),
+    new TextEncoder().encode(htwbApiTeamKey),
     {
       name: "HMAC",
       hash: "SHA-1"
@@ -37,19 +37,19 @@ async function hmacSha1(key, text) {
     ["sign"]
   );
 
-  const signature = await crypto.subtle.sign(
+  const htwbApiTeamSignature = await crypto.subtle.sign(
     "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(text)
+    htwbApiTeamCryptoKey,
+    new TextEncoder().encode(htwbApiTeamText)
   );
 
   return btoa(
-    String.fromCharCode(...new Uint8Array(signature))
+    String.fromCharCode(...new Uint8Array(htwbApiTeamSignature))
   );
 }
 
-function decodeXml(value) {
-  return String(value || "")
+function htwbApiTeamDecodeXml(htwbApiTeamValue) {
+  return String(htwbApiTeamValue || "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -57,199 +57,199 @@ function decodeXml(value) {
     .replace(/&apos;/g, "'");
 }
 
-function xmlValue(xml, tag) {
-  if (!xml) {
+function htwbApiTeamXmlValue(htwbApiTeamXml, htwbApiTeamTag) {
+  if (!htwbApiTeamXml) {
     return "";
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiTeamPattern = new RegExp(
+    `<${htwbApiTeamTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiTeamTag}>`,
     "i"
   );
 
-  const match = xml.match(pattern);
+  const htwbApiTeamMatch = htwbApiTeamXml.match(htwbApiTeamPattern);
 
-  if (!match) {
+  if (!htwbApiTeamMatch) {
     return "";
   }
 
-  return decodeXml(match[1].trim());
+  return htwbApiTeamDecodeXml(htwbApiTeamMatch[1].trim());
 }
 
-function xmlContainer(xml, tag) {
-  if (!xml) {
+function htwbApiTeamXmlContainer(htwbApiTeamXml, htwbApiTeamTag) {
+  if (!htwbApiTeamXml) {
     return "";
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiTeamPattern = new RegExp(
+    `<${htwbApiTeamTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiTeamTag}>`,
     "i"
   );
 
-  const match = xml.match(pattern);
+  const htwbApiTeamMatch = htwbApiTeamXml.match(htwbApiTeamPattern);
 
-  return match ? match[1] : "";
+  return htwbApiTeamMatch ? htwbApiTeamMatch[1] : "";
 }
 
-function xmlContainers(xml, tag) {
-  if (!xml) {
+function htwbApiTeamXmlContainers(htwbApiTeamXml, htwbApiTeamTag) {
+  if (!htwbApiTeamXml) {
     return [];
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiTeamPattern = new RegExp(
+    `<${htwbApiTeamTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiTeamTag}>`,
     "gi"
   );
 
-  return [...xml.matchAll(pattern)].map(
-    match => match[1]
+  return [...htwbApiTeamXml.matchAll(htwbApiTeamPattern)].map(
+    htwbApiTeamMatch => htwbApiTeamMatch[1]
   );
 }
 
-async function chppFetch(context, query) {
-  const endpoint =
+async function htwbApiTeamChppFetch(htwbApiTeamContext, htwbApiTeamQuery) {
+  const htwbApiTeamEndpoint =
     "https://chpp.hattrick.org/chppxml.ashx";
 
-  const accessToken =
-    getCookie(context.request, "chpp_access_token");
+  const htwbApiTeamAccessToken =
+    htwbApiTeamGetCookie(htwbApiTeamContext.request, "chpp_access_token");
 
-  const accessSecret =
-    getCookie(context.request, "chpp_access_secret");
+  const htwbApiTeamAccessSecret =
+    htwbApiTeamGetCookie(htwbApiTeamContext.request, "chpp_access_secret");
 
-  if (!accessToken || !accessSecret) {
-    const error = new Error("Not logged in");
-    error.status = 401;
-    throw error;
+  if (!htwbApiTeamAccessToken || !htwbApiTeamAccessSecret) {
+    const htwbApiTeamError = new Error("Not logged in");
+    htwbApiTeamError.status = 401;
+    throw htwbApiTeamError;
   }
 
-  const oauth = {
+  const htwbApiTeamOauth = {
     oauth_consumer_key:
-      context.env.CHPP_CONSUMER_KEY,
-    oauth_nonce: nonce(),
+      htwbApiTeamContext.env.CHPP_CONSUMER_KEY,
+    oauth_nonce: htwbApiTeamNonce(),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp:
       Math.floor(Date.now() / 1000).toString(),
-    oauth_token: accessToken,
+    oauth_token: htwbApiTeamAccessToken,
     oauth_version: "1.0"
   };
 
-  const allParameters = {
-    ...query,
-    ...oauth
+  const htwbApiTeamAllParameters = {
+    ...htwbApiTeamQuery,
+    ...htwbApiTeamOauth
   };
 
-  const parameterString =
-    Object.entries(allParameters)
-      .map(([key, value]) => [
-        enc(key),
-        enc(value)
+  const htwbApiTeamParameterString =
+    Object.entries(htwbApiTeamAllParameters)
+      .map(([htwbApiTeamKey, htwbApiTeamValue]) => [
+        htwbApiTeamEnc(htwbApiTeamKey),
+        htwbApiTeamEnc(htwbApiTeamValue)
       ])
-      .sort((a, b) => {
-        if (a[0] === b[0]) {
-          return a[1].localeCompare(b[1]);
+      .sort((htwbApiTeamA, htwbApiTeamB) => {
+        if (htwbApiTeamA[0] === htwbApiTeamB[0]) {
+          return htwbApiTeamA[1].localeCompare(htwbApiTeamB[1]);
         }
 
-        return a[0].localeCompare(b[0]);
+        return htwbApiTeamA[0].localeCompare(htwbApiTeamB[0]);
       })
       .map(
-        ([key, value]) =>
-          `${key}=${value}`
+        ([htwbApiTeamKey, htwbApiTeamValue]) =>
+          `${htwbApiTeamKey}=${htwbApiTeamValue}`
       )
       .join("&");
 
-  const signatureBase =
-    `GET&${enc(endpoint)}&${enc(parameterString)}`;
+  const htwbApiTeamSignatureBase =
+    `GET&${htwbApiTeamEnc(htwbApiTeamEndpoint)}&${htwbApiTeamEnc(htwbApiTeamParameterString)}`;
 
-  const signingKey =
-    `${enc(context.env.CHPP_CONSUMER_SECRET)}&${enc(accessSecret)}`;
+  const htwbApiTeamSigningKey =
+    `${htwbApiTeamEnc(htwbApiTeamContext.env.CHPP_CONSUMER_SECRET)}&${htwbApiTeamEnc(htwbApiTeamAccessSecret)}`;
 
-  oauth.oauth_signature =
-    await hmacSha1(signingKey, signatureBase);
+  htwbApiTeamOauth.oauth_signature =
+    await htwbApiTeamHmacSha1(htwbApiTeamSigningKey, htwbApiTeamSignatureBase);
 
-  const authorization =
+  const htwbApiTeamAuthorization =
     "OAuth " +
-    Object.entries(oauth)
-      .sort((a, b) => a[0].localeCompare(b[0]))
+    Object.entries(htwbApiTeamOauth)
+      .sort((htwbApiTeamA, htwbApiTeamB) => htwbApiTeamA[0].localeCompare(htwbApiTeamB[0]))
       .map(
-        ([key, value]) =>
-          `${enc(key)}="${enc(value)}"`
+        ([htwbApiTeamKey, htwbApiTeamValue]) =>
+          `${htwbApiTeamEnc(htwbApiTeamKey)}="${htwbApiTeamEnc(htwbApiTeamValue)}"`
       )
       .join(", ");
 
-  const queryString =
-    Object.entries(query)
+  const htwbApiTeamQueryString =
+    Object.entries(htwbApiTeamQuery)
       .map(
-        ([key, value]) =>
-          `${enc(key)}=${enc(value)}`
+        ([htwbApiTeamKey, htwbApiTeamValue]) =>
+          `${htwbApiTeamEnc(htwbApiTeamKey)}=${htwbApiTeamEnc(htwbApiTeamValue)}`
       )
       .join("&");
 
-  const response = await fetch(
-    `${endpoint}?${queryString}`,
+  const htwbApiTeamResponse = await fetch(
+    `${htwbApiTeamEndpoint}?${htwbApiTeamQueryString}`,
     {
       method: "GET",
       headers: {
-        Authorization: authorization,
+        Authorization: htwbApiTeamAuthorization,
         "User-Agent": "HT Wiki Builder/0.1"
       }
     }
   );
 
-  const xml = await response.text();
+  const htwbApiTeamXml = await htwbApiTeamResponse.text();
 
-  if (!response.ok) {
-    const error = new Error(
-      `CHPP request failed with status ${response.status}`
+  if (!htwbApiTeamResponse.ok) {
+    const htwbApiTeamError = new Error(
+      `CHPP request failed with status ${htwbApiTeamResponse.status}`
     );
 
-    error.status = 502;
-    throw error;
+    htwbApiTeamError.status = 502;
+    throw htwbApiTeamError;
   }
 
-  return xml;
+  return htwbApiTeamXml;
 }
 
-async function optionalChppFetch(context, query) {
+async function htwbApiTeamOptionalChppFetch(htwbApiTeamContext, htwbApiTeamQuery) {
   try {
-    return await chppFetch(context, query);
-  } catch (error) {
+    return await htwbApiTeamChppFetch(htwbApiTeamContext, htwbApiTeamQuery);
+  } catch (htwbApiTeamError) {
     console.error(
-      `Optional CHPP request failed for ${query.file}:`,
-      error
+      `Optional CHPP request failed for ${htwbApiTeamQuery.file}:`,
+      htwbApiTeamError
     );
 
     return "";
   }
 }
 
-function findLeague(worldXml, leagueId) {
-  if (!worldXml || !leagueId) {
+function htwbApiTeamFindLeague(htwbApiTeamWorldXml, htwbApiTeamLeagueId) {
+  if (!htwbApiTeamWorldXml || !htwbApiTeamLeagueId) {
     return null;
   }
 
-  const leagueList =
-    xmlContainer(worldXml, "LeagueList");
+  const htwbApiTeamLeagueList =
+    htwbApiTeamXmlContainer(htwbApiTeamWorldXml, "LeagueList");
 
-  const leagues =
-    xmlContainers(leagueList, "League");
+  const htwbApiTeamLeagues =
+    htwbApiTeamXmlContainers(htwbApiTeamLeagueList, "League");
 
-  for (const leagueXml of leagues) {
+  for (const htwbApiTeamLeagueXml of htwbApiTeamLeagues) {
     if (
-      String(xmlValue(leagueXml, "LeagueID")) ===
-      String(leagueId)
+      String(htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueID")) ===
+      String(htwbApiTeamLeagueId)
     ) {
       return {
         leagueId:
-          xmlValue(leagueXml, "LeagueID"),
+          htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueID"),
         leagueName:
-          xmlValue(leagueXml, "LeagueName"),
+          htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueName"),
         englishName:
-          xmlValue(leagueXml, "EnglishName"),
+          htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "EnglishName"),
         season:
-          xmlValue(leagueXml, "Season"),
+          htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "Season"),
         countryName:
-          xmlValue(
-            xmlContainer(leagueXml, "Country"),
+          htwbApiTeamXmlValue(
+            htwbApiTeamXmlContainer(htwbApiTeamLeagueXml, "Country"),
             "CountryName"
           )
       };
@@ -259,38 +259,38 @@ function findLeague(worldXml, leagueId) {
   return null;
 }
 
-function findLeaguePosition(
-  leagueDetailsXml,
-  teamId
+function htwbApiTeamFindLeaguePosition(
+  htwbApiTeamLeagueDetailsXml,
+  htwbApiTeamTeamId
 ) {
-  if (!leagueDetailsXml || !teamId) {
+  if (!htwbApiTeamLeagueDetailsXml || !htwbApiTeamTeamId) {
     return "";
   }
 
-  const teams =
-    xmlContainers(leagueDetailsXml, "Team");
+  const htwbApiTeamTeams =
+    htwbApiTeamXmlContainers(htwbApiTeamLeagueDetailsXml, "Team");
 
-  for (const teamXml of teams) {
+  for (const htwbApiTeamTeamXml of htwbApiTeamTeams) {
     if (
-      String(xmlValue(teamXml, "TeamID")) ===
-      String(teamId)
+      String(htwbApiTeamXmlValue(htwbApiTeamTeamXml, "TeamID")) ===
+      String(htwbApiTeamTeamId)
     ) {
-      return xmlValue(teamXml, "Position");
+      return htwbApiTeamXmlValue(htwbApiTeamTeamXml, "Position");
     }
   }
 
   return "";
 }
 
-export async function onRequestGet(context) {
-  const url = new URL(context.request.url);
+export async function onRequestGet(htwbApiTeamContext) {
+  const htwbApiTeamUrl = new URL(htwbApiTeamContext.request.url);
 
-  const requestedTeamId =
-    url.searchParams.get("teamId");
+  const htwbApiTeamRequestedTeamId =
+    htwbApiTeamUrl.searchParams.get("teamId");
 
   if (
-    !requestedTeamId ||
-    !/^\d+$/.test(requestedTeamId)
+    !htwbApiTeamRequestedTeamId ||
+    !/^\d+$/.test(htwbApiTeamRequestedTeamId)
   ) {
     return Response.json(
       {
@@ -306,22 +306,22 @@ export async function onRequestGet(context) {
   }
 
   try {
-    const teamDetailsXml = await chppFetch(
-      context,
+    const htwbApiTeamTeamDetailsXml = await htwbApiTeamChppFetch(
+      htwbApiTeamContext,
       {
         file: "teamdetails",
         version: "1.7",
-        teamID: requestedTeamId
+        teamID: htwbApiTeamRequestedTeamId
       }
     );
 
-    const userXml =
-      xmlContainer(teamDetailsXml, "User");
+    const htwbApiTeamUserXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamDetailsXml, "User");
 
-    const teamXml =
-      xmlContainer(teamDetailsXml, "Team");
+    const htwbApiTeamTeamXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamDetailsXml, "Team");
 
-    if (!teamXml) {
+    if (!htwbApiTeamTeamXml) {
       return Response.json(
         {
           error: "Hattrick did not return a team for that TeamID."
@@ -335,140 +335,140 @@ export async function onRequestGet(context) {
       );
     }
 
-    const teamId =
-      xmlValue(teamXml, "TeamID");
+    const htwbApiTeamTeamId =
+      htwbApiTeamXmlValue(htwbApiTeamTeamXml, "TeamID");
 
-    const teamName =
-      xmlValue(teamXml, "TeamName");
+    const htwbApiTeamTeamName =
+      htwbApiTeamXmlValue(htwbApiTeamTeamXml, "TeamName");
 
-    const shortTeamName =
-      xmlValue(teamXml, "ShortTeamName");
+    const htwbApiTeamShortTeamName =
+      htwbApiTeamXmlValue(htwbApiTeamTeamXml, "ShortTeamName");
 
-    const managerName =
-      xmlValue(userXml, "Loginname");
+    const htwbApiTeamManagerName =
+      htwbApiTeamXmlValue(htwbApiTeamUserXml, "Loginname");
 
-    const ownerUserId =
-      xmlValue(userXml, "UserID");
+    const htwbApiTeamOwnerUserId =
+      htwbApiTeamXmlValue(htwbApiTeamUserXml, "UserID");
 
-    const activationDate =
-      xmlValue(userXml, "ActivationDate");
+    const htwbApiTeamActivationDate =
+      htwbApiTeamXmlValue(htwbApiTeamUserXml, "ActivationDate");
 
-    const rootBeforeUser =
-      teamDetailsXml.split(/<User(?:\s|>)/i)[0];
+    const htwbApiTeamRootBeforeUser =
+      htwbApiTeamTeamDetailsXml.split(/<User(?:\s|>)/i)[0];
 
-    const loggedInUserId =
-      xmlValue(rootBeforeUser, "UserID");
+    const htwbApiTeamLoggedInUserId =
+      htwbApiTeamXmlValue(htwbApiTeamRootBeforeUser, "UserID");
 
-    const isManagedTeam =
+    const htwbApiTeamIsManagedTeam =
       Boolean(
-        loggedInUserId &&
-        ownerUserId &&
-        String(loggedInUserId) ===
-          String(ownerUserId)
+        htwbApiTeamLoggedInUserId &&
+        htwbApiTeamOwnerUserId &&
+        String(htwbApiTeamLoggedInUserId) ===
+          String(htwbApiTeamOwnerUserId)
       );
 
-    const arenaXml =
-      xmlContainer(teamXml, "Arena");
+    const htwbApiTeamArenaXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamXml, "Arena");
 
-    const arenaId =
-      xmlValue(arenaXml, "ArenaID");
+    const htwbApiTeamArenaId =
+      htwbApiTeamXmlValue(htwbApiTeamArenaXml, "ArenaID");
 
-    const arenaName =
-      xmlValue(arenaXml, "ArenaName");
+    const htwbApiTeamArenaName =
+      htwbApiTeamXmlValue(htwbApiTeamArenaXml, "ArenaName");
 
-    const leagueXml =
-      xmlContainer(teamXml, "League");
+    const htwbApiTeamLeagueXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamXml, "League");
 
-    const leagueId =
-      xmlValue(leagueXml, "LeagueID");
+    const htwbApiTeamLeagueId =
+      htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueID");
 
-    const countryFromTeam =
-      xmlValue(leagueXml, "LeagueName");
+    const htwbApiTeamCountryFromTeam =
+      htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueName");
 
-    const regionXml =
-      xmlContainer(teamXml, "Region");
+    const htwbApiTeamRegionXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamXml, "Region");
 
-    const region =
-      xmlValue(regionXml, "RegionName");
+    const htwbApiTeamRegion =
+      htwbApiTeamXmlValue(htwbApiTeamRegionXml, "RegionName");
 
-    const leagueLevelUnitXml =
-      xmlContainer(
-        teamXml,
+    const htwbApiTeamLeagueLevelUnitXml =
+      htwbApiTeamXmlContainer(
+        htwbApiTeamTeamXml,
         "LeagueLevelUnit"
       );
 
-    const leagueLevelUnitId =
-      xmlValue(
-        leagueLevelUnitXml,
+    const htwbApiTeamLeagueLevelUnitId =
+      htwbApiTeamXmlValue(
+        htwbApiTeamLeagueLevelUnitXml,
         "LeagueLevelUnitID"
       );
 
-    const league =
-      xmlValue(
-        leagueLevelUnitXml,
+    const htwbApiTeamLeague =
+      htwbApiTeamXmlValue(
+        htwbApiTeamLeagueLevelUnitXml,
         "LeagueLevelUnitName"
       );
 
-    const trainerXml =
-      xmlContainer(teamXml, "Trainer");
+    const htwbApiTeamTrainerXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamXml, "Trainer");
 
-    const coachId =
-      xmlValue(trainerXml, "PlayerID");
+    const htwbApiTeamCoachId =
+      htwbApiTeamXmlValue(htwbApiTeamTrainerXml, "PlayerID");
 
-    const coachName =
-      xmlValue(trainerXml, "PlayerName");
+    const htwbApiTeamCoachName =
+      htwbApiTeamXmlValue(htwbApiTeamTrainerXml, "PlayerName");
 
-    const fanclubXml =
-      xmlContainer(teamXml, "Fanclub");
+    const htwbApiTeamFanclubXml =
+      htwbApiTeamXmlContainer(htwbApiTeamTeamXml, "Fanclub");
 
-    const fanclubName =
-      xmlValue(fanclubXml, "FanclubName");
+    const htwbApiTeamFanclubName =
+      htwbApiTeamXmlValue(htwbApiTeamFanclubXml, "FanclubName");
 
-    const logoUrl =
-      xmlValue(teamXml, "LogoURL");
+    const htwbApiTeamLogoUrl =
+      htwbApiTeamXmlValue(htwbApiTeamTeamXml, "LogoURL");
 
     const [
-      arenaDetailsXml,
-      leagueDetailsXml,
-      playerDetailsXml,
-      worldDetailsXml
+      htwbApiTeamArenaDetailsXml,
+      htwbApiTeamLeagueDetailsXml,
+      htwbApiTeamPlayerDetailsXml,
+      htwbApiTeamWorldDetailsXml
     ] = await Promise.all([
-      arenaId
-        ? optionalChppFetch(
-            context,
+      htwbApiTeamArenaId
+        ? htwbApiTeamOptionalChppFetch(
+            htwbApiTeamContext,
             {
               file: "arenadetails",
               version: "1.2",
-              arenaID: arenaId
+              arenaID: htwbApiTeamArenaId
             }
           )
         : Promise.resolve(""),
 
-      leagueLevelUnitId
-        ? optionalChppFetch(
-            context,
+      htwbApiTeamLeagueLevelUnitId
+        ? htwbApiTeamOptionalChppFetch(
+            htwbApiTeamContext,
             {
               file: "leaguedetails",
               version: "1.1",
               leagueLevelUnitID:
-                leagueLevelUnitId
+                htwbApiTeamLeagueLevelUnitId
             }
           )
         : Promise.resolve(""),
 
-      coachId
-        ? optionalChppFetch(
-            context,
+      htwbApiTeamCoachId
+        ? htwbApiTeamOptionalChppFetch(
+            htwbApiTeamContext,
             {
               file: "playerdetails",
               version: "1.1",
-              playerID: coachId
+              playerID: htwbApiTeamCoachId
             }
           )
         : Promise.resolve(""),
 
-      optionalChppFetch(
-        context,
+      htwbApiTeamOptionalChppFetch(
+        htwbApiTeamContext,
         {
           file: "worlddetails",
           version: "1.2"
@@ -476,110 +476,110 @@ export async function onRequestGet(context) {
       )
     ]);
 
-    const currentCapacityXml =
-      xmlContainer(
-        arenaDetailsXml,
+    const htwbApiTeamCurrentCapacityXml =
+      htwbApiTeamXmlContainer(
+        htwbApiTeamArenaDetailsXml,
         "CurrentCapacity"
       );
 
-    const arenaCapacity =
-      xmlValue(
-        currentCapacityXml,
+    const htwbApiTeamArenaCapacity =
+      htwbApiTeamXmlValue(
+        htwbApiTeamCurrentCapacityXml,
         "Total"
       );
 
-    const leaguePosition =
-      findLeaguePosition(
-        leagueDetailsXml,
-        teamId
+    const htwbApiTeamLeaguePosition =
+      htwbApiTeamFindLeaguePosition(
+        htwbApiTeamLeagueDetailsXml,
+        htwbApiTeamTeamId
       );
 
-    const coachPlayerXml =
-      xmlContainer(
-        playerDetailsXml,
+    const htwbApiTeamCoachPlayerXml =
+      htwbApiTeamXmlContainer(
+        htwbApiTeamPlayerDetailsXml,
         "Player"
       );
 
-    const coachNativeLeagueId =
-      xmlValue(
-        coachPlayerXml,
+    const htwbApiTeamCoachNativeLeagueId =
+      htwbApiTeamXmlValue(
+        htwbApiTeamCoachPlayerXml,
         "NativeLeagueID"
       );
 
-    const coachNativeLeagueName =
-      xmlValue(
-        coachPlayerXml,
+    const htwbApiTeamCoachNativeLeagueName =
+      htwbApiTeamXmlValue(
+        htwbApiTeamCoachPlayerXml,
         "NativeLeagueName"
       );
 
-    const teamWorldLeague =
-      findLeague(
-        worldDetailsXml,
-        leagueId
+    const htwbApiTeamTeamWorldLeague =
+      htwbApiTeamFindLeague(
+        htwbApiTeamWorldDetailsXml,
+        htwbApiTeamLeagueId
       );
 
-    const coachWorldLeague =
-      findLeague(
-        worldDetailsXml,
-        coachNativeLeagueId
+    const htwbApiTeamCoachWorldLeague =
+      htwbApiTeamFindLeague(
+        htwbApiTeamWorldDetailsXml,
+        htwbApiTeamCoachNativeLeagueId
       );
 
-    const country =
-      teamWorldLeague
+    const htwbApiTeamCountry =
+      htwbApiTeamTeamWorldLeague
         ? (
-            teamWorldLeague.englishName ||
-            teamWorldLeague.countryName ||
-            teamWorldLeague.leagueName
+            htwbApiTeamTeamWorldLeague.englishName ||
+            htwbApiTeamTeamWorldLeague.countryName ||
+            htwbApiTeamTeamWorldLeague.leagueName
           )
-        : countryFromTeam;
+        : htwbApiTeamCountryFromTeam;
 
-    const coachNationality =
-      coachWorldLeague
+    const htwbApiTeamCoachNationality =
+      htwbApiTeamCoachWorldLeague
         ? (
-            coachWorldLeague.englishName ||
-            coachWorldLeague.countryName ||
-            coachWorldLeague.leagueName
+            htwbApiTeamCoachWorldLeague.englishName ||
+            htwbApiTeamCoachWorldLeague.countryName ||
+            htwbApiTeamCoachWorldLeague.leagueName
           )
-        : coachNativeLeagueName;
+        : htwbApiTeamCoachNativeLeagueName;
 
-    const currentSeason =
-      teamWorldLeague
-        ? teamWorldLeague.season
+    const htwbApiTeamCurrentSeason =
+      htwbApiTeamTeamWorldLeague
+        ? htwbApiTeamTeamWorldLeague.season
         : "";
 
     return Response.json(
       {
-        teamId,
-        teamName,
-        shortTeamName,
-        managerName,
+        teamId: htwbApiTeamTeamId,
+        teamName: htwbApiTeamTeamName,
+        shortTeamName: htwbApiTeamShortTeamName,
+        managerName: htwbApiTeamManagerName,
 
-        isManagedTeam,
+        isManagedTeam: htwbApiTeamIsManagedTeam,
 
-        region,
-        country,
+        region: htwbApiTeamRegion,
+        country: htwbApiTeamCountry,
 
-        league,
-        leagueLevelUnitId,
-        leaguePosition,
+        league: htwbApiTeamLeague,
+        leagueLevelUnitId: htwbApiTeamLeagueLevelUnitId,
+        leaguePosition: htwbApiTeamLeaguePosition,
 
-        arenaId,
-        arenaName,
-        arenaCapacity,
+        arenaId: htwbApiTeamArenaId,
+        arenaName: htwbApiTeamArenaName,
+        arenaCapacity: htwbApiTeamArenaCapacity,
 
-        coachId,
-        coachName,
-        coachNationality,
+        coachId: htwbApiTeamCoachId,
+        coachName: htwbApiTeamCoachName,
+        coachNationality: htwbApiTeamCoachNationality,
 
-        fanclubName,
-        logoUrl,
+        fanclubName: htwbApiTeamFanclubName,
+        logoUrl: htwbApiTeamLogoUrl,
 
         activationDate:
-          isManagedTeam
-            ? activationDate
+          htwbApiTeamIsManagedTeam
+            ? htwbApiTeamActivationDate
             : "",
 
-        currentSeason
+        currentSeason: htwbApiTeamCurrentSeason
       },
       {
         headers: {
@@ -587,26 +587,26 @@ export async function onRequestGet(context) {
         }
       }
     );
-  } catch (error) {
+  } catch (htwbApiTeamError) {
     console.error(
       "Team builder API error:",
-      error
+      htwbApiTeamError
     );
 
-    const status =
-      error.status === 401
+    const htwbApiTeamStatus =
+      htwbApiTeamError.status === 401
         ? 401
         : 502;
 
     return Response.json(
       {
         error:
-          status === 401
+          htwbApiTeamStatus === 401
             ? "Not logged in"
             : "Could not load team data from Hattrick."
       },
       {
-        status,
+        status: htwbApiTeamStatus,
         headers: {
           "Cache-Control": "no-store"
         }

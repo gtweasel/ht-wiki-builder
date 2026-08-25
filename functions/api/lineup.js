@@ -1,5 +1,5 @@
-function enc(value) {
-  return encodeURIComponent(String(value))
+function htwbApiLineupEnc(htwbApiLineupValue) {
+  return encodeURIComponent(String(htwbApiLineupValue))
     .replace(/!/g, "%21")
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
@@ -7,28 +7,28 @@ function enc(value) {
     .replace(/\*/g, "%2A");
 }
 
-function nonce() {
+function htwbApiLineupNonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function getCookie(request, name) {
-  const cookie = request.headers.get("Cookie") || "";
+function htwbApiLineupGetCookie(htwbApiLineupRequest, htwbApiLineupName) {
+  const htwbApiLineupCookie = htwbApiLineupRequest.headers.get("Cookie") || "";
 
-  for (const part of cookie.split(";")) {
-    const [key, ...value] = part.trim().split("=");
+  for (const htwbApiLineupPart of htwbApiLineupCookie.split(";")) {
+    const [htwbApiLineupKey, ...htwbApiLineupValue] = htwbApiLineupPart.trim().split("=");
 
-    if (key === name) {
-      return decodeURIComponent(value.join("="));
+    if (htwbApiLineupKey === htwbApiLineupName) {
+      return decodeURIComponent(htwbApiLineupValue.join("="));
     }
   }
 
   return null;
 }
 
-async function hmacSha1(key, text) {
-  const cryptoKey = await crypto.subtle.importKey(
+async function htwbApiLineupHmacSha1(htwbApiLineupKey, htwbApiLineupText) {
+  const htwbApiLineupCryptoKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(key),
+    new TextEncoder().encode(htwbApiLineupKey),
     {
       name: "HMAC",
       hash: "SHA-1"
@@ -37,21 +37,21 @@ async function hmacSha1(key, text) {
     ["sign"]
   );
 
-  const signature = await crypto.subtle.sign(
+  const htwbApiLineupSignature = await crypto.subtle.sign(
     "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(text)
+    htwbApiLineupCryptoKey,
+    new TextEncoder().encode(htwbApiLineupText)
   );
 
   return btoa(
     String.fromCharCode(
-      ...new Uint8Array(signature)
+      ...new Uint8Array(htwbApiLineupSignature)
     )
   );
 }
 
-function decodeXml(value) {
-  return String(value || "")
+function htwbApiLineupDecodeXml(htwbApiLineupValue) {
+  return String(htwbApiLineupValue || "")
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -59,108 +59,108 @@ function decodeXml(value) {
     .replace(/&apos;/g, "'");
 }
 
-function xmlValue(xml, tag) {
-  if (!xml) {
+function htwbApiLineupXmlValue(htwbApiLineupXml, htwbApiLineupTag) {
+  if (!htwbApiLineupXml) {
     return "";
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiLineupPattern = new RegExp(
+    `<${htwbApiLineupTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiLineupTag}>`,
     "i"
   );
 
-  const match = xml.match(pattern);
+  const htwbApiLineupMatch = htwbApiLineupXml.match(htwbApiLineupPattern);
 
-  if (!match) {
+  if (!htwbApiLineupMatch) {
     return "";
   }
 
-  return decodeXml(match[1].trim());
+  return htwbApiLineupDecodeXml(htwbApiLineupMatch[1].trim());
 }
 
-function xmlContainer(xml, tag) {
-  if (!xml) {
+function htwbApiLineupXmlContainer(htwbApiLineupXml, htwbApiLineupTag) {
+  if (!htwbApiLineupXml) {
     return "";
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiLineupPattern = new RegExp(
+    `<${htwbApiLineupTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiLineupTag}>`,
     "i"
   );
 
-  const match = xml.match(pattern);
+  const htwbApiLineupMatch = htwbApiLineupXml.match(htwbApiLineupPattern);
 
-  return match ? match[1] : "";
+  return htwbApiLineupMatch ? htwbApiLineupMatch[1] : "";
 }
 
-function xmlContainers(xml, tag) {
-  if (!xml) {
+function htwbApiLineupXmlContainers(htwbApiLineupXml, htwbApiLineupTag) {
+  if (!htwbApiLineupXml) {
     return [];
   }
 
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+  const htwbApiLineupPattern = new RegExp(
+    `<${htwbApiLineupTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiLineupTag}>`,
     "gi"
   );
 
-  return [...xml.matchAll(pattern)].map(
-    match => match[1]
+  return [...htwbApiLineupXml.matchAll(htwbApiLineupPattern)].map(
+    htwbApiLineupMatch => htwbApiLineupMatch[1]
   );
 }
 
-function xmlNumber(xml, tag) {
-  const value = xmlValue(xml, tag);
+function htwbApiLineupXmlNumber(htwbApiLineupXml, htwbApiLineupTag) {
+  const htwbApiLineupValue = htwbApiLineupXmlValue(htwbApiLineupXml, htwbApiLineupTag);
 
   if (
-    value === "" ||
-    String(value).toUpperCase() === "NOT AVAILABLE"
+    htwbApiLineupValue === "" ||
+    String(htwbApiLineupValue).toUpperCase() === "NOT AVAILABLE"
   ) {
     return null;
   }
 
-  const number = Number(value);
+  const htwbApiLineupNumber = Number(htwbApiLineupValue);
 
-  return Number.isFinite(number)
-    ? number
+  return Number.isFinite(htwbApiLineupNumber)
+    ? htwbApiLineupNumber
     : null;
 }
 
-function makeError(message, status = 502) {
-  const error = new Error(message);
-  error.status = status;
+function htwbApiLineupMakeError(htwbApiLineupMessage, htwbApiLineupStatus = 502) {
+  const htwbApiLineupError = new Error(htwbApiLineupMessage);
+  htwbApiLineupError.status = htwbApiLineupStatus;
 
-  return error;
+  return htwbApiLineupError;
 }
 
-async function chppFetch(context, query) {
-  const endpoint =
+async function htwbApiLineupChppFetch(htwbApiLineupContext, htwbApiLineupQuery) {
+  const htwbApiLineupEndpoint =
     "https://chpp.hattrick.org/chppxml.ashx";
 
-  const accessToken =
-    getCookie(
-      context.request,
+  const htwbApiLineupAccessToken =
+    htwbApiLineupGetCookie(
+      htwbApiLineupContext.request,
       "chpp_access_token"
     );
 
-  const accessSecret =
-    getCookie(
-      context.request,
+  const htwbApiLineupAccessSecret =
+    htwbApiLineupGetCookie(
+      htwbApiLineupContext.request,
       "chpp_access_secret"
     );
 
-  if (!accessToken || !accessSecret) {
-    throw makeError(
+  if (!htwbApiLineupAccessToken || !htwbApiLineupAccessSecret) {
+    throw htwbApiLineupMakeError(
       "Not logged in",
       401
     );
   }
 
-  const oauth = {
+  const htwbApiLineupOauth = {
     oauth_consumer_key:
-      context.env.CHPP_CONSUMER_KEY,
+      htwbApiLineupContext.env.CHPP_CONSUMER_KEY,
 
     oauth_nonce:
-      nonce(),
+      htwbApiLineupNonce(),
 
     oauth_signature_method:
       "HMAC-SHA1",
@@ -171,92 +171,92 @@ async function chppFetch(context, query) {
       ).toString(),
 
     oauth_token:
-      accessToken,
+      htwbApiLineupAccessToken,
 
     oauth_version:
       "1.0"
   };
 
-  const allParameters = {
-    ...query,
-    ...oauth
+  const htwbApiLineupAllParameters = {
+    ...htwbApiLineupQuery,
+    ...htwbApiLineupOauth
   };
 
-  const parameterString =
-    Object.entries(allParameters)
-      .map(([key, value]) => [
-        enc(key),
-        enc(value)
+  const htwbApiLineupParameterString =
+    Object.entries(htwbApiLineupAllParameters)
+      .map(([htwbApiLineupKey, htwbApiLineupValue]) => [
+        htwbApiLineupEnc(htwbApiLineupKey),
+        htwbApiLineupEnc(htwbApiLineupValue)
       ])
-      .sort((a, b) => {
-        if (a[0] === b[0]) {
-          return a[1].localeCompare(b[1]);
+      .sort((htwbApiLineupA, htwbApiLineupB) => {
+        if (htwbApiLineupA[0] === htwbApiLineupB[0]) {
+          return htwbApiLineupA[1].localeCompare(htwbApiLineupB[1]);
         }
 
-        return a[0].localeCompare(b[0]);
+        return htwbApiLineupA[0].localeCompare(htwbApiLineupB[0]);
       })
       .map(
-        ([key, value]) =>
-          `${key}=${value}`
+        ([htwbApiLineupKey, htwbApiLineupValue]) =>
+          `${htwbApiLineupKey}=${htwbApiLineupValue}`
       )
       .join("&");
 
-  const signatureBase =
-    `GET&${enc(endpoint)}&${enc(parameterString)}`;
+  const htwbApiLineupSignatureBase =
+    `GET&${htwbApiLineupEnc(htwbApiLineupEndpoint)}&${htwbApiLineupEnc(htwbApiLineupParameterString)}`;
 
-  const signingKey =
-    `${enc(
-      context.env.CHPP_CONSUMER_SECRET
-    )}&${enc(accessSecret)}`;
+  const htwbApiLineupSigningKey =
+    `${htwbApiLineupEnc(
+      htwbApiLineupContext.env.CHPP_CONSUMER_SECRET
+    )}&${htwbApiLineupEnc(htwbApiLineupAccessSecret)}`;
 
-  oauth.oauth_signature =
-    await hmacSha1(
-      signingKey,
-      signatureBase
+  htwbApiLineupOauth.oauth_signature =
+    await htwbApiLineupHmacSha1(
+      htwbApiLineupSigningKey,
+      htwbApiLineupSignatureBase
     );
 
-  const authorization =
+  const htwbApiLineupAuthorization =
     "OAuth " +
-    Object.entries(oauth)
+    Object.entries(htwbApiLineupOauth)
       .sort(
-        (a, b) =>
-          a[0].localeCompare(b[0])
+        (htwbApiLineupA, htwbApiLineupB) =>
+          htwbApiLineupA[0].localeCompare(htwbApiLineupB[0])
       )
       .map(
-        ([key, value]) =>
-          `${enc(key)}="${enc(value)}"`
+        ([htwbApiLineupKey, htwbApiLineupValue]) =>
+          `${htwbApiLineupEnc(htwbApiLineupKey)}="${htwbApiLineupEnc(htwbApiLineupValue)}"`
       )
       .join(", ");
 
-  const queryString =
-    Object.entries(query)
+  const htwbApiLineupQueryString =
+    Object.entries(htwbApiLineupQuery)
       .map(
-        ([key, value]) =>
-          `${enc(key)}=${enc(value)}`
+        ([htwbApiLineupKey, htwbApiLineupValue]) =>
+          `${htwbApiLineupEnc(htwbApiLineupKey)}=${htwbApiLineupEnc(htwbApiLineupValue)}`
       )
       .join("&");
 
-  const response = await fetch(
-    `${endpoint}?${queryString}`,
+  const htwbApiLineupResponse = await fetch(
+    `${htwbApiLineupEndpoint}?${htwbApiLineupQueryString}`,
     {
       method: "GET",
       headers: {
-        Authorization: authorization,
+        Authorization: htwbApiLineupAuthorization,
         "User-Agent": "HT Wiki Builder/0.1"
       }
     }
   );
 
-  const xml = await response.text();
+  const htwbApiLineupXml = await htwbApiLineupResponse.text();
 
-  if (!response.ok) {
-    throw makeError(
-      `CHPP request failed with status ${response.status}`,
+  if (!htwbApiLineupResponse.ok) {
+    throw htwbApiLineupMakeError(
+      `CHPP request failed with status ${htwbApiLineupResponse.status}`,
       502
     );
   }
 
-  return xml;
+  return htwbApiLineupXml;
 }
 
 
@@ -264,98 +264,98 @@ async function chppFetch(context, query) {
    TEAM
    ========================================================= */
 
-function parseTeamDetails(
-  teamDetailsXml,
-  requestedTeamId
+function htwbApiLineupParseTeamDetails(
+  htwbApiLineupTeamDetailsXml,
+  htwbApiLineupRequestedTeamId
 ) {
-  const userXml =
-    xmlContainer(
-      teamDetailsXml,
+  const htwbApiLineupUserXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamDetailsXml,
       "User"
     );
 
-  const teamXml =
-    xmlContainer(
-      teamDetailsXml,
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamDetailsXml,
       "Team"
     );
 
-  if (!teamXml) {
-    throw makeError(
+  if (!htwbApiLineupTeamXml) {
+    throw htwbApiLineupMakeError(
       "Hattrick did not return that team.",
       404
     );
   }
 
-  const teamId =
-    xmlValue(
-      teamXml,
+  const htwbApiLineupTeamId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
       "TeamID"
     );
 
-  const teamName =
-    xmlValue(
-      teamXml,
+  const htwbApiLineupTeamName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
       "TeamName"
     );
 
   if (
-    String(teamId) !==
-    String(requestedTeamId)
+    String(htwbApiLineupTeamId) !==
+    String(htwbApiLineupRequestedTeamId)
   ) {
-    throw makeError(
+    throw htwbApiLineupMakeError(
       "Hattrick returned a different team than requested."
     );
   }
 
-  const ownerUserId =
-    xmlValue(
-      userXml,
+  const htwbApiLineupOwnerUserId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupUserXml,
       "UserID"
     );
 
-  const rootBeforeUser =
-    teamDetailsXml.split(
+  const htwbApiLineupRootBeforeUser =
+    htwbApiLineupTeamDetailsXml.split(
       /<User(?:\s|>)/i
     )[0];
 
-  const loggedInUserId =
-    xmlValue(
-      rootBeforeUser,
+  const htwbApiLineupLoggedInUserId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupRootBeforeUser,
       "UserID"
     );
 
-  const isManagedTeam =
+  const htwbApiLineupIsManagedTeam =
     Boolean(
-      loggedInUserId &&
-      ownerUserId &&
-      String(loggedInUserId) ===
-        String(ownerUserId)
+      htwbApiLineupLoggedInUserId &&
+      htwbApiLineupOwnerUserId &&
+      String(htwbApiLineupLoggedInUserId) ===
+        String(htwbApiLineupOwnerUserId)
     );
 
-  if (!isManagedTeam) {
-    throw makeError(
+  if (!htwbApiLineupIsManagedTeam) {
+    throw htwbApiLineupMakeError(
       "The Lineup Builder can only use the logged-in manager's own team.",
       403
     );
   }
 
-  const leagueXml =
-    xmlContainer(
-      teamXml,
+  const htwbApiLineupLeagueXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamXml,
       "League"
     );
 
-  const leagueId =
-    xmlValue(
-      leagueXml,
+  const htwbApiLineupLeagueId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupLeagueXml,
       "LeagueID"
     );
 
   return {
-    teamId,
-    teamName,
-    leagueId
+    teamId: htwbApiLineupTeamId,
+    teamName: htwbApiLineupTeamName,
+    leagueId: htwbApiLineupLeagueId
   };
 }
 
@@ -364,185 +364,185 @@ function parseTeamDetails(
    PLAYERS
    ========================================================= */
 
-function parsePlayers(
-  playersXml,
-  requestedTeamId
+function htwbApiLineupParsePlayers(
+  htwbApiLineupPlayersXml,
+  htwbApiLineupRequestedTeamId
 ) {
-  const teamXml =
-    xmlContainer(
-      playersXml,
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupPlayersXml,
       "Team"
     );
 
-  if (!teamXml) {
-    throw makeError(
+  if (!htwbApiLineupTeamXml) {
+    throw htwbApiLineupMakeError(
       "Hattrick did not return the roster."
     );
   }
 
-  const returnedTeamId =
-    xmlValue(
-      teamXml,
+  const htwbApiLineupReturnedTeamId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
       "TeamID"
     );
 
   if (
-    String(returnedTeamId) !==
-    String(requestedTeamId)
+    String(htwbApiLineupReturnedTeamId) !==
+    String(htwbApiLineupRequestedTeamId)
   ) {
-    throw makeError(
+    throw htwbApiLineupMakeError(
       "Hattrick returned the wrong roster."
     );
   }
 
-  const playerListXml =
-    xmlContainer(
-      teamXml,
+  const htwbApiLineupPlayerListXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamXml,
       "PlayerList"
     );
 
-  const playerXmlList =
-    xmlContainers(
-      playerListXml,
+  const htwbApiLineupPlayerXmlList =
+    htwbApiLineupXmlContainers(
+      htwbApiLineupPlayerListXml,
       "Player"
     );
 
-  const players =
-    playerXmlList.map(
-      playerXml => ({
+  const htwbApiLineupPlayers =
+    htwbApiLineupPlayerXmlList.map(
+      htwbApiLineupPlayerXml => ({
         playerId:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "PlayerID"
           ),
 
         name:
-          xmlValue(
-            playerXml,
+          htwbApiLineupXmlValue(
+            htwbApiLineupPlayerXml,
             "PlayerName"
           ),
 
         age:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "Age"
           ),
 
         ageDays:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "AgeDays"
           ),
 
         form:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "PlayerForm"
           ),
 
         stamina:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "StaminaSkill"
           ),
 
         keeper:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "KeeperSkill"
           ),
 
         defending:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "DefenderSkill"
           ),
 
         playmaking:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "PlaymakerSkill"
           ),
 
         winger:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "WingerSkill"
           ),
 
         passing:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "PassingSkill"
           ),
 
         scoring:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "ScorerSkill"
           ),
 
         setPieces:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "SetPiecesSkill"
           ),
 
         injuryLevel:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "InjuryLevel"
           ),
 
         cards:
-          xmlNumber(
-            playerXml,
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
             "Cards"
           )
       })
     );
 
-  if (!players.length) {
-    throw makeError(
+  if (!htwbApiLineupPlayers.length) {
+    throw htwbApiLineupMakeError(
       "No players were returned for this team."
     );
   }
 
-  const missingSkillData =
-    players.some(player =>
-      player.age === null ||
-      player.ageDays === null ||
-      player.form === null ||
-      player.stamina === null ||
-      player.keeper === null ||
-      player.defending === null ||
-      player.playmaking === null ||
-      player.winger === null ||
-      player.passing === null ||
-      player.scoring === null ||
-      player.setPieces === null
+  const htwbApiLineupMissingSkillData =
+    htwbApiLineupPlayers.some(htwbApiLineupPlayer =>
+      htwbApiLineupPlayer.age === null ||
+      htwbApiLineupPlayer.ageDays === null ||
+      htwbApiLineupPlayer.form === null ||
+      htwbApiLineupPlayer.stamina === null ||
+      htwbApiLineupPlayer.keeper === null ||
+      htwbApiLineupPlayer.defending === null ||
+      htwbApiLineupPlayer.playmaking === null ||
+      htwbApiLineupPlayer.winger === null ||
+      htwbApiLineupPlayer.passing === null ||
+      htwbApiLineupPlayer.scoring === null ||
+      htwbApiLineupPlayer.setPieces === null
     );
 
-  if (missingSkillData) {
-    throw makeError(
+  if (htwbApiLineupMissingSkillData) {
+    throw htwbApiLineupMakeError(
       "Hattrick did not return all player skill data."
     );
   }
 
-  const missingAvailabilityData =
-    players.some(player =>
-      player.injuryLevel === null ||
-      player.cards === null
+  const htwbApiLineupMissingAvailabilityData =
+    htwbApiLineupPlayers.some(htwbApiLineupPlayer =>
+      htwbApiLineupPlayer.injuryLevel === null ||
+      htwbApiLineupPlayer.cards === null
     );
 
-  if (missingAvailabilityData) {
-    throw makeError(
+  if (htwbApiLineupMissingAvailabilityData) {
+    throw htwbApiLineupMakeError(
       "Player injury/card data is temporarily unavailable while the team is playing.",
       409
     );
   }
 
-  return players;
+  return htwbApiLineupPlayers;
 }
 
 
@@ -555,7 +555,7 @@ function parsePlayers(
  * currently exposed through CHPP training XML.
  */
 
-const REQUIRED_FORMATIONS = [
+const HTWB_API_LINEUP_REQUIRED_FORMATIONS = [
   "4-3-3",
   "4-5-1",
   "3-5-2",
@@ -564,86 +564,86 @@ const REQUIRED_FORMATIONS = [
   "5-4-1"
 ];
 
-function parseFormationExperience(
-  trainingXml,
-  requestedTeamId
+function htwbApiLineupParseFormationExperience(
+  htwbApiLineupTrainingXml,
+  htwbApiLineupRequestedTeamId
 ) {
-  const teamXml =
-    xmlContainer(
-      trainingXml,
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTrainingXml,
       "Team"
     );
 
-  if (!teamXml) {
-    throw makeError(
+  if (!htwbApiLineupTeamXml) {
+    throw htwbApiLineupMakeError(
       "Hattrick did not return training data."
     );
   }
 
-  const returnedTeamId =
-    xmlValue(
-      teamXml,
+  const htwbApiLineupReturnedTeamId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
       "TeamID"
     );
 
   if (
-    returnedTeamId &&
-    String(returnedTeamId) !==
-      String(requestedTeamId)
+    htwbApiLineupReturnedTeamId &&
+    String(htwbApiLineupReturnedTeamId) !==
+      String(htwbApiLineupRequestedTeamId)
   ) {
-    throw makeError(
+    throw htwbApiLineupMakeError(
       "Hattrick returned training data for a different team."
     );
   }
 
-  const formationExperience = {};
+  const htwbApiLineupFormationExperience = {};
 
-  const pattern =
+  const htwbApiLineupPattern =
     /<Experience(\d{3})(?:\s[^>]*)?>([\s\S]*?)<\/Experience\1>/gi;
 
   for (
-    const match
-    of teamXml.matchAll(pattern)
+    const htwbApiLineupMatch
+    of htwbApiLineupTeamXml.matchAll(htwbApiLineupPattern)
   ) {
-    const digits =
-      match[1];
+    const htwbApiLineupDigits =
+      htwbApiLineupMatch[1];
 
-    const value =
+    const htwbApiLineupValue =
       Number(
-        decodeXml(
-          match[2].trim()
+        htwbApiLineupDecodeXml(
+          htwbApiLineupMatch[2].trim()
         )
       );
 
     if (
-      !Number.isFinite(value)
+      !Number.isFinite(htwbApiLineupValue)
     ) {
       continue;
     }
 
-    const formation =
-      `${digits[0]}-${digits[1]}-${digits[2]}`;
+    const htwbApiLineupFormation =
+      `${htwbApiLineupDigits[0]}-${htwbApiLineupDigits[1]}-${htwbApiLineupDigits[2]}`;
 
-    formationExperience[
-      formation
-    ] = value;
+    htwbApiLineupFormationExperience[
+      htwbApiLineupFormation
+    ] = htwbApiLineupValue;
   }
 
-  const missing =
-    REQUIRED_FORMATIONS.filter(
-      formation =>
-        formationExperience[
-          formation
+  const htwbApiLineupMissing =
+    HTWB_API_LINEUP_REQUIRED_FORMATIONS.filter(
+      htwbApiLineupFormation =>
+        htwbApiLineupFormationExperience[
+          htwbApiLineupFormation
         ] === undefined
     );
 
-  if (missing.length) {
-    throw makeError(
-      `Formation experience is missing for: ${missing.join(", ")}`
+  if (htwbApiLineupMissing.length) {
+    throw htwbApiLineupMakeError(
+      `Formation experience is missing for: ${htwbApiLineupMissing.join(", ")}`
     );
   }
 
-  return formationExperience;
+  return htwbApiLineupFormationExperience;
 }
 
 
@@ -651,51 +651,51 @@ function parseFormationExperience(
    WORLD DETAILS / TRAINING DATE
    ========================================================= */
 
-function findLeagueSchedule(
-  worldDetailsXml,
-  leagueId
+function htwbApiLineupFindLeagueSchedule(
+  htwbApiLineupWorldDetailsXml,
+  htwbApiLineupLeagueId
 ) {
-  const leagueListXml =
-    xmlContainer(
-      worldDetailsXml,
+  const htwbApiLineupLeagueListXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupWorldDetailsXml,
       "LeagueList"
     );
 
-  const leagues =
-    xmlContainers(
-      leagueListXml,
+  const htwbApiLineupLeagues =
+    htwbApiLineupXmlContainers(
+      htwbApiLineupLeagueListXml,
       "League"
     );
 
   for (
-    const leagueXml
-    of leagues
+    const htwbApiLineupLeagueXml
+    of htwbApiLineupLeagues
   ) {
-    const id =
-      xmlValue(
-        leagueXml,
+    const htwbApiLineupId =
+      htwbApiLineupXmlValue(
+        htwbApiLineupLeagueXml,
         "LeagueID"
       );
 
     if (
-      String(id) !==
-      String(leagueId)
+      String(htwbApiLineupId) !==
+      String(htwbApiLineupLeagueId)
     ) {
       continue;
     }
 
     return {
-      leagueId: id,
+      leagueId: htwbApiLineupId,
 
       leagueName:
-        xmlValue(
-          leagueXml,
+        htwbApiLineupXmlValue(
+          htwbApiLineupLeagueXml,
           "LeagueName"
         ),
 
       trainingDate:
-        xmlValue(
-          leagueXml,
+        htwbApiLineupXmlValue(
+          htwbApiLineupLeagueXml,
           "TrainingDate"
         )
     };
@@ -709,142 +709,142 @@ function findLeagueSchedule(
    MATCHES
    ========================================================= */
 
-function parseHattrickDate(value) {
-  if (!value) {
+function htwbApiLineupParseHattrickDate(htwbApiLineupValue) {
+  if (!htwbApiLineupValue) {
     return null;
   }
 
-  const normalized =
-    String(value)
+  const htwbApiLineupNormalized =
+    String(htwbApiLineupValue)
       .trim()
       .replace(" ", "T");
 
-  const milliseconds =
-    Date.parse(normalized);
+  const htwbApiLineupMilliseconds =
+    Date.parse(htwbApiLineupNormalized);
 
-  return Number.isFinite(milliseconds)
-    ? milliseconds
+  return Number.isFinite(htwbApiLineupMilliseconds)
+    ? htwbApiLineupMilliseconds
     : null;
 }
 
-function parseMatch(matchXml) {
-  const homeXml =
-    xmlContainer(
-      matchXml,
+function htwbApiLineupParseMatch(htwbApiLineupMatchXml) {
+  const htwbApiLineupHomeXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupMatchXml,
       "HomeTeam"
     );
 
-  const awayXml =
-    xmlContainer(
-      matchXml,
+  const htwbApiLineupAwayXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupMatchXml,
       "AwayTeam"
     );
 
-  const matchDate =
-    xmlValue(
-      matchXml,
+  const htwbApiLineupMatchDate =
+    htwbApiLineupXmlValue(
+      htwbApiLineupMatchXml,
       "MatchDate"
     );
 
   return {
     matchId:
-      xmlNumber(
-        matchXml,
+      htwbApiLineupXmlNumber(
+        htwbApiLineupMatchXml,
         "MatchID"
       ),
 
     matchType:
-      xmlNumber(
-        matchXml,
+      htwbApiLineupXmlNumber(
+        htwbApiLineupMatchXml,
         "MatchType"
       ),
 
-    matchDate,
+    matchDate: htwbApiLineupMatchDate,
 
     matchDateMs:
-      parseHattrickDate(
-        matchDate
+      htwbApiLineupParseHattrickDate(
+        htwbApiLineupMatchDate
       ),
 
     status:
-      xmlValue(
-        matchXml,
+      htwbApiLineupXmlValue(
+        htwbApiLineupMatchXml,
         "Status"
       ).toUpperCase(),
 
     homeTeamId:
-      xmlNumber(
-        homeXml,
+      htwbApiLineupXmlNumber(
+        htwbApiLineupHomeXml,
         "HomeTeamID"
       ),
 
     homeTeamName:
-      xmlValue(
-        homeXml,
+      htwbApiLineupXmlValue(
+        htwbApiLineupHomeXml,
         "HomeTeamName"
       ),
 
     awayTeamId:
-      xmlNumber(
-        awayXml,
+      htwbApiLineupXmlNumber(
+        htwbApiLineupAwayXml,
         "AwayTeamID"
       ),
 
     awayTeamName:
-      xmlValue(
-        awayXml,
+      htwbApiLineupXmlValue(
+        htwbApiLineupAwayXml,
         "AwayTeamName"
       )
   };
 }
 
-function parseMatches(matchesXml) {
-  const teamXml =
-    xmlContainer(
-      matchesXml,
+function htwbApiLineupParseMatches(htwbApiLineupMatchesXml) {
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupMatchesXml,
       "Team"
     );
 
-  const matchListXml =
-    xmlContainer(
-      teamXml,
+  const htwbApiLineupMatchListXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamXml,
       "MatchList"
     );
 
-  return xmlContainers(
-    matchListXml,
+  return htwbApiLineupXmlContainers(
+    htwbApiLineupMatchListXml,
     "Match"
   )
-    .map(parseMatch)
+    .map(htwbApiLineupParseMatch)
     .filter(
-      match =>
-        match.matchId !== null &&
-        match.matchDateMs !== null
+      htwbApiLineupMatch =>
+        htwbApiLineupMatch.matchId !== null &&
+        htwbApiLineupMatch.matchDateMs !== null
     );
 }
 
-function getUpcomingMatch(matches) {
-  const upcoming =
-    matches
+function htwbApiLineupGetUpcomingMatch(htwbApiLineupMatches) {
+  const htwbApiLineupUpcoming =
+    htwbApiLineupMatches
       .filter(
-        match =>
-          match.status ===
+        htwbApiLineupMatch =>
+          htwbApiLineupMatch.status ===
           "UPCOMING"
       )
       .sort(
-        (a, b) =>
-          a.matchDateMs -
-          b.matchDateMs
+        (htwbApiLineupA, htwbApiLineupB) =>
+          htwbApiLineupA.matchDateMs -
+          htwbApiLineupB.matchDateMs
       );
 
-  if (!upcoming.length) {
-    throw makeError(
+  if (!htwbApiLineupUpcoming.length) {
+    throw htwbApiLineupMakeError(
       "No upcoming match was found.",
       404
     );
   }
 
-  return upcoming[0];
+  return htwbApiLineupUpcoming[0];
 }
 
 
@@ -852,7 +852,7 @@ function getUpcomingMatch(matches) {
    TRAINING WEEK POSITION
    ========================================================= */
 
-const TRAINING_MATCH_TYPES =
+const HTWB_API_LINEUP_TRAINING_MATCH_TYPES =
   new Set([
     1,
     2,
@@ -863,34 +863,34 @@ const TRAINING_MATCH_TYPES =
     9
   ]);
 
-function determineTrainingWeekPosition(
-  upcomingMatch,
-  nextTrainingDate
+function htwbApiLineupDetermineTrainingWeekPosition(
+  htwbApiLineupUpcomingMatch,
+  htwbApiLineupNextTrainingDate
 ) {
   if (
-    !TRAINING_MATCH_TYPES.has(
-      upcomingMatch.matchType
+    !HTWB_API_LINEUP_TRAINING_MATCH_TYPES.has(
+      htwbApiLineupUpcomingMatch.matchType
     )
   ) {
     return "none";
   }
 
-  const trainingDateMs =
-    parseHattrickDate(
-      nextTrainingDate
+  const htwbApiLineupTrainingDateMs =
+    htwbApiLineupParseHattrickDate(
+      htwbApiLineupNextTrainingDate
     );
 
   if (
-    trainingDateMs === null
+    htwbApiLineupTrainingDateMs === null
   ) {
-    throw makeError(
+    throw htwbApiLineupMakeError(
       "Could not determine the next Hattrick training date."
     );
   }
 
   if (
-    upcomingMatch.matchDateMs <
-    trainingDateMs
+    htwbApiLineupUpcomingMatch.matchDateMs <
+    htwbApiLineupTrainingDateMs
   ) {
     return "second";
   }
@@ -903,35 +903,35 @@ function determineTrainingWeekPosition(
    PREVIOUS TRAINING MATCH
    ========================================================= */
 
-function getPreviousTrainingMatch(
-  matches,
-  upcomingMatch
+function htwbApiLineupGetPreviousTrainingMatch(
+  htwbApiLineupMatches,
+  htwbApiLineupUpcomingMatch
 ) {
-  const previous =
-    matches
+  const htwbApiLineupPrevious =
+    htwbApiLineupMatches
       .filter(
-        match =>
-          match.status ===
+        htwbApiLineupMatch =>
+          htwbApiLineupMatch.status ===
           "FINISHED"
       )
       .filter(
-        match =>
-          match.matchDateMs <
-          upcomingMatch.matchDateMs
+        htwbApiLineupMatch =>
+          htwbApiLineupMatch.matchDateMs <
+          htwbApiLineupUpcomingMatch.matchDateMs
       )
       .filter(
-        match =>
-          TRAINING_MATCH_TYPES.has(
-            match.matchType
+        htwbApiLineupMatch =>
+          HTWB_API_LINEUP_TRAINING_MATCH_TYPES.has(
+            htwbApiLineupMatch.matchType
           )
       )
       .sort(
-        (a, b) =>
-          b.matchDateMs -
-          a.matchDateMs
+        (htwbApiLineupA, htwbApiLineupB) =>
+          htwbApiLineupB.matchDateMs -
+          htwbApiLineupA.matchDateMs
       );
 
-  return previous[0] || null;
+  return htwbApiLineupPrevious[0] || null;
 }
 
 
@@ -939,11 +939,11 @@ function getPreviousTrainingMatch(
    MATCH LINEUP
    ========================================================= */
 
-function positionCodeToRole(
-  positionCode
+function htwbApiLineupPositionCodeToRole(
+  htwbApiLineupPositionCode
 ) {
   switch (
-    Number(positionCode)
+    Number(htwbApiLineupPositionCode)
   ) {
     case 1:
       return "GK";
@@ -973,113 +973,113 @@ function positionCodeToRole(
   }
 }
 
-function parsePreviousAppearances(
-  matchLineupXml,
-  requestedTeamId
+function htwbApiLineupParsePreviousAppearances(
+  htwbApiLineupMatchLineupXml,
+  htwbApiLineupRequestedTeamId
 ) {
-  const teamXml =
-    xmlContainer(
-      matchLineupXml,
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupMatchLineupXml,
       "Team"
     );
 
-  if (!teamXml) {
-    throw makeError(
+  if (!htwbApiLineupTeamXml) {
+    throw htwbApiLineupMakeError(
       "Hattrick did not return the previous match lineup."
     );
   }
 
-  const returnedTeamId =
-    xmlValue(
-      teamXml,
+  const htwbApiLineupReturnedTeamId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
       "TeamID"
     );
 
   if (
-    String(returnedTeamId) !==
-    String(requestedTeamId)
+    String(htwbApiLineupReturnedTeamId) !==
+    String(htwbApiLineupRequestedTeamId)
   ) {
-    throw makeError(
+    throw htwbApiLineupMakeError(
       "Hattrick returned the previous lineup for a different team."
     );
   }
 
-  const lineupXml =
-    xmlContainer(
-      teamXml,
+  const htwbApiLineupLineupXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTeamXml,
       "Lineup"
     );
 
-  const playerXmlList =
-    xmlContainers(
-      lineupXml,
+  const htwbApiLineupPlayerXmlList =
+    htwbApiLineupXmlContainers(
+      htwbApiLineupLineupXml,
       "Player"
     );
 
-  const appearances = [];
+  const htwbApiLineupAppearances = [];
 
-  const unresolvedAppearances =
+  const htwbApiLineupUnresolvedAppearances =
     [];
 
-  const seen =
+  const htwbApiLineupSeen =
     new Set();
 
   for (
-    const playerXml
-    of playerXmlList
+    const htwbApiLineupPlayerXml
+    of htwbApiLineupPlayerXmlList
   ) {
-    const playerId =
-      xmlNumber(
-        playerXml,
+    const htwbApiLineupPlayerId =
+      htwbApiLineupXmlNumber(
+        htwbApiLineupPlayerXml,
         "PlayerID"
       );
 
-    const playerName =
-      xmlValue(
-        playerXml,
+    const htwbApiLineupPlayerName =
+      htwbApiLineupXmlValue(
+        htwbApiLineupPlayerXml,
         "PlayerName"
       );
 
-    const roleId =
-      xmlNumber(
-        playerXml,
+    const htwbApiLineupRoleId =
+      htwbApiLineupXmlNumber(
+        htwbApiLineupPlayerXml,
         "RoleID"
       );
 
-    const positionCode =
-      xmlNumber(
-        playerXml,
+    const htwbApiLineupPositionCode =
+      htwbApiLineupXmlNumber(
+        htwbApiLineupPlayerXml,
         "PositionCode"
       );
 
-    const ratingStars =
-      xmlNumber(
-        playerXml,
+    const htwbApiLineupRatingStars =
+      htwbApiLineupXmlNumber(
+        htwbApiLineupPlayerXml,
         "RatingStars"
       );
 
-    if (playerId === null) {
+    if (htwbApiLineupPlayerId === null) {
       continue;
     }
 
-    const role =
-      positionCodeToRole(
-        positionCode
+    const htwbApiLineupRole =
+      htwbApiLineupPositionCodeToRole(
+        htwbApiLineupPositionCode
       );
 
-    if (role) {
-      const key =
-        `${playerId}:${role}`;
+    if (htwbApiLineupRole) {
+      const htwbApiLineupKey =
+        `${htwbApiLineupPlayerId}:${htwbApiLineupRole}`;
 
-      if (!seen.has(key)) {
-        seen.add(key);
+      if (!htwbApiLineupSeen.has(htwbApiLineupKey)) {
+        htwbApiLineupSeen.add(htwbApiLineupKey);
 
-        appearances.push({
-          playerId,
-          playerName,
-          role,
-          positionCode,
-          roleId
+        htwbApiLineupAppearances.push({
+          playerId: htwbApiLineupPlayerId,
+          playerName: htwbApiLineupPlayerName,
+          role: htwbApiLineupRole,
+          positionCode: htwbApiLineupPositionCode,
+          roleId: htwbApiLineupRoleId
         });
       }
 
@@ -1088,28 +1088,28 @@ function parsePreviousAppearances(
 
     if (
       (
-        roleId !== null &&
-        roleId >= 19 &&
-        roleId <= 21
+        htwbApiLineupRoleId !== null &&
+        htwbApiLineupRoleId >= 19 &&
+        htwbApiLineupRoleId <= 21
       ) ||
       (
-        ratingStars !== null &&
-        ratingStars > 0
+        htwbApiLineupRatingStars !== null &&
+        htwbApiLineupRatingStars > 0
       )
     ) {
-      unresolvedAppearances.push({
-        playerId,
-        playerName,
-        roleId,
-        positionCode,
-        ratingStars
+      htwbApiLineupUnresolvedAppearances.push({
+        playerId: htwbApiLineupPlayerId,
+        playerName: htwbApiLineupPlayerName,
+        roleId: htwbApiLineupRoleId,
+        positionCode: htwbApiLineupPositionCode,
+        ratingStars: htwbApiLineupRatingStars
       });
     }
   }
 
   return {
-    appearances,
-    unresolvedAppearances
+    appearances: htwbApiLineupAppearances,
+    unresolvedAppearances: htwbApiLineupUnresolvedAppearances
   };
 }
 
@@ -1119,22 +1119,22 @@ function parsePreviousAppearances(
    ========================================================= */
 
 export async function onRequestGet(
-  context
+  htwbApiLineupContext
 ) {
-  const url =
+  const htwbApiLineupUrl =
     new URL(
-      context.request.url
+      htwbApiLineupContext.request.url
     );
 
-  const requestedTeamId =
-    url.searchParams.get(
+  const htwbApiLineupRequestedTeamId =
+    htwbApiLineupUrl.searchParams.get(
       "teamId"
     );
 
   if (
-    !requestedTeamId ||
+    !htwbApiLineupRequestedTeamId ||
     !/^\d+$/.test(
-      requestedTeamId
+      htwbApiLineupRequestedTeamId
     )
   ) {
     return Response.json(
@@ -1153,9 +1153,9 @@ export async function onRequestGet(
   }
 
   try {
-    const teamDetailsXml =
-      await chppFetch(
-        context,
+    const htwbApiLineupTeamDetailsXml =
+      await htwbApiLineupChppFetch(
+        htwbApiLineupContext,
         {
           file:
             "teamdetails",
@@ -1164,25 +1164,25 @@ export async function onRequestGet(
             "1.7",
 
           teamID:
-            requestedTeamId
+            htwbApiLineupRequestedTeamId
         }
       );
 
-    const team =
-      parseTeamDetails(
-        teamDetailsXml,
-        requestedTeamId
+    const htwbApiLineupTeam =
+      htwbApiLineupParseTeamDetails(
+        htwbApiLineupTeamDetailsXml,
+        htwbApiLineupRequestedTeamId
       );
 
     const [
-      playersXml,
-      trainingXml,
-      matchesXml,
-      worldDetailsXml
+      htwbApiLineupPlayersXml,
+      htwbApiLineupTrainingXml,
+      htwbApiLineupMatchesXml,
+      htwbApiLineupWorldDetailsXml
     ] =
       await Promise.all([
-        chppFetch(
-          context,
+        htwbApiLineupChppFetch(
+          htwbApiLineupContext,
           {
             file:
               "players",
@@ -1194,12 +1194,12 @@ export async function onRequestGet(
               "view",
 
             teamID:
-              requestedTeamId
+              htwbApiLineupRequestedTeamId
           }
         ),
 
-        chppFetch(
-          context,
+        htwbApiLineupChppFetch(
+          htwbApiLineupContext,
           {
             file:
               "training",
@@ -1212,8 +1212,8 @@ export async function onRequestGet(
           }
         ),
 
-        chppFetch(
-          context,
+        htwbApiLineupChppFetch(
+          htwbApiLineupContext,
           {
             file:
               "matches",
@@ -1225,12 +1225,12 @@ export async function onRequestGet(
               "view",
 
             teamID:
-              requestedTeamId
+              htwbApiLineupRequestedTeamId
           }
         ),
 
-        chppFetch(
-          context,
+        htwbApiLineupChppFetch(
+          htwbApiLineupContext,
           {
             file:
               "worlddetails",
@@ -1244,47 +1244,47 @@ export async function onRequestGet(
         )
       ]);
 
-    const players =
-      parsePlayers(
-        playersXml,
-        requestedTeamId
+    const htwbApiLineupPlayers =
+      htwbApiLineupParsePlayers(
+        htwbApiLineupPlayersXml,
+        htwbApiLineupRequestedTeamId
       );
 
-    const formationExperience =
-      parseFormationExperience(
-        trainingXml,
-        requestedTeamId
+    const htwbApiLineupFormationExperience =
+      htwbApiLineupParseFormationExperience(
+        htwbApiLineupTrainingXml,
+        htwbApiLineupRequestedTeamId
       );
 
-    const matches =
-      parseMatches(
-        matchesXml
+    const htwbApiLineupMatches =
+      htwbApiLineupParseMatches(
+        htwbApiLineupMatchesXml
       );
 
-    const upcomingMatch =
-      getUpcomingMatch(
-        matches
+    const htwbApiLineupUpcomingMatch =
+      htwbApiLineupGetUpcomingMatch(
+        htwbApiLineupMatches
       );
 
-    const leagueSchedule =
-      findLeagueSchedule(
-        worldDetailsXml,
-        team.leagueId
+    const htwbApiLineupLeagueSchedule =
+      htwbApiLineupFindLeagueSchedule(
+        htwbApiLineupWorldDetailsXml,
+        htwbApiLineupTeam.leagueId
       );
 
-    if (!leagueSchedule) {
-      throw makeError(
+    if (!htwbApiLineupLeagueSchedule) {
+      throw htwbApiLineupMakeError(
         "Could not find the team's league training schedule."
       );
     }
 
-    upcomingMatch.trainingWeekPosition =
-      determineTrainingWeekPosition(
-        upcomingMatch,
-        leagueSchedule.trainingDate
+    htwbApiLineupUpcomingMatch.trainingWeekPosition =
+      htwbApiLineupDetermineTrainingWeekPosition(
+        htwbApiLineupUpcomingMatch,
+        htwbApiLineupLeagueSchedule.trainingDate
       );
 
-    let previousTrainingMatch = {
+    let htwbApiLineupPreviousTrainingMatch = {
       matchId: null,
       matchDate: "",
       matchType: null,
@@ -1293,24 +1293,24 @@ export async function onRequestGet(
     };
 
     if (
-      upcomingMatch.trainingWeekPosition ===
+      htwbApiLineupUpcomingMatch.trainingWeekPosition ===
       "second"
     ) {
-      const previousMatch =
-        getPreviousTrainingMatch(
-          matches,
-          upcomingMatch
+      const htwbApiLineupPreviousMatch =
+        htwbApiLineupGetPreviousTrainingMatch(
+          htwbApiLineupMatches,
+          htwbApiLineupUpcomingMatch
         );
 
-      if (!previousMatch) {
-        throw makeError(
+      if (!htwbApiLineupPreviousMatch) {
+        throw htwbApiLineupMakeError(
           "Could not find the first training match of the current week."
         );
       }
 
-      const matchLineupXml =
-        await chppFetch(
-          context,
+      const htwbApiLineupMatchLineupXml =
+        await htwbApiLineupChppFetch(
+          htwbApiLineupContext,
           {
             file:
               "matchlineup",
@@ -1322,41 +1322,41 @@ export async function onRequestGet(
               "view",
 
             matchID:
-              previousMatch.matchId,
+              htwbApiLineupPreviousMatch.matchId,
 
             teamID:
-              requestedTeamId
+              htwbApiLineupRequestedTeamId
           }
         );
 
-      const previousAppearanceData =
-        parsePreviousAppearances(
-          matchLineupXml,
-          requestedTeamId
+      const htwbApiLineupPreviousAppearanceData =
+        htwbApiLineupParsePreviousAppearances(
+          htwbApiLineupMatchLineupXml,
+          htwbApiLineupRequestedTeamId
         );
 
-      previousTrainingMatch = {
+      htwbApiLineupPreviousTrainingMatch = {
         matchId:
-          previousMatch.matchId,
+          htwbApiLineupPreviousMatch.matchId,
 
         matchDate:
-          previousMatch.matchDate,
+          htwbApiLineupPreviousMatch.matchDate,
 
         matchType:
-          previousMatch.matchType,
+          htwbApiLineupPreviousMatch.matchType,
 
         homeTeamName:
-          previousMatch.homeTeamName,
+          htwbApiLineupPreviousMatch.homeTeamName,
 
         awayTeamName:
-          previousMatch.awayTeamName,
+          htwbApiLineupPreviousMatch.awayTeamName,
 
         appearances:
-          previousAppearanceData
+          htwbApiLineupPreviousAppearanceData
             .appearances,
 
         unresolvedAppearances:
-          previousAppearanceData
+          htwbApiLineupPreviousAppearanceData
             .unresolvedAppearances
       };
     }
@@ -1364,52 +1364,52 @@ export async function onRequestGet(
     return Response.json(
       {
         teamId:
-          team.teamId,
+          htwbApiLineupTeam.teamId,
 
         teamName:
-          team.teamName,
+          htwbApiLineupTeam.teamName,
 
         leagueId:
-          team.leagueId,
+          htwbApiLineupTeam.leagueId,
 
         nextTrainingDate:
-          leagueSchedule.trainingDate,
+          htwbApiLineupLeagueSchedule.trainingDate,
 
         upcomingMatch: {
           matchId:
-            upcomingMatch.matchId,
+            htwbApiLineupUpcomingMatch.matchId,
 
           matchType:
-            upcomingMatch.matchType,
+            htwbApiLineupUpcomingMatch.matchType,
 
           matchDate:
-            upcomingMatch.matchDate,
+            htwbApiLineupUpcomingMatch.matchDate,
 
           status:
-            upcomingMatch.status,
+            htwbApiLineupUpcomingMatch.status,
 
           homeTeamId:
-            upcomingMatch.homeTeamId,
+            htwbApiLineupUpcomingMatch.homeTeamId,
 
           homeTeamName:
-            upcomingMatch.homeTeamName,
+            htwbApiLineupUpcomingMatch.homeTeamName,
 
           awayTeamId:
-            upcomingMatch.awayTeamId,
+            htwbApiLineupUpcomingMatch.awayTeamId,
 
           awayTeamName:
-            upcomingMatch.awayTeamName,
+            htwbApiLineupUpcomingMatch.awayTeamName,
 
           trainingWeekPosition:
-            upcomingMatch
+            htwbApiLineupUpcomingMatch
               .trainingWeekPosition
         },
 
-        formationExperience,
+        formationExperience: htwbApiLineupFormationExperience,
 
-        players,
+        players: htwbApiLineupPlayers,
 
-        previousTrainingMatch
+        previousTrainingMatch: htwbApiLineupPreviousTrainingMatch
       },
       {
         headers: {
@@ -1418,35 +1418,35 @@ export async function onRequestGet(
         }
       }
     );
-  } catch (error) {
+  } catch (htwbApiLineupError) {
     console.error(
       "Lineup builder API error:",
-      error
+      htwbApiLineupError
     );
 
-    const status =
+    const htwbApiLineupStatus =
       Number.isFinite(
-        error.status
+        htwbApiLineupError.status
       )
-        ? error.status
+        ? htwbApiLineupError.status
         : 502;
 
-    let message =
-      error.message ||
+    let htwbApiLineupMessage =
+      htwbApiLineupError.message ||
       "Could not load lineup data from Hattrick.";
 
-    if (status === 401) {
-      message =
+    if (htwbApiLineupStatus === 401) {
+      htwbApiLineupMessage =
         "Not logged in";
     }
 
     return Response.json(
       {
         error:
-          message
+          htwbApiLineupMessage
       },
       {
-        status,
+        status: htwbApiLineupStatus,
         headers: {
           "Cache-Control":
             "no-store"

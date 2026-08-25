@@ -1,5 +1,5 @@
-function enc(value) {
-  return encodeURIComponent(value)
+function htwbApiMeEnc(htwbApiMeValue) {
+  return encodeURIComponent(htwbApiMeValue)
     .replace(/!/g, "%21")
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
@@ -7,46 +7,46 @@ function enc(value) {
     .replace(/\*/g, "%2A");
 }
 
-function nonce() {
+function htwbApiMeNonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function getCookie(request, name) {
-  const cookie = request.headers.get("Cookie") || "";
+function htwbApiMeGetCookie(htwbApiMeRequest, htwbApiMeName) {
+  const htwbApiMeCookie = htwbApiMeRequest.headers.get("Cookie") || "";
 
-  for (const part of cookie.split(";")) {
-    const [key, ...value] = part.trim().split("=");
+  for (const htwbApiMePart of htwbApiMeCookie.split(";")) {
+    const [htwbApiMeKey, ...htwbApiMeValue] = htwbApiMePart.trim().split("=");
 
-    if (key === name) {
-      return decodeURIComponent(value.join("="));
+    if (htwbApiMeKey === htwbApiMeName) {
+      return decodeURIComponent(htwbApiMeValue.join("="));
     }
   }
 
   return null;
 }
 
-async function hmacSha1(key, text) {
-  const cryptoKey = await crypto.subtle.importKey(
+async function htwbApiMeHmacSha1(htwbApiMeKey, htwbApiMeText) {
+  const htwbApiMeCryptoKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(key),
+    new TextEncoder().encode(htwbApiMeKey),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"]
   );
 
-  const signature = await crypto.subtle.sign(
+  const htwbApiMeSignature = await crypto.subtle.sign(
     "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(text)
+    htwbApiMeCryptoKey,
+    new TextEncoder().encode(htwbApiMeText)
   );
 
   return btoa(
-    String.fromCharCode(...new Uint8Array(signature))
+    String.fromCharCode(...new Uint8Array(htwbApiMeSignature))
   );
 }
 
-function decodeXml(value) {
-  return value
+function htwbApiMeDecodeXml(htwbApiMeValue) {
+  return htwbApiMeValue
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
@@ -54,76 +54,76 @@ function decodeXml(value) {
     .replace(/&apos;/g, "'");
 }
 
-function xmlValue(xml, tag) {
-  const pattern = new RegExp(
-    `<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`,
+function htwbApiMeXmlValue(htwbApiMeXml, htwbApiMeTag) {
+  const htwbApiMePattern = new RegExp(
+    `<${htwbApiMeTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiMeTag}>`,
     "i"
   );
 
-  const match = xml.match(pattern);
+  const htwbApiMeMatch = htwbApiMeXml.match(htwbApiMePattern);
 
-  if (!match) {
+  if (!htwbApiMeMatch) {
     return "";
   }
 
-  return decodeXml(match[1].trim());
+  return htwbApiMeDecodeXml(htwbApiMeMatch[1].trim());
 }
 
-function xmlValueAny(xml, tags) {
-  for (const tag of tags) {
-    const value = xmlValue(xml, tag);
+function htwbApiMeXmlValueAny(htwbApiMeXml, htwbApiMeTags) {
+  for (const htwbApiMeTag of htwbApiMeTags) {
+    const htwbApiMeValue = htwbApiMeXmlValue(htwbApiMeXml, htwbApiMeTag);
 
-    if (value) {
-      return value;
+    if (htwbApiMeValue) {
+      return htwbApiMeValue;
     }
   }
 
   return "";
 }
 
-function getTeams(xml) {
-  const teamsMatch = xml.match(
+function htwbApiMeGetTeams(htwbApiMeXml) {
+  const htwbApiMeTeamsMatch = htwbApiMeXml.match(
     /<Teams(?:\s[^>]*)?>([\s\S]*?)<\/Teams>/i
   );
 
-  if (!teamsMatch) {
+  if (!htwbApiMeTeamsMatch) {
     return [];
   }
 
-  const teamsXml = teamsMatch[1];
+  const htwbApiMeTeamsXml = htwbApiMeTeamsMatch[1];
 
-  const teamMatches = [
-    ...teamsXml.matchAll(
+  const htwbApiMeTeamMatches = [
+    ...htwbApiMeTeamsXml.matchAll(
       /<Team(?:\s[^>]*)?>([\s\S]*?)<\/Team>/gi
     )
   ];
 
-  return teamMatches
-    .map(match => {
-      const teamXml = match[1];
+  return htwbApiMeTeamMatches
+    .map(htwbApiMeMatch => {
+      const htwbApiMeTeamXml = htwbApiMeMatch[1];
 
       return {
-        teamId: xmlValueAny(
-          teamXml,
+        teamId: htwbApiMeXmlValueAny(
+          htwbApiMeTeamXml,
           ["TeamId", "TeamID"]
         ),
-        teamName: xmlValue(
-          teamXml,
+        teamName: htwbApiMeXmlValue(
+          htwbApiMeTeamXml,
           "TeamName"
         )
       };
     })
-    .filter(team => team.teamId && team.teamName);
+    .filter(htwbApiMeTeam => htwbApiMeTeam.teamId && htwbApiMeTeam.teamName);
 }
 
-export async function onRequestGet(context) {
-  const accessToken =
-    getCookie(context.request, "chpp_access_token");
+export async function onRequestGet(htwbApiMeContext) {
+  const htwbApiMeAccessToken =
+    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_token");
 
-  const accessSecret =
-    getCookie(context.request, "chpp_access_secret");
+  const htwbApiMeAccessSecret =
+    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_secret");
 
-  if (!accessToken || !accessSecret) {
+  if (!htwbApiMeAccessToken || !htwbApiMeAccessSecret) {
     return Response.json(
       { error: "Not logged in" },
       {
@@ -135,76 +135,76 @@ export async function onRequestGet(context) {
     );
   }
 
-  const endpoint =
+  const htwbApiMeEndpoint =
     "https://chpp.hattrick.org/chppxml.ashx";
 
-  const query = {
+  const htwbApiMeQuery = {
     file: "managercompendium",
     version: "1.7"
   };
 
-  const oauth = {
+  const htwbApiMeOauth = {
     oauth_consumer_key:
-      context.env.CHPP_CONSUMER_KEY,
-    oauth_nonce: nonce(),
+      htwbApiMeContext.env.CHPP_CONSUMER_KEY,
+    oauth_nonce: htwbApiMeNonce(),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp:
       Math.floor(Date.now() / 1000).toString(),
-    oauth_token: accessToken,
+    oauth_token: htwbApiMeAccessToken,
     oauth_version: "1.0"
   };
 
-  const allParameters = {
-    ...query,
-    ...oauth
+  const htwbApiMeAllParameters = {
+    ...htwbApiMeQuery,
+    ...htwbApiMeOauth
   };
 
-  const parameterString =
-    Object.keys(allParameters)
+  const htwbApiMeParameterString =
+    Object.keys(htwbApiMeAllParameters)
       .sort()
       .map(
-        key =>
-          `${enc(key)}=${enc(allParameters[key])}`
+        htwbApiMeKey =>
+          `${htwbApiMeEnc(htwbApiMeKey)}=${htwbApiMeEnc(htwbApiMeAllParameters[htwbApiMeKey])}`
       )
       .join("&");
 
-  const signatureBase =
-    `GET&${enc(endpoint)}&${enc(parameterString)}`;
+  const htwbApiMeSignatureBase =
+    `GET&${htwbApiMeEnc(htwbApiMeEndpoint)}&${htwbApiMeEnc(htwbApiMeParameterString)}`;
 
-  const signingKey =
-    `${enc(context.env.CHPP_CONSUMER_SECRET)}&${enc(accessSecret)}`;
+  const htwbApiMeSigningKey =
+    `${htwbApiMeEnc(htwbApiMeContext.env.CHPP_CONSUMER_SECRET)}&${htwbApiMeEnc(htwbApiMeAccessSecret)}`;
 
-  oauth.oauth_signature =
-    await hmacSha1(signingKey, signatureBase);
+  htwbApiMeOauth.oauth_signature =
+    await htwbApiMeHmacSha1(htwbApiMeSigningKey, htwbApiMeSignatureBase);
 
-  const authorization =
+  const htwbApiMeAuthorization =
     "OAuth " +
-    Object.keys(oauth)
+    Object.keys(htwbApiMeOauth)
       .sort()
       .map(
-        key =>
-          `${enc(key)}="${enc(oauth[key])}"`
+        htwbApiMeKey =>
+          `${htwbApiMeEnc(htwbApiMeKey)}="${htwbApiMeEnc(htwbApiMeOauth[htwbApiMeKey])}"`
       )
       .join(", ");
 
-  const requestUrl =
-    `${endpoint}?file=managercompendium&version=1.7`;
+  const htwbApiMeRequestUrl =
+    `${htwbApiMeEndpoint}?file=managercompendium&version=1.7`;
 
-  const response = await fetch(requestUrl, {
+  const htwbApiMeResponse = await fetch(htwbApiMeRequestUrl, {
     method: "GET",
     headers: {
-      Authorization: authorization,
+      Authorization: htwbApiMeAuthorization,
       "User-Agent": "HT Wiki Builder/0.1"
     }
   });
 
-  const xml = await response.text();
+  const htwbApiMeXml = await htwbApiMeResponse.text();
 
-  if (!response.ok) {
+  if (!htwbApiMeResponse.ok) {
     return Response.json(
       {
         error: "CHPP request failed",
-        status: response.status
+        status: htwbApiMeResponse.status
       },
       {
         status: 502,
@@ -215,20 +215,20 @@ export async function onRequestGet(context) {
     );
   }
 
-  const teams = getTeams(xml);
+  const htwbApiMeTeams = htwbApiMeGetTeams(htwbApiMeXml);
 
-  const data = {
+  const htwbApiMeData = {
     managerName:
-      xmlValue(xml, "Loginname"),
-    teams: teams,
+      htwbApiMeXmlValue(htwbApiMeXml, "Loginname"),
+    teams: htwbApiMeTeams,
     teamId:
-      teams.length ? teams[0].teamId : "",
+      htwbApiMeTeams.length ? htwbApiMeTeams[0].teamId : "",
     teamName:
-      teams.length ? teams[0].teamName : ""
+      htwbApiMeTeams.length ? htwbApiMeTeams[0].teamName : ""
   };
 
   return Response.json(
-    data,
+    htwbApiMeData,
     {
       headers: {
         "Cache-Control": "no-store"
