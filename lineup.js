@@ -4,18 +4,18 @@
  * HT Wiki Builder
  * Lineup Builder
  *
- * Recommendation order:
- * 1. Training need - lowest full ideal trainee-group skill average
- * 2. Formation - all six CHPP-tracked formations are scored
- *    with training waste + continuous formation-experience cost
- * 3. Starting XI
- * 4. Captain and set pieces
- * 5. Substitute bench
+ * Recommendation model:
+ * 1. Calculate the ideal training average for every supported training type
+ * 2. Combine every training type with all six CHPP-tracked formations
+ * 3. Formation Score = FrmExp * (Ideal Slots / Effective Slots)
+ * 4. Combination Score = Training Ideal Average * Formation Score
+ * 5. Lowest combination score wins
+ * 6. Display Training first, then Formation, then build the lineup
  *
  * User overrides:
  * - Training and formation are dropdowns after the first build
- * - Changing training rescans formation and everything downstream
- * - Changing formation keeps training and rebuilds everything downstream
+ * - Changing training chooses the best formation for that training and rebuilds
+ * - Changing formation keeps training fixed and rebuilds everything downstream
  *
  * Substitute calculation order: GK, DE, WB, IM, WG, FW, EX
  * Display order follows Hattrick: GK, DE, WB, IM, FW, WG, EX
@@ -66,9 +66,9 @@ const htwbLineupSelectedFormationUtilizationElement =
     "lineup-selected-formation-utilization"
   );
 
-const htwbLineupSelectedFormationWasteElement =
+const htwbLineupSelectedCombinationScoreElement =
   document.getElementById(
-    "lineup-selected-formation-waste"
+    "lineup-selected-combination-score"
   );
 
 const htwbLineupSelectedFormationScoreElement =
@@ -1000,25 +1000,22 @@ function htwbLineupSlotMatchesTrainingRole(
 
 
 /* =========================================================
-   FORMATION SELECTION
+   FORMATION / COMBINATION SCORING
    ========================================================= */
 
 /*
- * Every CHPP-tracked formation is scored every time.
- * Nothing is pre-excluded for low utilization or high/low FE.
+ * Every supported training type is paired with all six
+ * CHPP-tracked formations. Nothing is pre-excluded for low
+ * utilization or any formation-experience value.
  *
  * Low score wins:
  *
- *   Formation Score = Training Waste Slots + FE Cost
+ *   Formation Score = FrmExp * (Ideal Slots / Effective Slots)
  *
- * Training Waste Slots is the number of ideal trainee slots
- * lost in THIS match for the selected training type.
+ *   Combination Score = Training Ideal Average * Formation Score
  *
- * FE Cost = log2(Formation Experience + 1)
- *
- * The logarithm is continuous: there is no FE threshold.
- * Lower FE always lowers the score, but the benefit becomes
- * progressively more meaningful as FE gets very low.
+ * A formation with zero effective training slots receives an
+ * infinite formation score naturally because Ideal / 0 is undefined.
  */
 
 function htwbLineupCalculateFormationMetrics(
@@ -1050,13 +1047,6 @@ function htwbLineupCalculateFormationMetrics(
     htwbLineupIdealSlots *
     htwbLineupUtilization;
 
-  const htwbLineupWasteSlots =
-    Math.max(
-      0,
-      htwbLineupIdealSlots -
-      htwbLineupEffectiveSlots
-    );
-
   const htwbLineupSafeExperience =
     Math.max(
       0,
@@ -1066,136 +1056,188 @@ function htwbLineupCalculateFormationMetrics(
       )
     );
 
-  const htwbLineupFormationExperienceCost =
-    Math.log2(
-      htwbLineupSafeExperience + 1
-    );
+  const htwbLineupFormationScore =
+    htwbLineupEffectiveSlots > 0
+      ? htwbLineupSafeExperience *
+        (
+          htwbLineupIdealSlots /
+          htwbLineupEffectiveSlots
+        )
+      : Number.POSITIVE_INFINITY;
 
   return {
     utilization: htwbLineupUtilization,
     idealSlots: htwbLineupIdealSlots,
     effectiveSlots: htwbLineupEffectiveSlots,
-    wasteSlots: htwbLineupWasteSlots,
-    experienceCost:
-      htwbLineupFormationExperienceCost,
-    score:
-      htwbLineupWasteSlots +
-      htwbLineupFormationExperienceCost
+    score: htwbLineupFormationScore
   };
 }
 
 
-function htwbLineupSelectFormation(
+function htwbLineupCompareCombinationCandidates(
+  htwbLineupA,
+  htwbLineupB
+) {
+  if (
+    htwbLineupA.combinationScore !==
+    htwbLineupB.combinationScore
+  ) {
+    return (
+      htwbLineupA.combinationScore -
+      htwbLineupB.combinationScore
+    );
+  }
+
+  if (
+    htwbLineupA.formationScore !==
+    htwbLineupB.formationScore
+  ) {
+    return (
+      htwbLineupA.formationScore -
+      htwbLineupB.formationScore
+    );
+  }
+
+  if (
+    htwbLineupA.idealAverage !==
+    htwbLineupB.idealAverage
+  ) {
+    return (
+      htwbLineupA.idealAverage -
+      htwbLineupB.idealAverage
+    );
+  }
+
+  if (
+    htwbLineupA.utilization !==
+    htwbLineupB.utilization
+  ) {
+    return (
+      htwbLineupB.utilization -
+      htwbLineupA.utilization
+    );
+  }
+
+  if (
+    htwbLineupA.experience !==
+    htwbLineupB.experience
+  ) {
+    return (
+      htwbLineupA.experience -
+      htwbLineupB.experience
+    );
+  }
+
+  if (
+    htwbLineupA.training.tiePriority !==
+    htwbLineupB.training.tiePriority
+  ) {
+    return (
+      htwbLineupA.training.tiePriority -
+      htwbLineupB.training.tiePriority
+    );
+  }
+
+  return htwbLineupA.name.localeCompare(
+    htwbLineupB.name
+  );
+}
+
+
+function htwbLineupBuildCombinationMatrix(
   htwbLineupFormationExperience,
+  htwbLineupTrainingResults
+) {
+  return htwbLineupTrainingResults.flatMap(
+    htwbLineupTrainingResult =>
+      Object.entries(
+        HTWB_LINEUP_FORMATIONS
+      )
+        .map(
+          ([
+            htwbLineupName,
+            htwbLineupFormation
+          ]) => {
+            const htwbLineupExperience =
+              Number(
+                htwbLineupFormationExperience?.[
+                  htwbLineupName
+                ]
+              );
+
+            if (
+              !Number.isFinite(
+                htwbLineupExperience
+              )
+            ) {
+              return null;
+            }
+
+            const htwbLineupMetrics =
+              htwbLineupCalculateFormationMetrics(
+                htwbLineupFormation,
+                htwbLineupExperience,
+                htwbLineupTrainingResult.training
+              );
+
+            const htwbLineupCombinationScore =
+              htwbLineupTrainingResult.hasEnoughPlayers &&
+              Number.isFinite(
+                htwbLineupMetrics.score
+              )
+                ? htwbLineupTrainingResult.idealAverage *
+                  htwbLineupMetrics.score
+                : Number.POSITIVE_INFINITY;
+
+            return {
+              training:
+                htwbLineupTrainingResult.training,
+              idealAverage:
+                htwbLineupTrainingResult.idealAverage,
+              hasEnoughPlayers:
+                htwbLineupTrainingResult.hasEnoughPlayers,
+              name: htwbLineupName,
+              formation: htwbLineupFormation,
+              experience: htwbLineupExperience,
+              utilization:
+                htwbLineupMetrics.utilization,
+              idealSlots:
+                htwbLineupMetrics.idealSlots,
+              effectiveSlots:
+                htwbLineupMetrics.effectiveSlots,
+              formationScore:
+                htwbLineupMetrics.score,
+              combinationScore:
+                htwbLineupCombinationScore
+            };
+          }
+        )
+        .filter(Boolean)
+  );
+}
+
+
+function htwbLineupSelectFormation(
+  htwbLineupCombinationMatrix,
   htwbLineupTraining,
   htwbLineupRequestedFormationName = ""
 ) {
   const htwbLineupCandidates =
-    Object.entries(
-      HTWB_LINEUP_FORMATIONS
-    )
-      .map(
-        ([
-          htwbLineupName,
-          htwbLineupFormation
-        ]) => {
-          const htwbLineupExperience =
-            Number(
-              htwbLineupFormationExperience?.[
-                htwbLineupName
-              ]
-            );
-
-          if (
-            !Number.isFinite(
-              htwbLineupExperience
-            )
-          ) {
-            return null;
-          }
-
-          const htwbLineupMetrics =
-            htwbLineupCalculateFormationMetrics(
-              htwbLineupFormation,
-              htwbLineupExperience,
-              htwbLineupTraining
-            );
-
-          return {
-            name: htwbLineupName,
-            formation: htwbLineupFormation,
-            experience: htwbLineupExperience,
-            ...htwbLineupMetrics
-          };
-        }
+    htwbLineupCombinationMatrix
+      .filter(
+        htwbLineupCandidate =>
+          htwbLineupCandidate.training.id ===
+          htwbLineupTraining.id
       )
-      .filter(Boolean);
+      .sort(
+        htwbLineupCompareCombinationCandidates
+      );
 
   if (!htwbLineupCandidates.length) {
     throw new Error(
       "No usable formation experience values were returned."
     );
   }
-
-  htwbLineupCandidates.sort(
-    (htwbLineupA, htwbLineupB) => {
-      if (
-        htwbLineupA.score !==
-        htwbLineupB.score
-      ) {
-        return (
-          htwbLineupA.score -
-          htwbLineupB.score
-        );
-      }
-
-      if (
-        htwbLineupA.utilization !==
-        htwbLineupB.utilization
-      ) {
-        return (
-          htwbLineupB.utilization -
-          htwbLineupA.utilization
-        );
-      }
-
-      if (
-        htwbLineupA.experience !==
-        htwbLineupB.experience
-      ) {
-        return (
-          htwbLineupA.experience -
-          htwbLineupB.experience
-        );
-      }
-
-      if (
-        htwbLineupA.formation.defenders !==
-        htwbLineupB.formation.defenders
-      ) {
-        return (
-          htwbLineupB.formation.defenders -
-          htwbLineupA.formation.defenders
-        );
-      }
-
-      if (
-        htwbLineupA.formation.midfielders !==
-        htwbLineupB.formation.midfielders
-      ) {
-        return (
-          htwbLineupB.formation.midfielders -
-          htwbLineupA.formation.midfielders
-        );
-      }
-
-      return (
-        htwbLineupA.name.localeCompare(
-          htwbLineupB.name
-        )
-      );
-    }
-  );
 
   const htwbLineupRecommendedFormation =
     htwbLineupCandidates[0];
@@ -1284,19 +1326,21 @@ function htwbLineupCalculateTrainingAverage(
 
 
 /* =========================================================
-   TRAINING SELECTION
+   TRAINING / GLOBAL COMBINATION SELECTION
    ========================================================= */
 
 /*
- * Training is selected BEFORE formation.
+ * Training is displayed first, but the automatic recommendation
+ * comes from the best training + formation pair across the full
+ * combination matrix.
  *
- * The full ideal trainee group is used for every type and
- * formation utilization is deliberately ignored here.
- * Lowest ideal skill average wins.
+ * With 10 supported training types and 6 CHPP formations, the
+ * normal full matrix contains 60 combinations.
  */
 
 function htwbLineupSelectTraining(
   htwbLineupPlayers,
+  htwbLineupFormationExperience,
   htwbLineupRequestedTrainingId = ""
 ) {
   const htwbLineupResults =
@@ -1312,44 +1356,82 @@ function htwbLineupSelectTraining(
           training: htwbLineupTraining,
           idealAverage: htwbLineupIdealAverage,
           hasEnoughPlayers:
-            htwbLineupIdealAverage !== null
+            htwbLineupIdealAverage !== null,
+          bestCombination: null
         };
       }
     );
+
+  const htwbLineupCombinationMatrix =
+    htwbLineupBuildCombinationMatrix(
+      htwbLineupFormationExperience,
+      htwbLineupResults
+    );
+
+  const htwbLineupFiniteCombinations =
+    htwbLineupCombinationMatrix
+      .filter(
+        htwbLineupCombination =>
+          Number.isFinite(
+            htwbLineupCombination.combinationScore
+          )
+      )
+      .sort(
+        htwbLineupCompareCombinationCandidates
+      );
+
+  if (!htwbLineupFiniteCombinations.length) {
+    throw new Error(
+      "No training and formation combination can be calculated from the current roster."
+    );
+  }
+
+  htwbLineupResults.forEach(
+    htwbLineupTrainingResult => {
+      const htwbLineupTrainingCombinations =
+        htwbLineupCombinationMatrix
+          .filter(
+            htwbLineupCombination =>
+              htwbLineupCombination.training.id ===
+              htwbLineupTrainingResult.training.id &&
+              Number.isFinite(
+                htwbLineupCombination.combinationScore
+              )
+          )
+          .sort(
+            htwbLineupCompareCombinationCandidates
+          );
+
+      htwbLineupTrainingResult.bestCombination =
+        htwbLineupTrainingCombinations[0] ||
+        null;
+    }
+  );
+
+  const htwbLineupRecommendedCombination =
+    htwbLineupFiniteCombinations[0];
 
   const htwbLineupCandidates =
     htwbLineupResults
       .filter(
         htwbLineupResult =>
-          htwbLineupResult.hasEnoughPlayers
+          htwbLineupResult.hasEnoughPlayers &&
+          htwbLineupResult.bestCombination
       )
       .sort(
-        (htwbLineupA, htwbLineupB) => {
-          if (
-            htwbLineupA.idealAverage !==
-            htwbLineupB.idealAverage
-          ) {
-            return (
-              htwbLineupA.idealAverage -
-              htwbLineupB.idealAverage
-            );
-          }
-
-          return (
-            htwbLineupA.training.tiePriority -
-            htwbLineupB.training.tiePriority
-          );
-        }
+        (htwbLineupA, htwbLineupB) =>
+          htwbLineupCompareCombinationCandidates(
+            htwbLineupA.bestCombination,
+            htwbLineupB.bestCombination
+          )
       );
 
-  if (!htwbLineupCandidates.length) {
-    throw new Error(
-      "No training type can be calculated from the current roster."
-    );
-  }
-
   const htwbLineupRecommendedTraining =
-    htwbLineupCandidates[0];
+    htwbLineupCandidates.find(
+      htwbLineupCandidate =>
+        htwbLineupCandidate.training.id ===
+        htwbLineupRecommendedCombination.training.id
+    ) || htwbLineupCandidates[0];
 
   const htwbLineupRequestedTraining =
     htwbLineupCandidates.find(
@@ -1367,11 +1449,17 @@ function htwbLineupSelectTraining(
       htwbLineupSelectedTraining,
     recommended:
       htwbLineupRecommendedTraining,
+    recommendedCombination:
+      htwbLineupRecommendedCombination,
     isOverride:
       htwbLineupSelectedTraining.training.id !==
       htwbLineupRecommendedTraining.training.id,
     results: htwbLineupResults,
-    candidates: htwbLineupCandidates
+    candidates: htwbLineupCandidates,
+    combinationMatrix:
+      htwbLineupCombinationMatrix,
+    finiteCombinations:
+      htwbLineupFiniteCombinations
   };
 }
 
@@ -2701,13 +2789,15 @@ function htwbLineupCalculateLineup(
     );
 
   /*
-   * 1. Training need
-   * Lowest ideal full-group skill average wins.
+   * 1. Global optimizer
+   * Calculate every training + formation combination. The
+   * lowest combination score determines the automatic training.
    */
 
   const htwbLineupTrainingResult =
     htwbLineupSelectTraining(
       htwbLineupTrainingPool,
+      htwbLineupData.formationExperience,
       htwbLineupChoices.trainingId || ""
     );
 
@@ -2718,13 +2808,13 @@ function htwbLineupCalculateLineup(
 
   /*
    * 2. Formation
-   * All six CHPP-tracked formations are scored against the
-   * selected training type using utilization + FE math.
+   * The selected training is shown first in the UI. Its six
+   * formation combinations are then ranked by the same score.
    */
 
   const htwbLineupFormationResult =
     htwbLineupSelectFormation(
-      htwbLineupData.formationExperience,
+      htwbLineupTrainingResult.combinationMatrix,
       htwbLineupSelectedTraining,
       htwbLineupChoices.formationName || ""
     );
@@ -3015,20 +3105,28 @@ function htwbLineupRenderFormation(
       );
   }
 
-  if (htwbLineupSelectedFormationWasteElement) {
-    htwbLineupSelectedFormationWasteElement.textContent =
-      `${htwbLineupRound(
-        htwbLineupSelected.wasteSlots,
-        2
-      ).toFixed(2)} slots`;
-  }
-
   if (htwbLineupSelectedFormationScoreElement) {
     htwbLineupSelectedFormationScoreElement.textContent =
-      htwbLineupRound(
-        htwbLineupSelected.score,
-        3
-      ).toFixed(3);
+      Number.isFinite(
+        htwbLineupSelected.formationScore
+      )
+        ? htwbLineupRound(
+            htwbLineupSelected.formationScore,
+            3
+          ).toFixed(3)
+        : "Infinity";
+  }
+
+  if (htwbLineupSelectedCombinationScoreElement) {
+    htwbLineupSelectedCombinationScoreElement.textContent =
+      Number.isFinite(
+        htwbLineupSelected.combinationScore
+      )
+        ? htwbLineupRound(
+            htwbLineupSelected.combinationScore,
+            3
+          ).toFixed(3)
+        : "Infinity";
   }
 
   if (!htwbLineupFormationTableBody) {
@@ -3101,24 +3199,25 @@ function htwbLineupRenderFormation(
               </td>
 
               <td class="number">
-                ${htwbLineupRound(
-                  htwbLineupCandidate.wasteSlots,
-                  2
-                ).toFixed(2)}
+                ${Number.isFinite(
+                  htwbLineupCandidate.formationScore
+                )
+                  ? htwbLineupRound(
+                      htwbLineupCandidate.formationScore,
+                      3
+                    ).toFixed(3)
+                  : "Infinity"}
               </td>
 
               <td class="number">
-                ${htwbLineupRound(
-                  htwbLineupCandidate.experienceCost,
-                  3
-                ).toFixed(3)}
-              </td>
-
-              <td class="number">
-                ${htwbLineupRound(
-                  htwbLineupCandidate.score,
-                  3
-                ).toFixed(3)}
+                ${Number.isFinite(
+                  htwbLineupCandidate.combinationScore
+                )
+                  ? htwbLineupRound(
+                      htwbLineupCandidate.combinationScore,
+                      3
+                    ).toFixed(3)
+                  : "Infinity"}
               </td>
 
               <td>
@@ -3275,6 +3374,26 @@ function htwbLineupRenderTraining(
 
               <td class="number">
                 ${htwbLineupAverageText}
+              </td>
+
+              <td>
+                ${htwbLineupItem.bestCombination
+                  ? htwbLineupEscapeHtml(
+                      htwbLineupItem.bestCombination.name
+                    )
+                  : "-"}
+              </td>
+
+              <td class="number">
+                ${htwbLineupItem.bestCombination &&
+                  Number.isFinite(
+                    htwbLineupItem.bestCombination.combinationScore
+                  )
+                  ? htwbLineupRound(
+                      htwbLineupItem.bestCombination.combinationScore,
+                      3
+                    ).toFixed(3)
+                  : "-"}
               </td>
 
               <td>
@@ -4110,8 +4229,8 @@ function htwbLineupResetChoiceControls() {
       "-";
   }
 
-  if (htwbLineupSelectedFormationWasteElement) {
-    htwbLineupSelectedFormationWasteElement.textContent =
+  if (htwbLineupSelectedCombinationScoreElement) {
+    htwbLineupSelectedCombinationScoreElement.textContent =
       "-";
   }
 
@@ -4157,11 +4276,15 @@ function htwbLineupUpdateCalculationStatus() {
       htwbLineupFormation.utilization
     );
 
-  const htwbLineupFormationScore =
-    htwbLineupRound(
-      htwbLineupFormation.score,
-      3
-    ).toFixed(3);
+  const htwbLineupCombinationScore =
+    Number.isFinite(
+      htwbLineupFormation.combinationScore
+    )
+      ? htwbLineupRound(
+          htwbLineupFormation.combinationScore,
+          3
+        ).toFixed(3)
+      : "Infinity";
 
   const htwbLineupWarning =
     htwbLineupGetPreviousMatchWarning(
@@ -4193,7 +4316,7 @@ function htwbLineupUpdateCalculationStatus() {
     htwbLineupSubstitutesComplete
   ) {
     htwbLineupSetStatus(
-      `Lineup and bench built: ${htwbLineupFormation.name} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - formation score ${htwbLineupFormationScore}.${htwbLineupOverrideLabel}${htwbLineupWarning}`,
+      `Lineup and bench built: ${htwbLineupTrainingName} - ${htwbLineupFormation.name} - ${htwbLineupUtilization} utilization - combination score ${htwbLineupCombinationScore}.${htwbLineupOverrideLabel}${htwbLineupWarning}`,
       htwbLineupWarning
         ? "error"
         : "success"
@@ -4326,10 +4449,10 @@ function htwbLineupHandleTrainingChange() {
       : htwbLineupSelectedTrainingId;
 
   /*
-   * Training is upstream of formation. A training change
-   * deliberately clears any formation override so all six
-   * formations are rescored and the new recommendation is
-   * selected. The user can then override formation again.
+   * Training is displayed first. A training change deliberately
+   * clears any formation override so the six combinations for
+   * that training are rescored and its best formation is selected.
+   * The user can then override formation again.
    */
 
   htwbLineupFormationOverrideName = "";

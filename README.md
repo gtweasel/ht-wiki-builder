@@ -55,9 +55,9 @@ Use the recruitment URL `https://www.hattrick.org/?inviteRef=TS7E2C` only for li
 
 ## Lineup training and formation recommendation
 
-The Lineup Builder recommendation is intentionally sequential: **training need first, formation second, lineup third**.
+The Lineup Builder optimizes **training and formation together**, while keeping the user-facing controls in the simpler order **Training -> Formation -> Lineup**.
 
-### Training recommendation
+### Supported training types
 
 All senior-team Hattrick training types are considered except the combined **Scoring and Set Pieces** type:
 
@@ -72,11 +72,11 @@ All senior-team Hattrick training types are considered except the combined **Sco
 - Winger (Winger + Attackers)
 - Passing (Defenders + All Midfielders)
 
-Each type is evaluated with its full ideal weekly trainee group. Formation utilization does not alter this stage. The type with the **lowest ideal skill average** is recommended. The coach is retained in roster data so the UI can show `Excluded: Coach`, but the coach is not included in training-average calculations.
+Each training type is evaluated with its full ideal weekly trainee group. The coach is retained in roster data so the UI can show `Excluded: Coach`, but the coach is not included in ideal training-average calculations.
 
-### Formation recommendation
+### Full combination matrix
 
-Once training is selected, every one of the six formation-experience values returned by CHPP is evaluated:
+Behind the scenes, every supported training type is paired with every CHPP-tracked formation:
 
 - 4-3-3
 - 4-5-1
@@ -85,20 +85,28 @@ Once training is selected, every one of the six formation-experience values retu
 - 3-4-3
 - 5-4-1
 
-No formation is pre-excluded because of utilization and there is no formation-experience threshold. For the selected training type:
+With 10 training types and 6 formations, the normal optimizer evaluates **60 training/formation combinations**. No formation is pre-excluded because of utilization and there is no formation-experience threshold.
 
-`Training Waste Slots = Ideal Slots Per Match - Effective Training Slots`
+For each training/formation pair:
 
-`FE Cost = log2(Formation Experience + 1)`
+`Formation Score = Formation Experience x (Ideal Training Slots / Effective Training Slots)`
 
-`Formation Score = Training Waste Slots + FE Cost`
+`Combination Score = Training Ideal Average x Formation Score`
 
-The **lowest Formation Score wins**. The continuous logarithmic FE term lets utilization normally dominate while increasingly low formation experience can naturally outweigh lost training slots without a hard-coded cutoff. Exact score ties prefer higher utilization, then lower formation experience.
+The **lowest Combination Score wins**. A formation with zero effective training slots naturally receives an infinite score because the ideal/effective ratio cannot be calculated.
 
-### User overrides
+This single formula lets all three priorities compete mathematically every time:
 
-After the first build, Training and Formation are both dropdowns.
+- lower ideal training average favors a training need;
+- higher utilization lowers the ideal/effective multiplier;
+- lower formation experience lowers the formation score and encourages building weaker formations.
 
-- Changing **Training** clears any formation override, rescans all six formations for that training type, selects the new recommended formation, and rebuilds everything downstream.
-- Changing **Formation** keeps the selected training type and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
-- Clicking **Build Lineup** again clears both overrides and returns to the current recommendations.
+### User-facing order and overrides
+
+The overall winning combination supplies both initial dropdown selections, but **Training is displayed first**.
+
+- The Training table shows each training type's ideal average, its best formation, and its best combination score.
+- Changing **Training** clears any formation override and selects the lowest-scoring formation among the six combinations for that chosen training type.
+- Changing **Formation** keeps the selected training type fixed and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
+- Clicking **Build Lineup** again clears both overrides and returns to the current overall lowest-scoring training/formation combination.
+

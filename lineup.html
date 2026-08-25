@@ -294,9 +294,10 @@
 
               <p>
                 Every senior-team training type is considered except
-                combined Scoring and Set Pieces. The full ideal weekly
-                trainee group is used, and the lowest ideal skill average
-                is recommended before formation is considered.
+                combined Scoring and Set Pieces. Behind the scenes, each
+                training type is paired with all six CHPP-tracked formations.
+                The lowest training-and-formation combination score is
+                recommended, while Training remains the first user control.
               </p>
             </div>
 
@@ -370,6 +371,14 @@
                   </th>
 
                   <th>
+                    Best Formation
+                  </th>
+
+                  <th class="number">
+                    Best Combo Score
+                  </th>
+
+                  <th>
                     Status
                   </th>
 
@@ -385,9 +394,12 @@
 
 
           <p class="lineup-note">
-            Formation utilization does not affect the training recommendation.
-            Changing training rescans all six CHPP-tracked formations, selects
-            the newly recommended formation, and rebuilds everything below.
+            All 10 supported training types are compared against all six
+            CHPP-tracked formations: 60 possible combinations when every
+            training average is available. Combination Score = Training Ideal
+            Average x Formation Score. Lowest score wins. Changing Training
+            selects the best formation for that training and rebuilds
+            everything below.
           </p>
 
         </div>
@@ -414,10 +426,10 @@
               </h2>
 
               <p>
-                All six CHPP-tracked formations are scored every time.
-                Training waste normally favors better utilization, while
-                lower formation experience continuously lowers the score
-                and becomes more influential as experience falls.
+                For the selected training type, all six CHPP-tracked
+                formations stay in the calculation. Lower formation
+                experience lowers the score, while lower training utilization
+                raises it. No formation is removed by a preset cutoff.
               </p>
             </div>
 
@@ -481,11 +493,11 @@
 
             <div class="lineup-summary-item">
               <span class="lineup-summary-label">
-                Training Waste
+                Formation Score
               </span>
 
               <span
-                id="lineup-selected-formation-waste"
+                id="lineup-selected-formation-score"
                 class="lineup-summary-value"
               >
                 -
@@ -495,11 +507,11 @@
 
             <div class="lineup-summary-item">
               <span class="lineup-summary-label">
-                Formation Score
+                Combination Score
               </span>
 
               <span
-                id="lineup-selected-formation-score"
+                id="lineup-selected-combination-score"
                 class="lineup-summary-value"
               >
                 -
@@ -532,15 +544,11 @@
                   </th>
 
                   <th class="number">
-                    Waste Slots
+                    Formation Score
                   </th>
 
                   <th class="number">
-                    FE Cost
-                  </th>
-
-                  <th class="number">
-                    Final Score
+                    Combination Score
                   </th>
 
                   <th>
@@ -558,10 +566,11 @@
 
 
           <p class="lineup-note">
-            Formation Score = training waste slots + log2(FrmExp + 1).
+            Formation Score = FrmExp x (Ideal Trainees / Effective Trainees).
+            Combination Score = Training Ideal Average x Formation Score.
             Lowest score wins. There is no utilization cutoff and no
-            formation-experience threshold: every formation stays in the
-            calculation. Changing formation keeps the selected training type
+            formation-experience threshold: all six formations stay in the
+            calculation. Changing Formation keeps the selected training type
             and immediately rebuilds everything below.
           </p>
 
