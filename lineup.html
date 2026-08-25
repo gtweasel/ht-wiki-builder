@@ -2,9 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Lineup Builder - HT Wiki Builder</title>
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>
+    Lineup Builder - HT Wiki Builder
+  </title>
 
   <style>
     * {
@@ -97,7 +103,11 @@
 
     .summary-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      grid-template-columns:
+        repeat(
+          auto-fit,
+          minmax(190px, 1fr)
+        );
       gap: 12px;
     }
 
@@ -148,9 +158,15 @@
       flex-wrap: wrap;
     }
 
+    .table-wrap {
+      overflow-x: auto;
+      width: 100%;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
+      min-width: 700px;
     }
 
     th,
@@ -158,10 +174,12 @@
       border: 1px solid #ddd;
       padding: 9px 10px;
       text-align: left;
+      vertical-align: middle;
     }
 
     th {
       background: #f0f0f0;
+      white-space: nowrap;
     }
 
     td.number,
@@ -177,6 +195,13 @@
     tr.ineligible-training {
       color: #888;
       background: #f8f8f8;
+    }
+
+    .training-note {
+      margin-top: 12px;
+      font-size: 13px;
+      line-height: 1.45;
+      color: #666;
     }
 
     .pitch {
@@ -205,7 +230,13 @@
     .player-slot {
       width: 170px;
       min-height: 95px;
-      background: rgba(255, 255, 255, 0.95);
+      background:
+        rgba(
+          255,
+          255,
+          255,
+          0.95
+        );
       border: 2px solid #ddd;
       border-radius: 7px;
       padding: 8px;
@@ -301,7 +332,9 @@
       color: #666;
     }
 
-    @media (max-width: 800px) {
+    @media (
+      max-width: 800px
+    ) {
       .pitch {
         padding: 16px 6px;
       }
@@ -335,308 +368,847 @@
   </header>
 
   <nav>
-    <a href="index.html">Home</a>
-    <a href="team.html">Team</a>
-    <a href="lineup.html">Lineup Builder</a>
+    <a href="index.html">
+      Home
+    </a>
+
+    <a href="team.html">
+      Team
+    </a>
+
+    <a href="lineup.html">
+      Lineup Builder
+    </a>
   </nav>
 
   <main>
 
-    <div id="status" class="status">
+    <div
+      id="status"
+      class="status"
+    >
       Waiting for team data.
     </div>
 
+
+    <!-- ===================================================
+         MATCH
+         =================================================== -->
+
     <section class="card">
+
       <h2>Match</h2>
 
       <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">Team</span>
-          <span id="teamName" class="summary-value">-</span>
-        </div>
 
         <div class="summary-item">
-          <span class="summary-label">Match</span>
-          <span id="matchName" class="summary-value">-</span>
+          <span class="summary-label">
+            Team
+          </span>
+
+          <span
+            id="teamName"
+            class="summary-value"
+          >
+            -
+          </span>
         </div>
 
-        <div class="summary-item">
-          <span class="summary-label">Match Type</span>
-          <span id="matchType" class="summary-value">-</span>
-        </div>
 
         <div class="summary-item">
-          <span class="summary-label">Training Week Position</span>
-          <span id="trainingWeekPosition" class="summary-value">-</span>
+          <span class="summary-label">
+            Match
+          </span>
+
+          <span
+            id="matchName"
+            class="summary-value"
+          >
+            -
+          </span>
         </div>
+
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Match Type
+          </span>
+
+          <span
+            id="matchType"
+            class="summary-value"
+          >
+            -
+          </span>
+        </div>
+
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Training Week Position
+          </span>
+
+          <span
+            id="trainingWeekPosition"
+            class="summary-value"
+          >
+            -
+          </span>
+        </div>
+
       </div>
 
-      <div class="button-row" style="margin-top: 16px;">
-        <button id="buildLineupButton" type="button">
+
+      <div
+        class="button-row"
+        style="margin-top: 16px;"
+      >
+        <button
+          id="buildLineupButton"
+          type="button"
+        >
           Build Lineup
         </button>
       </div>
+
     </section>
 
+
+    <!-- ===================================================
+         FORMATION
+         =================================================== -->
+
     <section class="card">
+
       <h2>Formation</h2>
 
       <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">Selected Formation</span>
-          <span id="selectedFormation" class="summary-value">-</span>
-        </div>
 
         <div class="summary-item">
-          <span class="summary-label">Formation Experience</span>
-          <span id="selectedFormationExperience" class="summary-value">-</span>
+          <span class="summary-label">
+            Selected Formation
+          </span>
+
+          <span
+            id="selectedFormation"
+            class="summary-value"
+          >
+            -
+          </span>
         </div>
+
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Formation Experience
+          </span>
+
+          <span
+            id="selectedFormationExperience"
+            class="summary-value"
+          >
+            -
+          </span>
+        </div>
+
       </div>
 
-      <details>
-        <summary>Formation experience details</summary>
 
-        <div style="overflow-x: auto; margin-top: 12px;">
+      <details>
+        <summary>
+          Formation experience details
+        </summary>
+
+        <div
+          class="table-wrap"
+          style="margin-top: 12px;"
+        >
           <table>
+
             <thead>
               <tr>
-                <th>Formation</th>
-                <th class="number">Experience</th>
-                <th>Status</th>
+                <th>
+                  Formation
+                </th>
+
+                <th class="number">
+                  Experience
+                </th>
+
+                <th>
+                  Status
+                </th>
               </tr>
             </thead>
-            <tbody id="formationTableBody">
+
+            <tbody
+              id="formationTableBody"
+            >
             </tbody>
+
           </table>
         </div>
       </details>
+
     </section>
 
+
+    <!-- ===================================================
+         TRAINING
+         =================================================== -->
+
     <section class="card">
+
       <h2>Training</h2>
 
       <div class="summary-grid">
-        <div class="summary-item">
-          <span class="summary-label">Selected Training</span>
-          <span id="selectedTraining" class="summary-value">-</span>
-        </div>
 
         <div class="summary-item">
-          <span class="summary-label">Skill Average</span>
-          <span id="selectedTrainingAverage" class="summary-value">-</span>
+          <span class="summary-label">
+            Selected Training
+          </span>
+
+          <span
+            id="selectedTraining"
+            class="summary-value"
+          >
+            -
+          </span>
         </div>
+
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Ideal Skill Average
+          </span>
+
+          <span
+            id="selectedTrainingAverage"
+            class="summary-value"
+          >
+            -
+          </span>
+        </div>
+
       </div>
 
-      <div style="overflow-x: auto; margin-top: 16px;">
+
+      <div
+        class="table-wrap"
+        style="margin-top: 16px;"
+      >
         <table>
+
           <thead>
             <tr>
-              <th>Training Type</th>
-              <th>Skill</th>
-              <th class="number">Players Required</th>
-              <th class="number">Top-X Average</th>
-              <th>Status</th>
+
+              <th>
+                Training Type
+              </th>
+
+              <th>
+                Skill
+              </th>
+
+              <th class="number">
+                Players Required
+              </th>
+
+              <th class="number">
+                Ideal Top-X Average
+              </th>
+
+              <th class="number">
+                Utilization
+              </th>
+
+              <th class="number">
+                Waste
+              </th>
+
+              <th class="number">
+                Final Score
+              </th>
+
+              <th>
+                Status
+              </th>
+
             </tr>
           </thead>
-          <tbody id="trainingTableBody">
+
+          <tbody
+            id="trainingTableBody"
+          >
           </tbody>
+
         </table>
       </div>
+
+
+      <p class="training-note">
+        Ideal Top-X Average always uses the full ideal
+        number of weekly trainees. Formation utilization
+        measures how much of that training the selected
+        formation can actually use. Final Score equals
+        Ideal Average divided by Utilization. Lowest score
+        wins.
+      </p>
+
     </section>
 
+
+    <!-- ===================================================
+         LINEUP
+         =================================================== -->
+
     <section class="card">
+
       <h2>Generated Lineup</h2>
 
-      <div id="lineupWarning" class="warning">
-        Not enough eligible players to complete the lineup.
+
+      <div
+        id="lineupWarning"
+        class="warning"
+      >
+        Not enough eligible players to complete
+        the lineup.
       </div>
 
+
       <div class="legend">
+
         <div class="legend-item">
-          <span class="legend-box full"></span>
+          <span
+            class="legend-box full"
+          ></span>
+
           Full training
         </div>
 
+
         <div class="legend-item">
-          <span class="legend-box partial"></span>
+          <span
+            class="legend-box partial"
+          ></span>
+
           Partial training
         </div>
 
+
         <div class="legend-item">
-          <span class="legend-box"></span>
+          <span
+            class="legend-box"
+          ></span>
+
           Other position
         </div>
+
       </div>
+
 
       <div class="pitch">
 
+
+        <!-- FORWARDS -->
+
         <div class="pitch-row">
-          <div id="slot-LF" class="player-slot hidden">
-            <div class="position-name">LF</div>
-            <div id="player-LF" class="player-name">-</div>
-            <div id="rating-LF" class="player-rating"></div>
+
+          <div
+            id="slot-LF"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              LF
+            </div>
+
+            <div
+              id="player-LF"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-LF"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-CF" class="player-slot hidden">
-            <div class="position-name">CF</div>
-            <div id="player-CF" class="player-name">-</div>
-            <div id="rating-CF" class="player-rating"></div>
+
+          <div
+            id="slot-CF"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              CF
+            </div>
+
+            <div
+              id="player-CF"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-CF"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-RF" class="player-slot hidden">
-            <div class="position-name">RF</div>
-            <div id="player-RF" class="player-name">-</div>
-            <div id="rating-RF" class="player-rating"></div>
+
+          <div
+            id="slot-RF"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              RF
+            </div>
+
+            <div
+              id="player-RF"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-RF"
+              class="player-rating"
+            ></div>
           </div>
+
         </div>
 
+
+        <!-- MIDFIELD -->
+
         <div class="pitch-row">
-          <div id="slot-LW" class="player-slot hidden">
-            <div class="position-name">LW</div>
-            <div id="player-LW" class="player-name">-</div>
-            <div id="rating-LW" class="player-rating"></div>
+
+          <div
+            id="slot-LW"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              LW
+            </div>
+
+            <div
+              id="player-LW"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-LW"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-LCM" class="player-slot hidden">
-            <div class="position-name">LCM</div>
-            <div id="player-LCM" class="player-name">-</div>
-            <div id="rating-LCM" class="player-rating"></div>
+
+          <div
+            id="slot-LCM"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              LCM
+            </div>
+
+            <div
+              id="player-LCM"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-LCM"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-CM" class="player-slot hidden">
-            <div class="position-name">CM</div>
-            <div id="player-CM" class="player-name">-</div>
-            <div id="rating-CM" class="player-rating"></div>
+
+          <div
+            id="slot-CM"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              CM
+            </div>
+
+            <div
+              id="player-CM"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-CM"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-RCM" class="player-slot hidden">
-            <div class="position-name">RCM</div>
-            <div id="player-RCM" class="player-name">-</div>
-            <div id="rating-RCM" class="player-rating"></div>
+
+          <div
+            id="slot-RCM"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              RCM
+            </div>
+
+            <div
+              id="player-RCM"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-RCM"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-RW" class="player-slot hidden">
-            <div class="position-name">RW</div>
-            <div id="player-RW" class="player-name">-</div>
-            <div id="rating-RW" class="player-rating"></div>
+
+          <div
+            id="slot-RW"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              RW
+            </div>
+
+            <div
+              id="player-RW"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-RW"
+              class="player-rating"
+            ></div>
           </div>
+
         </div>
 
+
+        <!-- DEFENSE -->
+
         <div class="pitch-row">
-          <div id="slot-LWB" class="player-slot hidden">
-            <div class="position-name">LWB</div>
-            <div id="player-LWB" class="player-name">-</div>
-            <div id="rating-LWB" class="player-rating"></div>
+
+          <div
+            id="slot-LWB"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              LWB
+            </div>
+
+            <div
+              id="player-LWB"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-LWB"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-LCD" class="player-slot hidden">
-            <div class="position-name">LCD</div>
-            <div id="player-LCD" class="player-name">-</div>
-            <div id="rating-LCD" class="player-rating"></div>
+
+          <div
+            id="slot-LCD"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              LCD
+            </div>
+
+            <div
+              id="player-LCD"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-LCD"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-CD" class="player-slot hidden">
-            <div class="position-name">CD</div>
-            <div id="player-CD" class="player-name">-</div>
-            <div id="rating-CD" class="player-rating"></div>
+
+          <div
+            id="slot-CD"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              CD
+            </div>
+
+            <div
+              id="player-CD"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-CD"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-RCD" class="player-slot hidden">
-            <div class="position-name">RCD</div>
-            <div id="player-RCD" class="player-name">-</div>
-            <div id="rating-RCD" class="player-rating"></div>
+
+          <div
+            id="slot-RCD"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              RCD
+            </div>
+
+            <div
+              id="player-RCD"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-RCD"
+              class="player-rating"
+            ></div>
           </div>
 
-          <div id="slot-RWB" class="player-slot hidden">
-            <div class="position-name">RWB</div>
-            <div id="player-RWB" class="player-name">-</div>
-            <div id="rating-RWB" class="player-rating"></div>
+
+          <div
+            id="slot-RWB"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              RWB
+            </div>
+
+            <div
+              id="player-RWB"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-RWB"
+              class="player-rating"
+            ></div>
           </div>
+
         </div>
 
+
+        <!-- GOALKEEPER -->
+
         <div class="pitch-row">
-          <div id="slot-GK" class="player-slot hidden">
-            <div class="position-name">GK</div>
-            <div id="player-GK" class="player-name">-</div>
-            <div id="rating-GK" class="player-rating"></div>
+
+          <div
+            id="slot-GK"
+            class="player-slot hidden"
+          >
+            <div class="position-name">
+              GK
+            </div>
+
+            <div
+              id="player-GK"
+              class="player-name"
+            >
+              -
+            </div>
+
+            <div
+              id="rating-GK"
+              class="player-rating"
+            ></div>
           </div>
+
         </div>
 
       </div>
 
-      <div class="summary-grid" style="margin-top: 16px;">
-        <div class="summary-item">
-          <span class="summary-label">Captain</span>
-          <span class="summary-value">Coach pick</span>
-        </div>
+
+      <div
+        class="summary-grid"
+        style="margin-top: 16px;"
+      >
 
         <div class="summary-item">
-          <span class="summary-label">Set Pieces</span>
-          <span class="summary-value">Coach pick</span>
+          <span class="summary-label">
+            Captain
+          </span>
+
+          <span class="summary-value">
+            Coach pick
+          </span>
         </div>
+
+
+        <div class="summary-item">
+          <span class="summary-label">
+            Set Pieces
+          </span>
+
+          <span class="summary-value">
+            Coach pick
+          </span>
+        </div>
+
       </div>
+
     </section>
 
+
+    <!-- ===================================================
+         EXCLUDED PLAYERS
+         =================================================== -->
+
     <section class="card">
+
       <h2>Excluded Players</h2>
 
       <p class="small">
-        Players removed after formation and training type have been selected.
+        These players are removed only after the formation
+        and training type have been selected.
       </p>
 
-      <div style="overflow-x: auto;">
+      <div class="table-wrap">
+
         <table>
+
           <thead>
             <tr>
-              <th>Player</th>
-              <th>Reason</th>
+              <th>
+                Player
+              </th>
+
+              <th>
+                Reason
+              </th>
             </tr>
           </thead>
-          <tbody id="excludedPlayersTableBody">
+
+          <tbody
+            id="excludedPlayersTableBody"
+          >
             <tr>
-              <td colspan="2" class="empty-message">
+              <td
+                colspan="2"
+                class="empty-message"
+              >
                 No exclusions calculated yet.
               </td>
             </tr>
           </tbody>
+
         </table>
+
       </div>
+
     </section>
 
+
+    <!-- ===================================================
+         DIAGNOSTICS
+         =================================================== -->
+
     <section class="card">
+
       <h2>Diagnostics</h2>
 
-      <details>
-        <summary>Eligible player pool</summary>
 
-        <div style="overflow-x: auto; margin-top: 12px;">
+      <details>
+
+        <summary>
+          Eligible player pool
+        </summary>
+
+        <div
+          class="table-wrap"
+          style="margin-top: 12px;"
+        >
+
           <table>
+
             <thead>
               <tr>
-                <th>Player</th>
-                <th class="number">GK</th>
-                <th class="number">CD</th>
-                <th class="number">WB</th>
-                <th class="number">IM</th>
-                <th class="number">WG</th>
-                <th class="number">FW</th>
+
+                <th>
+                  Player
+                </th>
+
+                <th class="number">
+                  GK
+                </th>
+
+                <th class="number">
+                  CD
+                </th>
+
+                <th class="number">
+                  WB
+                </th>
+
+                <th class="number">
+                  IM
+                </th>
+
+                <th class="number">
+                  WG
+                </th>
+
+                <th class="number">
+                  FW
+                </th>
+
               </tr>
             </thead>
-            <tbody id="eligiblePlayersTableBody">
+
+            <tbody
+              id="eligiblePlayersTableBody"
+            >
             </tbody>
+
           </table>
+
         </div>
+
       </details>
+
 
       <details>
-        <summary>Lineup selection order</summary>
 
-        <ol id="selectionOrderList">
+        <summary>
+          Lineup selection order
+        </summary>
+
+        <ol
+          id="selectionOrderList"
+        >
         </ol>
+
       </details>
+
     </section>
 
   </main>
+
 
   <script src="lineup.js"></script>
 
