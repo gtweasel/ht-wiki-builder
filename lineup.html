@@ -297,7 +297,7 @@
               <p>
                 Every senior-team training type is considered except
                 combined Scoring and Set Pieces. Behind the scenes, each
-                training type is paired with all six CHPP-tracked formations.
+                training type is paired with all ten CHPP-tracked formations.
                 The lowest training-and-formation combination score is
                 recommended, while Training remains the first user control.
               </p>
@@ -388,8 +388,8 @@
 
 
           <p class="lineup-note">
-            All 10 supported training types are compared against all six
-            CHPP-tracked formations behind the scenes: 60 possible combinations
+            All 10 supported training types are compared against all ten
+            CHPP-tracked formations behind the scenes: 100 possible combinations
             when every training average is available. This section shows only
             the training-side inputs. Changing Training selects that training
             type's best formation and rebuilds everything below.
@@ -419,10 +419,11 @@
               </h2>
 
               <p>
-                For the selected training type, all six CHPP-tracked
-                formations stay in the calculation. Lower formation
-                experience lowers the score, while lower training utilization
-                raises it. No formation is removed by a preset cutoff.
+                For the selected training type, all ten CHPP-tracked
+                formations stay in the calculation. Competitive matches favor
+                higher formation experience; friendlies favor lower formation
+                experience. Lower weighted training utilization raises the
+                score. No formation is removed by a preset cutoff.
               </p>
             </div>
 
@@ -533,7 +534,7 @@
                   </th>
 
                   <th class="number">
-                    Effective / Ideal
+                    Effective / Ideal Effect
                   </th>
 
                   <th class="number">
@@ -559,10 +560,13 @@
 
 
           <p class="lineup-note">
-            Formation Score = FrmExp x (Ideal Trainees / Effective Trainees).
-            Combination Score = Training Ideal Average x Formation Score.
+            Formation Score = Experience Priority Factor x
+            (Ideal Training Effect / Effective Training Effect).
+            Experience Priority Factor = (13 - FrmExp) / 10 for competitive
+            matches and FrmExp / 10 for friendlies. Combination Score =
+            Training Ideal Average x Formation Score.
             Lowest score wins. There is no utilization cutoff and no
-            formation-experience threshold: all six formations stay in the
+            formation-experience threshold: all ten formations stay in the
             calculation. Changing Formation keeps the selected training type
             and immediately rebuilds everything below.
           </p>
@@ -591,10 +595,11 @@
               </h2>
 
               <p>
-                Training positions are filled first, followed by
-                the remaining starting positions from goalkeeper forward.
-                The seven-player bench is then selected from the
-                remaining eligible players.
+                The position layout is chosen for the selected formation by
+                maximizing weighted training effect first, then lineup strength.
+                Full-training positions are filled before reduced-effect training
+                positions, followed by the remaining starting positions. The
+                seven-player bench is then selected from the remaining players.
               </p>
             </div>
 
@@ -1401,7 +1406,7 @@
 
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260825-2"></script>
+  <script src="/lineup.js?v=20260825-4"></script>
 
 </body>
 </html>

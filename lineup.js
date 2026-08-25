@@ -6,8 +6,8 @@
  *
  * Recommendation model:
  * 1. Calculate the ideal training average for every supported training type
- * 2. Combine every training type with all six CHPP-tracked formations
- * 3. Formation Score = FrmExp * (Ideal Slots / Effective Slots)
+ * 2. Combine every training type with all ten CHPP-tracked formations
+ * 3. Formation Score = Experience Priority Factor * (Ideal Training Effect / Effective Training Effect)
  * 4. Combination Score = Training Ideal Average * Formation Score
  * 5. Lowest combination score wins
  * 6. Display Training first, then Formation, then build the lineup
@@ -155,155 +155,113 @@ const HTWB_LINEUP_TEAM_STORAGE_KEY =
    ========================================================= */
 
 /*
- * These are the six formation experience values
- * currently available through CHPP.
+ * All ten legal senior-team formations are available through
+ * CHPP formation experience.
  *
- * Every formation:
- * - uses both wingbacks
- * - uses both wingers
- *
- * Center positions are used before left/right
- * when the number of central players allows it.
+ * A formation defines only how many defenders, midfielders,
+ * and forwards are used. The optimizer chooses the actual
+ * central / wing slots for the selected training type instead
+ * of forcing wingbacks and wingers into every formation.
  */
 
 const HTWB_LINEUP_FORMATIONS = {
-  "4-3-3": {
-    defenders: 4,
-    midfielders: 3,
-    forwards: 3,
-
-    slots: [
-      "GK",
-
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "CM",
-      "LW",
-      "RW",
-
-      "CF",
-      "LF",
-      "RF"
-    ]
-  },
-
-  "4-5-1": {
-    defenders: 4,
+  "2-5-3": {
+    defenders: 2,
     midfielders: 5,
-    forwards: 1,
-
-    slots: [
-      "GK",
-
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "CM",
-      "LCM",
-      "RCM",
-      "LW",
-      "RW",
-
-      "CF"
-    ]
-  },
-
-  "3-5-2": {
-    defenders: 3,
-    midfielders: 5,
-    forwards: 2,
-
-    slots: [
-      "GK",
-
-      "CD",
-      "LWB",
-      "RWB",
-
-      "CM",
-      "LCM",
-      "RCM",
-      "LW",
-      "RW",
-
-      "LF",
-      "RF"
-    ]
-  },
-
-  "5-3-2": {
-    defenders: 5,
-    midfielders: 3,
-    forwards: 2,
-
-    slots: [
-      "GK",
-
-      "CD",
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "CM",
-      "LW",
-      "RW",
-
-      "LF",
-      "RF"
-    ]
+    forwards: 3
   },
 
   "3-4-3": {
     defenders: 3,
     midfielders: 4,
-    forwards: 3,
+    forwards: 3
+  },
 
-    slots: [
-      "GK",
+  "3-5-2": {
+    defenders: 3,
+    midfielders: 5,
+    forwards: 2
+  },
 
-      "CD",
-      "LWB",
-      "RWB",
+  "4-3-3": {
+    defenders: 4,
+    midfielders: 3,
+    forwards: 3
+  },
 
-      "LCM",
-      "RCM",
-      "LW",
-      "RW",
+  "4-4-2": {
+    defenders: 4,
+    midfielders: 4,
+    forwards: 2
+  },
 
-      "CF",
-      "LF",
-      "RF"
-    ]
+  "4-5-1": {
+    defenders: 4,
+    midfielders: 5,
+    forwards: 1
+  },
+
+  "5-2-3": {
+    defenders: 5,
+    midfielders: 2,
+    forwards: 3
+  },
+
+  "5-3-2": {
+    defenders: 5,
+    midfielders: 3,
+    forwards: 2
   },
 
   "5-4-1": {
     defenders: 5,
     midfielders: 4,
-    forwards: 1,
+    forwards: 1
+  },
 
-    slots: [
-      "GK",
-
-      "CD",
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "LCM",
-      "RCM",
-      "LW",
-      "RW",
-
-      "CF"
-    ]
+  "5-5-0": {
+    defenders: 5,
+    midfielders: 5,
+    forwards: 0
   }
+};
+
+
+/* =========================================================
+   LEGAL POSITION POOLS
+   ========================================================= */
+
+/*
+ * Hattrick allows at most three central defenders, three inner
+ * midfielders, and three forwards. Wing positions fill the two
+ * remaining defender / midfielder locations.
+ *
+ * The optimizer chooses a legal subset from each line according
+ * to training effect first, then lineup strength.
+ */
+
+const HTWB_LINEUP_POSITION_GROUPS = {
+  defenders: [
+    "LWB",
+    "LCD",
+    "CD",
+    "RCD",
+    "RWB"
+  ],
+
+  midfielders: [
+    "LW",
+    "LCM",
+    "CM",
+    "RCM",
+    "RW"
+  ],
+
+  forwards: [
+    "LF",
+    "CF",
+    "RF"
+  ]
 };
 
 
@@ -411,10 +369,17 @@ const HTWB_LINEUP_SUBSTITUTE_ORDER = [
  * except the combined "Scoring and Set Pieces" type.
  *
  * requiredPlayers is the full ideal WEEKLY trainee group
- * across the two training matches.
+ * across the two training matches and still drives the ideal
+ * skill-average calculation.
  *
- * idealSlotsPerMatch is used only when comparing formations.
- * Formation utilization never changes the ideal skill average.
+ * idealEffectPerMatch is the maximum position-weighted training
+ * effect available in one match. Known reduced effects are used
+ * explicitly:
+ * - Playmaking: Wingers receive 50% of the IM effect.
+ * - Winger: Wingbacks receive 50% of the Winger effect.
+ *
+ * Very-small / osmosis effects are not counted as normal trainee
+ * slots in the formation calculation.
  */
 
 const HTWB_LINEUP_TRAINING_TYPES = [
@@ -424,13 +389,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "keeper",
     skillLabel: "Keeper",
     requiredPlayers: 2,
-    idealSlotsPerMatch: 1,
+    idealEffectPerMatch: 1,
     tiePriority: 1,
-    utilization() {
-      return 1;
-    },
     fullRoles: ["GK"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -439,13 +402,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "defending",
     skillLabel: "Defending",
     requiredPlayers: 10,
-    idealSlotsPerMatch: 5,
+    idealEffectPerMatch: 5,
     tiePriority: 2,
-    utilization(htwbLineupFormation) {
-      return htwbLineupFormation.defenders / 5;
-    },
     fullRoles: ["DEFENDER"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -454,13 +415,13 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "playmaking",
     skillLabel: "Playmaking",
     requiredPlayers: 10,
-    idealSlotsPerMatch: 5,
+    idealEffectPerMatch: 4,
     tiePriority: 3,
-    utilization(htwbLineupFormation) {
-      return htwbLineupFormation.midfielders / 5;
-    },
     fullRoles: ["IM"],
-    partialRoles: ["WG"]
+    partialRoles: ["WG"],
+    partialRoleWeights: {
+      WG: 0.5
+    }
   },
 
   {
@@ -469,13 +430,13 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "winger",
     skillLabel: "Winger",
     requiredPlayers: 8,
-    idealSlotsPerMatch: 4,
+    idealEffectPerMatch: 3,
     tiePriority: 4,
-    utilization() {
-      return 1;
-    },
     fullRoles: ["WG"],
-    partialRoles: ["WB"]
+    partialRoles: ["WB"],
+    partialRoleWeights: {
+      WB: 0.5
+    }
   },
 
   {
@@ -484,16 +445,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "passing",
     skillLabel: "Passing",
     requiredPlayers: 16,
-    idealSlotsPerMatch: 8,
+    idealEffectPerMatch: 8,
     tiePriority: 5,
-    utilization(htwbLineupFormation) {
-      return (
-        htwbLineupFormation.midfielders +
-        htwbLineupFormation.forwards
-      ) / 8;
-    },
     fullRoles: ["IM", "WG", "FW"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -502,13 +458,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "scoring",
     skillLabel: "Scoring",
     requiredPlayers: 6,
-    idealSlotsPerMatch: 3,
+    idealEffectPerMatch: 3,
     tiePriority: 6,
-    utilization(htwbLineupFormation) {
-      return htwbLineupFormation.forwards / 3;
-    },
     fullRoles: ["FW"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -517,13 +471,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "setPieces",
     skillLabel: "Set Pieces",
     requiredPlayers: 22,
-    idealSlotsPerMatch: 11,
+    idealEffectPerMatch: 11,
     tiePriority: 7,
-    utilization() {
-      return 1;
-    },
     fullRoles: ["ALL"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -532,17 +484,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "defending",
     skillLabel: "Defending",
     requiredPlayers: 22,
-    idealSlotsPerMatch: 11,
+    idealEffectPerMatch: 11,
     tiePriority: 8,
-    utilization(htwbLineupFormation) {
-      return (
-        1 +
-        htwbLineupFormation.defenders +
-        htwbLineupFormation.midfielders
-      ) / 11;
-    },
     fullRoles: ["GK", "DEFENDER", "IM", "WG"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -551,13 +497,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "winger",
     skillLabel: "Winger",
     requiredPlayers: 10,
-    idealSlotsPerMatch: 5,
+    idealEffectPerMatch: 5,
     tiePriority: 9,
-    utilization(htwbLineupFormation) {
-      return (2 + htwbLineupFormation.forwards) / 5;
-    },
     fullRoles: ["WG", "FW"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   },
 
   {
@@ -566,16 +510,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     skill: "passing",
     skillLabel: "Passing",
     requiredPlayers: 20,
-    idealSlotsPerMatch: 10,
+    idealEffectPerMatch: 10,
     tiePriority: 10,
-    utilization(htwbLineupFormation) {
-      return (
-        htwbLineupFormation.defenders +
-        htwbLineupFormation.midfielders
-      ) / 10;
-    },
     fullRoles: ["DEFENDER", "IM", "WG"],
-    partialRoles: []
+    partialRoles: [],
+    partialRoleWeights: {}
   }
 ];
 
@@ -1000,75 +939,374 @@ function htwbLineupSlotMatchesTrainingRole(
 
 
 /* =========================================================
+   FORMATION SLOT LAYOUTS / TRAINING EFFECT
+   ========================================================= */
+
+function htwbLineupCombinations(
+  htwbLineupItems,
+  htwbLineupCount
+) {
+  if (htwbLineupCount === 0) {
+    return [[]];
+  }
+
+  if (
+    htwbLineupCount < 0 ||
+    htwbLineupCount > htwbLineupItems.length
+  ) {
+    return [];
+  }
+
+  const htwbLineupResults = [];
+
+  function htwbLineupBuildCombination(
+    htwbLineupStart,
+    htwbLineupCurrent
+  ) {
+    if (
+      htwbLineupCurrent.length ===
+      htwbLineupCount
+    ) {
+      htwbLineupResults.push(
+        [...htwbLineupCurrent]
+      );
+
+      return;
+    }
+
+    const htwbLineupNeeded =
+      htwbLineupCount -
+      htwbLineupCurrent.length;
+
+    for (
+      let htwbLineupIndex = htwbLineupStart;
+      htwbLineupIndex <=
+        htwbLineupItems.length -
+          htwbLineupNeeded;
+      htwbLineupIndex += 1
+    ) {
+      htwbLineupCurrent.push(
+        htwbLineupItems[htwbLineupIndex]
+      );
+
+      htwbLineupBuildCombination(
+        htwbLineupIndex + 1,
+        htwbLineupCurrent
+      );
+
+      htwbLineupCurrent.pop();
+    }
+  }
+
+  htwbLineupBuildCombination(
+    0,
+    []
+  );
+
+  return htwbLineupResults;
+}
+
+
+function htwbLineupGenerateFormationSlotLayouts(
+  htwbLineupFormation
+) {
+  const htwbLineupDefenderLayouts =
+    htwbLineupCombinations(
+      HTWB_LINEUP_POSITION_GROUPS.defenders,
+      htwbLineupFormation.defenders
+    );
+
+  const htwbLineupMidfielderLayouts =
+    htwbLineupCombinations(
+      HTWB_LINEUP_POSITION_GROUPS.midfielders,
+      htwbLineupFormation.midfielders
+    );
+
+  const htwbLineupForwardLayouts =
+    htwbLineupCombinations(
+      HTWB_LINEUP_POSITION_GROUPS.forwards,
+      htwbLineupFormation.forwards
+    );
+
+  const htwbLineupLayouts = [];
+
+  for (
+    const htwbLineupDefenderSlots
+    of htwbLineupDefenderLayouts
+  ) {
+    for (
+      const htwbLineupMidfielderSlots
+      of htwbLineupMidfielderLayouts
+    ) {
+      for (
+        const htwbLineupForwardSlots
+        of htwbLineupForwardLayouts
+      ) {
+        const htwbLineupSelected =
+          new Set([
+            "GK",
+            ...htwbLineupDefenderSlots,
+            ...htwbLineupMidfielderSlots,
+            ...htwbLineupForwardSlots
+          ]);
+
+        htwbLineupLayouts.push(
+          HTWB_LINEUP_POSITION_ORDER.filter(
+            htwbLineupSlot =>
+              htwbLineupSelected.has(
+                htwbLineupSlot
+              )
+          )
+        );
+      }
+    }
+  }
+
+  return htwbLineupLayouts;
+}
+
+
+function htwbLineupGetTrainingEffectForSlot(
+  htwbLineupTraining,
+  htwbLineupSlot
+) {
+  const htwbLineupRole =
+    htwbLineupGetSlotRole(
+      htwbLineupSlot
+    );
+
+  if (!htwbLineupRole) {
+    return 0;
+  }
+
+  if (
+    htwbLineupTraining.fullRoles.some(
+      htwbLineupTrainingRole =>
+        htwbLineupRoleMatchesTrainingRole(
+          htwbLineupRole,
+          htwbLineupTrainingRole
+        )
+    )
+  ) {
+    return 1;
+  }
+
+  for (
+    const htwbLineupPartialRole
+    of htwbLineupTraining.partialRoles
+  ) {
+    if (
+      !htwbLineupRoleMatchesTrainingRole(
+        htwbLineupRole,
+        htwbLineupPartialRole
+      )
+    ) {
+      continue;
+    }
+
+    return Math.max(
+      0,
+      htwbLineupNumberValue(
+        htwbLineupTraining
+          .partialRoleWeights?.[
+            htwbLineupPartialRole
+          ],
+        0.5
+      )
+    );
+  }
+
+  return 0;
+}
+
+
+function htwbLineupCalculateLayoutTrainingEffect(
+  htwbLineupSlots,
+  htwbLineupTraining
+) {
+  return htwbLineupSlots.reduce(
+    (
+      htwbLineupTotal,
+      htwbLineupSlot
+    ) =>
+      htwbLineupTotal +
+      htwbLineupGetTrainingEffectForSlot(
+        htwbLineupTraining,
+        htwbLineupSlot
+      ),
+    0
+  );
+}
+
+
+function htwbLineupGetBestFormationTrainingEffect(
+  htwbLineupFormation,
+  htwbLineupTraining
+) {
+  const htwbLineupLayouts =
+    htwbLineupGenerateFormationSlotLayouts(
+      htwbLineupFormation
+    );
+
+  return htwbLineupLayouts.reduce(
+    (
+      htwbLineupBest,
+      htwbLineupSlots
+    ) =>
+      Math.max(
+        htwbLineupBest,
+        htwbLineupCalculateLayoutTrainingEffect(
+          htwbLineupSlots,
+          htwbLineupTraining
+        )
+      ),
+    0
+  );
+}
+
+
+/* =========================================================
+   FORMATION EXPERIENCE PRIORITY
+   ========================================================= */
+
+/*
+ * Low score wins, so the formation-experience factor points in
+ * the opposite direction from the player-rating form factor:
+ *
+ * - Competitive matches: higher experience -> lower factor.
+ * - Friendlies: lower experience -> lower factor.
+ *
+ * Formation experience is compared on its normal Poor (3) to
+ * Outstanding (10) range. The competitive factor mirrors that
+ * same 0.3-to-1.0 range so the priority reverses without changing
+ * the overall weight of formation experience in the score.
+ */
+
+function htwbLineupGetFormationExperienceFactor(
+  htwbLineupExperience,
+  htwbLineupUpcomingMatch
+) {
+  const htwbLineupSafeExperience =
+    Math.max(
+      3,
+      Math.min(
+        10,
+        htwbLineupNumberValue(
+          htwbLineupExperience,
+          3
+        )
+      )
+    );
+
+  const htwbLineupMatchType =
+    htwbLineupNumberValue(
+      htwbLineupUpcomingMatch?.matchType,
+      0
+    );
+
+  if (
+    HTWB_LINEUP_HIGH_FORM_MATCH_TYPES.has(
+      htwbLineupMatchType
+    )
+  ) {
+    return (
+      (13 - htwbLineupSafeExperience) /
+      10
+    );
+  }
+
+  if (
+    HTWB_LINEUP_LOW_FORM_MATCH_TYPES.has(
+      htwbLineupMatchType
+    )
+  ) {
+    return (
+      htwbLineupSafeExperience /
+      10
+    );
+  }
+
+  throw new Error(
+    `Unsupported MatchType ${htwbLineupMatchType} for formation-experience priority.`
+  );
+}
+
+
+/* =========================================================
    FORMATION / COMBINATION SCORING
    ========================================================= */
 
 /*
- * Every supported training type is paired with all six
+ * Every supported training type is paired with all ten
  * CHPP-tracked formations. Nothing is pre-excluded for low
  * utilization or any formation-experience value.
  *
  * Low score wins:
  *
- *   Formation Score = FrmExp * (Ideal Slots / Effective Slots)
+ *   Formation Score = Experience Priority Factor
+ *                     x (Ideal Training Effect / Effective Training Effect)
  *
- *   Combination Score = Training Ideal Average * Formation Score
+ *   Combination Score = Training Ideal Average x Formation Score
  *
- * A formation with zero effective training slots receives an
+ * A formation with zero effective training effect receives an
  * infinite formation score naturally because Ideal / 0 is undefined.
  */
 
 function htwbLineupCalculateFormationMetrics(
   htwbLineupFormation,
   htwbLineupExperience,
-  htwbLineupTraining
+  htwbLineupTraining,
+  htwbLineupUpcomingMatch
 ) {
-  const htwbLineupUtilization =
-    Math.max(
-      0,
-      Math.min(
-        1,
-        htwbLineupNumberValue(
-          htwbLineupTraining.utilization(
-            htwbLineupFormation
-          ),
-          0
-        )
-      )
-    );
-
-  const htwbLineupIdealSlots =
-    htwbLineupNumberValue(
-      htwbLineupTraining.idealSlotsPerMatch,
-      htwbLineupTraining.requiredPlayers / 2
-    );
-
-  const htwbLineupEffectiveSlots =
-    htwbLineupIdealSlots *
-    htwbLineupUtilization;
-
-  const htwbLineupSafeExperience =
+  const htwbLineupIdealEffect =
     Math.max(
       0,
       htwbLineupNumberValue(
-        htwbLineupExperience,
+        htwbLineupTraining
+          .idealEffectPerMatch,
         0
       )
     );
 
+  const htwbLineupEffectiveEffect =
+    htwbLineupGetBestFormationTrainingEffect(
+      htwbLineupFormation,
+      htwbLineupTraining
+    );
+
+  const htwbLineupUtilization =
+    htwbLineupIdealEffect > 0
+      ? Math.max(
+          0,
+          Math.min(
+            1,
+            htwbLineupEffectiveEffect /
+            htwbLineupIdealEffect
+          )
+        )
+      : 0;
+
+  const htwbLineupExperienceFactor =
+    htwbLineupGetFormationExperienceFactor(
+      htwbLineupExperience,
+      htwbLineupUpcomingMatch
+    );
+
   const htwbLineupFormationScore =
-    htwbLineupEffectiveSlots > 0
-      ? htwbLineupSafeExperience *
+    htwbLineupEffectiveEffect > 0
+      ? htwbLineupExperienceFactor *
         (
-          htwbLineupIdealSlots /
-          htwbLineupEffectiveSlots
+          htwbLineupIdealEffect /
+          htwbLineupEffectiveEffect
         )
       : Number.POSITIVE_INFINITY;
 
   return {
     utilization: htwbLineupUtilization,
-    idealSlots: htwbLineupIdealSlots,
-    effectiveSlots: htwbLineupEffectiveSlots,
+    idealSlots: htwbLineupIdealEffect,
+    effectiveSlots: htwbLineupEffectiveEffect,
+    experienceFactor:
+      htwbLineupExperienceFactor,
     score: htwbLineupFormationScore
   };
 }
@@ -1119,12 +1357,12 @@ function htwbLineupCompareCombinationCandidates(
   }
 
   if (
-    htwbLineupA.experience !==
-    htwbLineupB.experience
+    htwbLineupA.experienceFactor !==
+    htwbLineupB.experienceFactor
   ) {
     return (
-      htwbLineupA.experience -
-      htwbLineupB.experience
+      htwbLineupA.experienceFactor -
+      htwbLineupB.experienceFactor
     );
   }
 
@@ -1146,7 +1384,8 @@ function htwbLineupCompareCombinationCandidates(
 
 function htwbLineupBuildCombinationMatrix(
   htwbLineupFormationExperience,
-  htwbLineupTrainingResults
+  htwbLineupTrainingResults,
+  htwbLineupUpcomingMatch
 ) {
   return htwbLineupTrainingResults.flatMap(
     htwbLineupTrainingResult =>
@@ -1177,7 +1416,8 @@ function htwbLineupBuildCombinationMatrix(
               htwbLineupCalculateFormationMetrics(
                 htwbLineupFormation,
                 htwbLineupExperience,
-                htwbLineupTrainingResult.training
+                htwbLineupTrainingResult.training,
+                htwbLineupUpcomingMatch
               );
 
             const htwbLineupCombinationScore =
@@ -1199,6 +1439,8 @@ function htwbLineupBuildCombinationMatrix(
               name: htwbLineupName,
               formation: htwbLineupFormation,
               experience: htwbLineupExperience,
+              experienceFactor:
+                htwbLineupMetrics.experienceFactor,
               utilization:
                 htwbLineupMetrics.utilization,
               idealSlots:
@@ -1334,13 +1576,14 @@ function htwbLineupCalculateTrainingAverage(
  * comes from the best training + formation pair across the full
  * combination matrix.
  *
- * With 10 supported training types and 6 CHPP formations, the
- * normal full matrix contains 60 combinations.
+ * With 10 supported training types and 10 CHPP formations, the
+ * normal full matrix contains 100 combinations.
  */
 
 function htwbLineupSelectTraining(
   htwbLineupPlayers,
   htwbLineupFormationExperience,
+  htwbLineupUpcomingMatch,
   htwbLineupRequestedTrainingId = ""
 ) {
   const htwbLineupResults =
@@ -1365,7 +1608,8 @@ function htwbLineupSelectTraining(
   const htwbLineupCombinationMatrix =
     htwbLineupBuildCombinationMatrix(
       htwbLineupFormationExperience,
-      htwbLineupResults
+      htwbLineupResults,
+      htwbLineupUpcomingMatch
     );
 
   const htwbLineupFiniteCombinations =
@@ -1469,31 +1713,35 @@ function htwbLineupSelectTraining(
    ========================================================= */
 
 function htwbLineupGetTrainingSlots(
-  htwbLineupFormation,
+  htwbLineupSlots,
   htwbLineupTraining,
   htwbLineupType
 ) {
-  const htwbLineupRoles =
-    htwbLineupType === "full"
-      ? htwbLineupTraining.fullRoles
-      : htwbLineupTraining.partialRoles;
-
   return HTWB_LINEUP_POSITION_ORDER.filter(
     htwbLineupSlot => {
       if (
-        !htwbLineupFormation
-          .slots
-          .includes(htwbLineupSlot)
+        !htwbLineupSlots.includes(
+          htwbLineupSlot
+        )
       ) {
         return false;
       }
 
-      return htwbLineupRoles.some(
-        htwbLineupRole =>
-          htwbLineupSlotMatchesTrainingRole(
-            htwbLineupSlot,
-            htwbLineupRole
-          )
+      const htwbLineupEffect =
+        htwbLineupGetTrainingEffectForSlot(
+          htwbLineupTraining,
+          htwbLineupSlot
+        );
+
+      if (
+        htwbLineupType === "full"
+      ) {
+        return htwbLineupEffect >= 1;
+      }
+
+      return (
+        htwbLineupEffect > 0 &&
+        htwbLineupEffect < 1
       );
     }
   );
@@ -2059,7 +2307,7 @@ function htwbLineupGetSubstituteRating(
    ========================================================= */
 
 function htwbLineupBuildSelectionOrder(
-  htwbLineupFormation,
+  htwbLineupSlots,
   htwbLineupTraining
 ) {
   /*
@@ -2068,7 +2316,7 @@ function htwbLineupBuildSelectionOrder(
 
   const htwbLineupFullTrainingSlots =
     htwbLineupGetTrainingSlots(
-      htwbLineupFormation,
+      htwbLineupSlots,
       htwbLineupTraining,
       "full"
     );
@@ -2079,7 +2327,7 @@ function htwbLineupBuildSelectionOrder(
 
   const htwbLineupPartialTrainingSlots =
     htwbLineupGetTrainingSlots(
-      htwbLineupFormation,
+      htwbLineupSlots,
       htwbLineupTraining,
       "partial"
     )
@@ -2099,9 +2347,9 @@ function htwbLineupBuildSelectionOrder(
     HTWB_LINEUP_POSITION_ORDER
       .filter(
         htwbLineupSlot =>
-          htwbLineupFormation
-            .slots
-            .includes(htwbLineupSlot)
+          htwbLineupSlots.includes(
+            htwbLineupSlot
+          )
       )
       .filter(
         htwbLineupSlot =>
@@ -2233,9 +2481,9 @@ function htwbLineupChooseBestPlayerForSlot(
    BUILD XI
    ========================================================= */
 
-function htwbLineupConstructLineup(
+function htwbLineupConstructLineupForSlots(
   htwbLineupEligiblePlayers,
-  htwbLineupFormation,
+  htwbLineupSlots,
   htwbLineupTraining
 ) {
   const htwbLineupRemaining =
@@ -2247,9 +2495,11 @@ function htwbLineupConstructLineup(
 
   const htwbLineupOrder =
     htwbLineupBuildSelectionOrder(
-      htwbLineupFormation,
+      htwbLineupSlots,
       htwbLineupTraining
     );
+
+  let htwbLineupTotalRating = 0;
 
   for (
     const htwbLineupSlot
@@ -2285,6 +2535,21 @@ function htwbLineupConstructLineup(
     htwbLineupLineup[htwbLineupSlot] =
       htwbLineupSelectedPlayer;
 
+    const htwbLineupSelectedRating =
+      htwbLineupGetPositionRating(
+        htwbLineupSelectedPlayer,
+        htwbLineupSlot
+      );
+
+    if (
+      Number.isFinite(
+        htwbLineupSelectedRating
+      )
+    ) {
+      htwbLineupTotalRating +=
+        htwbLineupSelectedRating;
+    }
+
     const htwbLineupIndex =
       htwbLineupRemaining.findIndex(
         htwbLineupPlayer =>
@@ -2313,6 +2578,16 @@ function htwbLineupConstructLineup(
 
     order: htwbLineupOrder,
 
+    slotLayout: [...htwbLineupSlots],
+
+    trainingEffect:
+      htwbLineupCalculateLayoutTrainingEffect(
+        htwbLineupSlots,
+        htwbLineupTraining
+      ),
+
+    totalRating: htwbLineupTotalRating,
+
     playersRemaining:
       htwbLineupRemaining,
 
@@ -2321,6 +2596,92 @@ function htwbLineupConstructLineup(
         htwbLineupLineup
       ).length === 11
   };
+}
+
+
+function htwbLineupCompareSlotLayoutResults(
+  htwbLineupA,
+  htwbLineupB
+) {
+  if (
+    htwbLineupA.trainingEffect !==
+    htwbLineupB.trainingEffect
+  ) {
+    return (
+      htwbLineupB.trainingEffect -
+      htwbLineupA.trainingEffect
+    );
+  }
+
+  const htwbLineupPlayerCountA =
+    Object.keys(
+      htwbLineupA.lineup
+    ).length;
+
+  const htwbLineupPlayerCountB =
+    Object.keys(
+      htwbLineupB.lineup
+    ).length;
+
+  if (
+    htwbLineupPlayerCountA !==
+    htwbLineupPlayerCountB
+  ) {
+    return (
+      htwbLineupPlayerCountB -
+      htwbLineupPlayerCountA
+    );
+  }
+
+  if (
+    htwbLineupA.totalRating !==
+    htwbLineupB.totalRating
+  ) {
+    return (
+      htwbLineupB.totalRating -
+      htwbLineupA.totalRating
+    );
+  }
+
+  return htwbLineupA.slotLayout
+    .join("|")
+    .localeCompare(
+      htwbLineupB.slotLayout.join("|")
+    );
+}
+
+
+function htwbLineupConstructLineup(
+  htwbLineupEligiblePlayers,
+  htwbLineupFormation,
+  htwbLineupTraining
+) {
+  const htwbLineupLayouts =
+    htwbLineupGenerateFormationSlotLayouts(
+      htwbLineupFormation
+    );
+
+  if (!htwbLineupLayouts.length) {
+    throw new Error(
+      "No legal position layout is available for the selected formation."
+    );
+  }
+
+  const htwbLineupResults =
+    htwbLineupLayouts
+      .map(
+        htwbLineupSlots =>
+          htwbLineupConstructLineupForSlots(
+            htwbLineupEligiblePlayers,
+            htwbLineupSlots,
+            htwbLineupTraining
+          )
+      )
+      .sort(
+        htwbLineupCompareSlotLayoutResults
+      );
+
+  return htwbLineupResults[0];
 }
 
 
@@ -2798,6 +3159,7 @@ function htwbLineupCalculateLineup(
     htwbLineupSelectTraining(
       htwbLineupTrainingPool,
       htwbLineupData.formationExperience,
+      htwbLineupData.upcomingMatch,
       htwbLineupChoices.trainingId || ""
     );
 
@@ -2808,7 +3170,7 @@ function htwbLineupCalculateLineup(
 
   /*
    * 2. Formation
-   * The selected training is shown first in the UI. Its six
+   * The selected training is shown first in the UI. Its ten
    * formation combinations are then ranked by the same score.
    */
 
@@ -3497,18 +3859,13 @@ function htwbLineupRenderLineup(
 ) {
   htwbLineupResetPitch();
 
-  const htwbLineupFormation =
-    htwbLineupResult
-      .selectedFormation
-      .formation;
-
   const htwbLineupLineupResult =
     htwbLineupResult
       .lineupResult;
 
   for (
     const htwbLineupSlot
-    of htwbLineupFormation.slots
+    of htwbLineupLineupResult.slotLayout
   ) {
     const htwbLineupSlotElement =
       document.getElementById(
@@ -4430,7 +4787,7 @@ function htwbLineupHandleTrainingChange() {
 
   /*
    * Training is displayed first. A training change deliberately
-   * clears any formation override so the six combinations for
+   * clears any formation override so the ten combinations for
    * that training are rescored and its best formation is selected.
    * The user can then override formation again.
    */
