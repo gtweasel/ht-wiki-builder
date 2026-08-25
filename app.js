@@ -9,7 +9,15 @@ const teamName = document.getElementById("team-name");
 const managerName = document.getElementById("manager-name");
 const teamId = document.getElementById("team-id");
 
+const TEAM_STORAGE_KEY = "htwb_selected_team_id";
+
+let accountData = null;
+let selectedTeam = null;
+
 function showLoggedOut() {
+  accountData = null;
+  selectedTeam = null;
+
   userStatus.textContent = "Not connected";
 
   headerLogin.hidden = false;
@@ -19,8 +27,137 @@ function showLoggedOut() {
   connectedPanel.hidden = true;
 }
 
+function getSavedTeamId() {
+  return localStorage.getItem(TEAM_STORAGE_KEY) || "";
+}
+
+function saveTeamId(id) {
+  if (id) {
+    localStorage.setItem(TEAM_STORAGE_KEY, id);
+  }
+}
+
+function findTeam(id) {
+  if (!accountData || !Array.isArray(accountData.teams)) {
+    return null;
+  }
+
+  return accountData.teams.find(
+    team => String(team.teamId) === String(id)
+  ) || null;
+}
+
+function chooseInitialTeam(data) {
+  const teams = Array.isArray(data.teams)
+    ? data.teams
+    : [];
+
+  if (!teams.length) {
+    return null;
+  }
+
+  const savedTeam = findTeam(getSavedTeamId());
+
+  if (savedTeam) {
+    return savedTeam;
+  }
+
+  if (data.teamId) {
+    const defaultTeam = findTeam(data.teamId);
+
+    if (defaultTeam) {
+      return defaultTeam;
+    }
+  }
+
+  return teams[0];
+}
+
+function renderSelectedTeam(team) {
+  if (!team) {
+    teamName.textContent = "No managed team found";
+    teamId.textContent = "";
+    userStatus.textContent = "Connected";
+    return;
+  }
+
+  selectedTeam = team;
+  saveTeamId(team.teamId);
+
+  teamName.textContent =
+    team.teamName || "Hattrick team";
+
+  teamId.textContent =
+    team.teamId
+      ? `TeamID: ${team.teamId}`
+      : "";
+
+  userStatus.textContent =
+    team.teamName || "Connected";
+}
+
+function removeTeamSelector() {
+  const existing =
+    document.getElementById("team-selector-wrapper");
+
+  if (existing) {
+    existing.remove();
+  }
+}
+
+function createTeamSelector(teams) {
+  removeTeamSelector();
+
+  if (!Array.isArray(teams) || teams.length <= 1) {
+    return;
+  }
+
+  const wrapper = document.createElement("div");
+  wrapper.id = "team-selector-wrapper";
+  wrapper.className = "team-selector-wrapper";
+
+  const label = document.createElement("label");
+  label.htmlFor = "team-selector";
+  label.textContent = "Active team";
+
+  const select = document.createElement("select");
+  select.id = "team-selector";
+  select.className = "team-selector";
+
+  for (const team of teams) {
+    const option = document.createElement("option");
+
+    option.value = team.teamId;
+    option.textContent =
+      `${team.teamName} - TeamID ${team.teamId}`;
+
+    if (
+      selectedTeam &&
+      String(team.teamId) ===
+        String(selectedTeam.teamId)
+    ) {
+      option.selected = true;
+    }
+
+    select.appendChild(option);
+  }
+
+  select.addEventListener("change", event => {
+    const team = findTeam(event.target.value);
+
+    if (team) {
+      renderSelectedTeam(team);
+    }
+  });
+
+  wrapper.appendChild(label);
+  wrapper.appendChild(select);
+
+  connectedPanel.appendChild(wrapper);
+}
+
 function showLoggedIn(data) {
-  userStatus.textContent = data.teamName || "Connected";
+  accountData = data;
 
   headerLogin.hidden = true;
   headerLogout.hidden = false;
@@ -28,18 +165,15 @@ function showLoggedIn(data) {
   loginPanel.hidden = true;
   connectedPanel.hidden = false;
 
-  teamName.textContent =
-    data.teamName || "Hattrick team";
-
   managerName.textContent =
     data.managerName
       ? `Manager: ${data.managerName}`
       : "";
 
-  teamId.textContent =
-    data.teamId
-      ? `TeamID: ${data.teamId}`
-      : "";
+  selectedTeam = chooseInitialTeam(data);
+
+  renderSelectedTeam(selectedTeam);
+  createTeamSelector(data.teams);
 }
 
 async function loadUser() {
@@ -84,5 +218,24 @@ async function loadUser() {
     showLoggedOut();
   }
 }
+
+window.HTWikiBuilder = {
+  getSelectedTeamId() {
+    return selectedTeam
+      ? selectedTeam.teamId
+      : "";
+  },
+
+  getSelectedTeam() {
+    return selectedTeam;
+  },
+
+  getManagedTeams() {
+    return accountData &&
+      Array.isArray(accountData.teams)
+      ? accountData.teams
+      : [];
+  }
+};
 
 loadUser();
