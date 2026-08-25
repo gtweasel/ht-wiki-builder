@@ -4,17 +4,19 @@
  * HT Wiki Builder
  * Lineup Builder - Version 1
  *
- * Browser-side responsibilities:
- * - Load normalized JSON from /api/lineup
- * - Select formation
- * - Select training type
- * - Filter unavailable players
- * - Calculate positional ratings
- * - Build lineup
- * - Display diagnostics
+ * Formation:
+ * - Uses only formation experience exposed by CHPP
  *
- * CHPP authentication and XML parsing are handled by:
- * functions/api/lineup.js
+ * Training:
+ * - Calculates the ideal full-training average
+ * - Calculates utilization of that training in the selected formation
+ * - Final score = ideal average / utilization
+ * - Lowest final score wins
+ *
+ * Player selection:
+ * - Full training positions first
+ * - Partial training positions second
+ * - Remaining positions back to front
  */
 
 
@@ -26,24 +28,16 @@ const statusElement =
   document.getElementById("status");
 
 const buildLineupButton =
-  document.getElementById(
-    "buildLineupButton"
-  );
+  document.getElementById("buildLineupButton");
 
 const teamNameElement =
-  document.getElementById(
-    "teamName"
-  );
+  document.getElementById("teamName");
 
 const matchNameElement =
-  document.getElementById(
-    "matchName"
-  );
+  document.getElementById("matchName");
 
 const matchTypeElement =
-  document.getElementById(
-    "matchType"
-  );
+  document.getElementById("matchType");
 
 const trainingWeekPositionElement =
   document.getElementById(
@@ -114,71 +108,38 @@ const TEAM_STORAGE_KEY =
    ========================================================= */
 
 /*
- * Every allowed formation:
+ * These are the six formation experience values
+ * currently available through CHPP.
  *
- * - Uses both wingbacks
- * - Uses both wingers
+ * Every formation:
+ * - uses both wingbacks
+ * - uses both wingers
  *
- * Central defenders:
- * 3 defenders -> CD
- * 4 defenders -> LCD + RCD
- * 5 defenders -> CD + LCD + RCD
- *
- * Inner midfielders:
- * 3 midfielders -> CM
- * 4 midfielders -> LCM + RCM
- * 5 midfielders -> CM + LCM + RCM
- *
- * Forwards:
- * 0 -> none
- * 1 -> CF
- * 2 -> LF + RF
- * 3 -> CF + LF + RF
+ * Center positions are used before left/right
+ * when the number of central players allows it.
  */
 
 const FORMATIONS = {
-  "5-5-0": {
-    defenders: 5,
-    midfielders: 5,
-    forwards: 0,
+  "4-3-3": {
+    defenders: 4,
+    midfielders: 3,
+    forwards: 3,
 
     slots: [
       "GK",
 
-      "CD",
       "LCD",
       "RCD",
       "LWB",
       "RWB",
 
       "CM",
-      "LCM",
-      "RCM",
-      "LW",
-      "RW"
-    ]
-  },
-
-  "5-4-1": {
-    defenders: 5,
-    midfielders: 4,
-    forwards: 1,
-
-    slots: [
-      "GK",
-
-      "CD",
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "LCM",
-      "RCM",
       "LW",
       "RW",
 
-      "CF"
+      "CF",
+      "LF",
+      "RF"
     ]
   },
 
@@ -205,52 +166,6 @@ const FORMATIONS = {
     ]
   },
 
-  "5-3-2": {
-    defenders: 5,
-    midfielders: 3,
-    forwards: 2,
-
-    slots: [
-      "GK",
-
-      "CD",
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "CM",
-      "LW",
-      "RW",
-
-      "LF",
-      "RF"
-    ]
-  },
-
-  "4-4-2": {
-    defenders: 4,
-    midfielders: 4,
-    forwards: 2,
-
-    slots: [
-      "GK",
-
-      "LCD",
-      "RCD",
-      "LWB",
-      "RWB",
-
-      "LCM",
-      "RCM",
-      "LW",
-      "RW",
-
-      "LF",
-      "RF"
-    ]
-  },
-
   "3-5-2": {
     defenders: 3,
     midfielders: 5,
@@ -274,14 +189,15 @@ const FORMATIONS = {
     ]
   },
 
-  "4-3-3": {
-    defenders: 4,
+  "5-3-2": {
+    defenders: 5,
     midfielders: 3,
-    forwards: 3,
+    forwards: 2,
 
     slots: [
       "GK",
 
+      "CD",
       "LCD",
       "RCD",
       "LWB",
@@ -291,7 +207,6 @@ const FORMATIONS = {
       "LW",
       "RW",
 
-      "CF",
       "LF",
       "RF"
     ]
@@ -318,6 +233,29 @@ const FORMATIONS = {
       "LF",
       "RF"
     ]
+  },
+
+  "5-4-1": {
+    defenders: 5,
+    midfielders: 4,
+    forwards: 1,
+
+    slots: [
+      "GK",
+
+      "CD",
+      "LCD",
+      "RCD",
+      "LWB",
+      "RWB",
+
+      "LCM",
+      "RCM",
+      "LW",
+      "RW",
+
+      "CF"
+    ]
   }
 };
 
@@ -327,12 +265,26 @@ const FORMATIONS = {
    ========================================================= */
 
 /*
- * Fixed selection order.
+ * Fixed filling order.
  *
- * Training positions are pulled out first.
- * Within each category this order is used.
+ * Training positions are pulled forward first.
  *
- * Center -> Left -> Right
+ * Within each category:
+ *
+ * GK
+ * CD
+ * LCD
+ * RCD
+ * LWB
+ * RWB
+ * CM
+ * LCM
+ * RCM
+ * LW
+ * RW
+ * CF
+ * LF
+ * RF
  */
 
 const POSITION_ORDER = [
@@ -363,21 +315,15 @@ const POSITION_ORDER = [
    ========================================================= */
 
 /*
- * Training average tie priority follows the skill display
- * order shown on Hattrick player pages:
+ * IMPORTANT:
  *
- * Keeper
- * Defending
- * Playmaking
- * Winger
- * Passing
- * Scoring
- * Set Pieces
+ * requiredPlayers is ALWAYS the ideal weekly number.
  *
- * Regular Passing is excluded from our algorithm.
+ * We do NOT reduce the Top-X average because the
+ * selected formation wastes training slots.
  *
- * Passing (Defenders + Midfielders) still trains Passing,
- * so its tie priority remains in the Passing position.
+ * Formation waste is handled separately through
+ * utilization.
  */
 
 const TRAINING_TYPES = [
@@ -392,8 +338,9 @@ const TRAINING_TYPES = [
 
     tiePriority: 1,
 
-    compatible:
-      () => true,
+    utilization() {
+      return 1;
+    },
 
     fullRoles: [
       "GK"
@@ -413,9 +360,12 @@ const TRAINING_TYPES = [
 
     tiePriority: 2,
 
-    compatible:
-      formation =>
-        formation.defenders === 5,
+    utilization(formation) {
+      return (
+        formation.defenders /
+        5
+      );
+    },
 
     fullRoles: [
       "DEFENDER"
@@ -435,9 +385,12 @@ const TRAINING_TYPES = [
 
     tiePriority: 3,
 
-    compatible:
-      formation =>
-        formation.midfielders === 5,
+    utilization(formation) {
+      return (
+        formation.midfielders /
+        5
+      );
+    },
 
     fullRoles: [
       "IM"
@@ -460,11 +413,19 @@ const TRAINING_TYPES = [
     tiePriority: 4,
 
     /*
-     * Every formation we allow
-     * uses both wingers and wingbacks.
+     * We always use:
+     *
+     * LW
+     * RW
+     * LWB
+     * RWB
+     *
+     * Therefore Winger training is always
+     * fully utilized in our allowed formations.
      */
-    compatible:
-      () => true,
+    utilization() {
+      return 1;
+    },
 
     fullRoles: [
       "WG"
@@ -485,12 +446,21 @@ const TRAINING_TYPES = [
 
     requiredPlayers: 20,
 
+    /*
+     * Passing comes before Scoring and
+     * Set Pieces in Hattrick skill display order.
+     */
     tiePriority: 5,
 
-    compatible:
-      formation =>
-        formation.defenders === 5 &&
-        formation.midfielders === 5,
+    utilization(formation) {
+      return (
+        (
+          formation.defenders +
+          formation.midfielders
+        ) /
+        10
+      );
+    },
 
     fullRoles: [
       "DEFENDER",
@@ -512,9 +482,12 @@ const TRAINING_TYPES = [
 
     tiePriority: 6,
 
-    compatible:
-      formation =>
-        formation.forwards === 3,
+    utilization(formation) {
+      return (
+        formation.forwards /
+        3
+      );
+    },
 
     fullRoles: [
       "FW"
@@ -534,8 +507,9 @@ const TRAINING_TYPES = [
 
     tiePriority: 7,
 
-    compatible:
-      () => true,
+    utilization() {
+      return 1;
+    },
 
     fullRoles: [
       "ALL"
@@ -551,12 +525,12 @@ const TRAINING_TYPES = [
    ========================================================= */
 
 /*
- * High-form priority:
+ * League
+ * Qualification
+ * Cup
+ * Masters
  *
- * 1 League
- * 2 Qualification
- * 3 Cup
- * 7 Hattrick Masters
+ * Favor players with HIGH Form.
  */
 
 const HIGH_FORM_MATCH_TYPES =
@@ -569,12 +543,12 @@ const HIGH_FORM_MATCH_TYPES =
 
 
 /*
- * Low-form priority:
+ * Friendly
+ * Friendly - Cup Rules
+ * International Friendly
+ * International Friendly - Cup Rules
  *
- * 4 Friendly
- * 5 Friendly - Cup Rules
- * 8 International Friendly
- * 9 International Friendly - Cup Rules
+ * Favor players with LOW Form.
  */
 
 const LOW_FORM_MATCH_TYPES =
@@ -587,7 +561,7 @@ const LOW_FORM_MATCH_TYPES =
 
 
 /*
- * Suspensions are relevant for:
+ * Suspensions apply to:
  *
  * League
  * Qualification
@@ -635,14 +609,14 @@ function average(values) {
     return null;
   }
 
-  const total =
+  return (
     values.reduce(
       (sum, value) =>
         sum + value,
       0
-    );
-
-  return total / values.length;
+    ) /
+    values.length
+  );
 }
 
 
@@ -693,6 +667,16 @@ function escapeHtml(value) {
 }
 
 
+function percent(value) {
+  return (
+    `${round(
+      value * 100,
+      1
+    ).toFixed(1)}%`
+  );
+}
+
+
 /* =========================================================
    STATUS
    ========================================================= */
@@ -725,7 +709,9 @@ function setStatus(
 
 function validTeamId(value) {
   return /^\d+$/.test(
-    String(value || "")
+    String(
+      value || ""
+    )
   );
 }
 
@@ -737,7 +723,9 @@ function getUrlTeamId() {
     );
 
   const teamId =
-    params.get("teamId");
+    params.get(
+      "teamId"
+    );
 
   return validTeamId(teamId)
     ? teamId
@@ -765,8 +753,14 @@ function getSelectedTeamId() {
         .HTWikiBuilder
         .getSelectedTeamId();
 
-    if (validTeamId(selected)) {
-      return String(selected);
+    if (
+      validTeamId(
+        selected
+      )
+    ) {
+      return String(
+        selected
+      );
     }
   }
 
@@ -775,8 +769,14 @@ function getSelectedTeamId() {
       TEAM_STORAGE_KEY
     );
 
-  if (validTeamId(stored)) {
-    return String(stored);
+  if (
+    validTeamId(
+      stored
+    )
+  ) {
+    return String(
+      stored
+    );
   }
 
   return "";
@@ -787,12 +787,15 @@ function getSelectedTeamId() {
    API
    ========================================================= */
 
-async function loadLineupData(teamId) {
+async function loadLineupData(
+  teamId
+) {
   const response =
     await fetch(
       `/api/lineup?teamId=${encodeURIComponent(teamId)}`,
       {
-        method: "GET",
+        method:
+          "GET",
 
         headers: {
           Accept:
@@ -801,7 +804,7 @@ async function loadLineupData(teamId) {
       }
     );
 
-  let data = null;
+  let data;
 
   try {
     data =
@@ -845,7 +848,9 @@ async function loadLineupData(teamId) {
    ========================================================= */
 
 function getSlotRole(slot) {
-  if (slot === "GK") {
+  if (
+    slot === "GK"
+  ) {
     return "GK";
   }
 
@@ -895,7 +900,10 @@ function roleMatchesTrainingRole(
   role,
   trainingRole
 ) {
-  if (trainingRole === "ALL") {
+  if (
+    trainingRole ===
+    "ALL"
+  ) {
     return true;
   }
 
@@ -910,7 +918,8 @@ function roleMatchesTrainingRole(
   }
 
   return (
-    role === trainingRole
+    role ===
+    trainingRole
   );
 }
 
@@ -919,11 +928,8 @@ function slotMatchesTrainingRole(
   slot,
   trainingRole
 ) {
-  const role =
-    getSlotRole(slot);
-
   return roleMatchesTrainingRole(
-    role,
+    getSlotRole(slot),
     trainingRole
   );
 }
@@ -936,9 +942,9 @@ function slotMatchesTrainingRole(
 /*
  * Rule:
  *
- * 1. Lowest formation experience
- * 2. If tied, more defenders
- * 3. If still tied, more midfielders
+ * 1. Lowest experience
+ * 2. More defenders
+ * 3. More midfielders
  */
 
 function selectFormation(
@@ -1012,13 +1018,10 @@ function selectFormation(
         );
       }
 
-      /*
-       * All valid formations should be resolved
-       * before this point, but keep output
-       * deterministic just in case.
-       */
-      return a.name.localeCompare(
-        b.name
+      return (
+        a.name.localeCompare(
+          b.name
+        )
       );
     }
   );
@@ -1033,20 +1036,20 @@ function selectFormation(
 
 
 /* =========================================================
-   TRAINING AVERAGE
+   IDEAL TRAINING AVERAGE
    ========================================================= */
+
+/*
+ * This ALWAYS uses the full ideal number of
+ * trainees over two matches.
+ *
+ * Formation utilization does NOT alter this.
+ */
 
 function calculateTrainingAverage(
   players,
   training
 ) {
-  /*
-   * Training selection uses the ENTIRE roster.
-   *
-   * Injuries, suspensions and previous-match
-   * training are deliberately ignored here.
-   */
-
   const values =
     players
       .map(
@@ -1059,7 +1062,9 @@ function calculateTrainingAverage(
       )
       .filter(
         value =>
-          Number.isFinite(value)
+          Number.isFinite(
+            value
+          )
       )
       .sort(
         (a, b) =>
@@ -1067,11 +1072,10 @@ function calculateTrainingAverage(
       );
 
   /*
-   * Do not average fewer players.
-   *
-   * If the roster does not contain enough players
-   * for this training type, remove the training
-   * type from consideration.
+   * If we do not have the full number
+   * of players needed for the ideal
+   * training calculation, remove this
+   * training type.
    */
 
   if (
@@ -1081,14 +1085,11 @@ function calculateTrainingAverage(
     return null;
   }
 
-  const topValues =
+  return average(
     values.slice(
       0,
       training.requiredPlayers
-    );
-
-  return average(
-    topValues
+    )
   );
 }
 
@@ -1097,6 +1098,21 @@ function calculateTrainingAverage(
    TRAINING SELECTION
    ========================================================= */
 
+/*
+ * Final score:
+ *
+ * ideal average / formation utilization
+ *
+ * Lower score wins.
+ *
+ * Example:
+ *
+ * Ideal average = 9
+ * Utilization = 90%
+ *
+ * 9 / .90 = 10
+ */
+
 function selectTraining(
   players,
   formation
@@ -1104,29 +1120,54 @@ function selectTraining(
   const results =
     TRAINING_TYPES.map(
       training => {
-        const compatible =
-          training.compatible(
-            formation
+        const idealAverage =
+          calculateTrainingAverage(
+            players,
+            training
           );
 
-        const trainingAverage =
-          compatible
-            ? calculateTrainingAverage(
-                players,
-                training
+        const utilization =
+          Math.max(
+            0,
+            Math.min(
+              1,
+              numberValue(
+                training.utilization(
+                  formation
+                ),
+                0
               )
-            : null;
+            )
+          );
+
+        const waste =
+          1 -
+          utilization;
+
+        let score = null;
+
+        if (
+          idealAverage !== null &&
+          utilization > 0
+        ) {
+          score =
+            idealAverage /
+            utilization;
+        }
 
         return {
           training,
 
-          compatible,
+          idealAverage,
+
+          utilization,
+
+          waste,
+
+          score,
 
           hasEnoughPlayers:
-            trainingAverage !== null,
-
-          average:
-            trainingAverage
+            idealAverage !== null
         };
       }
     );
@@ -1135,18 +1176,19 @@ function selectTraining(
     results
       .filter(
         result =>
-          result.compatible &&
-          result.hasEnoughPlayers
+          result.hasEnoughPlayers &&
+          result.utilization > 0 &&
+          result.score !== null
       )
       .sort(
         (a, b) => {
           if (
-            a.average !==
-            b.average
+            a.score !==
+            b.score
           ) {
             return (
-              a.average -
-              b.average
+              a.score -
+              b.score
             );
           }
 
@@ -1159,7 +1201,7 @@ function selectTraining(
 
   if (!candidates.length) {
     throw new Error(
-      "No compatible training type has enough players on the roster."
+      "No training type can be calculated from the current roster."
     );
   }
 
@@ -1181,7 +1223,7 @@ function getTrainingSlots(
   training,
   type
 ) {
-  const trainingRoles =
+  const roles =
     type === "full"
       ? training.fullRoles
       : training.partialRoles;
@@ -1196,11 +1238,11 @@ function getTrainingSlots(
         return false;
       }
 
-      return trainingRoles.some(
-        trainingRole =>
+      return roles.some(
+        role =>
           slotMatchesTrainingRole(
             slot,
-            trainingRole
+            role
           )
       );
     }
@@ -1209,7 +1251,7 @@ function getTrainingSlots(
 
 
 /* =========================================================
-   PREVIOUS-MATCH TRAINING
+   PREVIOUS MATCH TRAINING
    ========================================================= */
 
 function playerWasPreviouslyTrained(
@@ -1219,7 +1261,8 @@ function playerWasPreviouslyTrained(
 ) {
   const appearances =
     previousTrainingMatch
-      ?.appearances || [];
+      ?.appearances ||
+    [];
 
   const trainingRoles = [
     ...training.fullRoles,
@@ -1241,7 +1284,8 @@ function playerWasPreviouslyTrained(
 
       const role =
         String(
-          appearance.role || ""
+          appearance.role ||
+          ""
         ).toUpperCase();
 
       return trainingRoles.some(
@@ -1281,12 +1325,13 @@ function filterEligiblePlayers(
       ?.trainingWeekPosition ===
       "second";
 
-  for (const player of players) {
+  for (
+    const player
+    of players
+  ) {
     const reasons = [];
 
     /*
-     * InjuryLevel:
-     *
      * -1 healthy
      *  0 bruised but playing
      * >0 injured
@@ -1304,13 +1349,7 @@ function filterEligiblePlayers(
     }
 
     /*
-     * Cards == 3:
-     * suspended.
-     *
-     * Apply to:
-     * League
-     * Qualification
-     * Cup
+     * Cards == 3 means suspended.
      */
 
     if (
@@ -1328,12 +1367,11 @@ function filterEligiblePlayers(
     }
 
     /*
-     * Previous match exclusions apply ONLY when
-     * constructing the second training match
-     * of the Hattrick training week.
+     * Only the second match of the
+     * training week looks backward.
      *
-     * Any appearance in a full OR partial training
-     * role counts as already trained.
+     * ANY appearance in a training role
+     * counts as already trained.
      */
 
     if (
@@ -1349,7 +1387,9 @@ function filterEligiblePlayers(
       );
     }
 
-    if (reasons.length) {
+    if (
+      reasons.length
+    ) {
       excluded.push({
         player,
         reasons
@@ -1369,7 +1409,7 @@ function filterEligiblePlayers(
 
 
 /* =========================================================
-   FORM FACTOR
+   FORM
    ========================================================= */
 
 function getFormFactor(
@@ -1388,27 +1428,16 @@ function getFormFactor(
       0
     );
 
-  /*
-   * League / Qualification / Cup / Masters:
-   *
-   * favor HIGH form.
-   */
-
   if (
     HIGH_FORM_MATCH_TYPES.has(
       matchType
     )
   ) {
     return (
-      form / 10
+      form /
+      10
     );
   }
-
-  /*
-   * Friendlies:
-   *
-   * favor LOW form.
-   */
 
   if (
     LOW_FORM_MATCH_TYPES.has(
@@ -1416,14 +1445,10 @@ function getFormFactor(
     )
   ) {
     return (
-      (10 - form) / 10
+      (10 - form) /
+      10
     );
   }
-
-  /*
-   * Do not silently apply the wrong form rule
-   * if Hattrick sends an unexpected match type.
-   */
 
   throw new Error(
     `Unsupported MatchType ${matchType} for form priority.`
@@ -1432,15 +1457,18 @@ function getFormFactor(
 
 
 /* =========================================================
-   STAMINA FACTOR
+   STAMINA
    ========================================================= */
 
-function getStaminaFactor(player) {
+function getStaminaFactor(
+  player
+) {
   return (
     numberValue(
       player.stamina,
       0
-    ) / 10
+    ) /
+    10
   );
 }
 
@@ -1449,49 +1477,28 @@ function getStaminaFactor(player) {
    POTENTIAL TIE BREAKER
    ========================================================= */
 
-/*
- * Hattrick year:
- * 112 days
- *
- * Age 30:
- * 30 * 112 = 3360 days
- *
- * Spreadsheet:
- *
- * POTENTIAL =
- * (3360 - ageInDays) * 7
- *
- * Positional rating adds:
- *
- * POTENTIAL / 100000
- */
-
 function getPotentialTieBreaker(
   player
 ) {
-  const age =
-    numberValue(
-      player.age,
-      0
-    );
-
-  const ageDays =
+  const ageInDays =
+    (
+      numberValue(
+        player.age,
+        0
+      ) *
+      112
+    ) +
     numberValue(
       player.ageDays,
       0
     );
 
-  const ageInDays =
-    (
-      age * 112
-    ) +
-    ageDays;
-
   const potential =
     (
       3360 -
       ageInDays
-    ) * 7;
+    ) *
+    7;
 
   return (
     potential /
@@ -1501,7 +1508,7 @@ function getPotentialTieBreaker(
 
 
 /* =========================================================
-   RAW POSITION SKILLS
+   RAW POSITION RATINGS
    ========================================================= */
 
 function calculateRawPositionSkills(
@@ -1544,43 +1551,25 @@ function calculateRawPositionSkills(
     );
 
   return {
-    /*
-     * GK
-     *
-     * 75% Keeper
-     * 25% Defending
-     */
-
     GK:
       (
-        keeper * 0.75
+        keeper *
+        0.75
       ) +
       (
-        defending * 0.25
+        defending *
+        0.25
       ),
-
-    /*
-     * Central Defender
-     *
-     * 75% Defending
-     * 25% Playmaking
-     */
 
     CD:
       (
-        defending * 0.75
+        defending *
+        0.75
       ) +
       (
-        playmaking * 0.25
+        playmaking *
+        0.25
       ),
-
-    /*
-     * Wingback
-     *
-     * 6/9 Defending
-     * 1/9 Playmaking
-     * 2/9 Winger
-     */
 
     WB:
       (
@@ -1596,14 +1585,6 @@ function calculateRawPositionSkills(
         (2 / 9)
       ),
 
-    /*
-     * Inner Midfielder
-     *
-     * 6/9 Playmaking
-     * 2/9 Defending
-     * 1/9 Passing
-     */
-
     IM:
       (
         playmaking *
@@ -1618,36 +1599,23 @@ function calculateRawPositionSkills(
         (1 / 9)
       ),
 
-    /*
-     * Winger
-     *
-     * 10% Defending
-     * 20% Playmaking
-     * 60% Winger
-     * 10% Passing
-     */
-
     WG:
       (
-        defending * 0.10
+        defending *
+        0.10
       ) +
       (
-        playmaking * 0.20
+        playmaking *
+        0.20
       ) +
       (
-        winger * 0.60
+        winger *
+        0.60
       ) +
       (
-        passing * 0.10
+        passing *
+        0.10
       ),
-
-    /*
-     * Forward
-     *
-     * 6/9 Scoring
-     * 2/9 Passing
-     * 1/9 Winger
-     */
 
     FW:
       (
@@ -1690,7 +1658,7 @@ function calculatePlayerRatings(
       player
     );
 
-  const potentialTieBreaker =
+  const tieBreaker =
     getPotentialTieBreaker(
       player
     );
@@ -1700,17 +1668,19 @@ function calculatePlayerRatings(
   for (
     const [
       position,
-      rawPositionSkill
+      rawSkill
     ]
-    of Object.entries(raw)
+    of Object.entries(
+      raw
+    )
   ) {
     ratings[position] =
       (
-        rawPositionSkill *
+        rawSkill *
         formFactor *
         staminaFactor
       ) +
-      potentialTieBreaker;
+      tieBreaker;
   }
 
   return {
@@ -1722,7 +1692,7 @@ function calculatePlayerRatings(
 
     staminaFactor,
 
-    potentialTieBreaker
+    tieBreaker
   };
 }
 
@@ -1736,10 +1706,14 @@ function getPositionRating(
   slot
 ) {
   const role =
-    getSlotRole(slot);
+    getSlotRole(
+      slot
+    );
 
   if (!role) {
-    return Number.NEGATIVE_INFINITY;
+    return (
+      Number.NEGATIVE_INFINITY
+    );
   }
 
   const rating =
@@ -1756,7 +1730,7 @@ function getPositionRating(
 
 
 /* =========================================================
-   LINEUP SELECTION ORDER
+   SELECTION ORDER
    ========================================================= */
 
 function buildSelectionOrder(
@@ -1764,8 +1738,7 @@ function buildSelectionOrder(
   training
 ) {
   /*
-   * Step 1:
-   * Full training positions.
+   * Full training positions first.
    */
 
   const fullTrainingSlots =
@@ -1776,8 +1749,7 @@ function buildSelectionOrder(
     );
 
   /*
-   * Step 2:
-   * Partial training positions.
+   * Partial training positions second.
    */
 
   const partialTrainingSlots =
@@ -1794,8 +1766,7 @@ function buildSelectionOrder(
       );
 
   /*
-   * Step 3:
-   * Everything remaining in fixed
+   * Everything else in fixed
    * back-to-front order.
    */
 
@@ -1865,71 +1836,66 @@ function getSelectionCategory(
 
 
 /* =========================================================
-   BEST PLAYER FOR SLOT
+   CHOOSE PLAYER
    ========================================================= */
 
 /*
  * Greedy selection.
  *
- * We do NOT save a player for a later position.
+ * Best remaining player for the CURRENT
+ * position is used immediately.
  *
- * If the best remaining defender is also the
- * best forward, and we are filling defense now,
- * he plays defense.
+ * Do not save him for a later position.
  */
 
 function chooseBestPlayerForSlot(
   players,
   slot
 ) {
-  if (!players.length) {
+  if (
+    !players.length
+  ) {
     return null;
   }
 
   const sorted =
-    [...players].sort(
-      (a, b) => {
-        const ratingA =
-          getPositionRating(
-            a,
-            slot
-          );
+    [...players]
+      .sort(
+        (a, b) => {
+          const ratingA =
+            getPositionRating(
+              a,
+              slot
+            );
 
-        const ratingB =
-          getPositionRating(
-            b,
-            slot
-          );
+          const ratingB =
+            getPositionRating(
+              b,
+              slot
+            );
 
-        if (
-          ratingA !== ratingB
-        ) {
+          if (
+            ratingA !==
+            ratingB
+          ) {
+            return (
+              ratingB -
+              ratingA
+            );
+          }
+
           return (
-            ratingB -
-            ratingA
+            numberValue(
+              a.playerId,
+              0
+            ) -
+            numberValue(
+              b.playerId,
+              0
+            )
           );
         }
-
-        /*
-         * Potential is already included in
-         * the rating.
-         *
-         * PlayerID is only an absolute final
-         * deterministic fallback.
-         */
-
-        return (
-          numberValue(
-            a.playerId,
-            0
-          ) -
-          numberValue(
-            b.playerId,
-            0
-          )
-        );
-      }
-    );
+      );
 
   return (
     sorted[0] ||
@@ -1939,7 +1905,7 @@ function chooseBestPlayerForSlot(
 
 
 /* =========================================================
-   BUILD LINEUP
+   BUILD XI
    ========================================================= */
 
 function constructLineup(
@@ -1947,7 +1913,7 @@ function constructLineup(
   formation,
   training
 ) {
-  const playersRemaining =
+  const remaining =
     [...eligiblePlayers];
 
   const lineup = {};
@@ -1966,7 +1932,7 @@ function constructLineup(
   ) {
     const selectedPlayer =
       chooseBestPlayerForSlot(
-        playersRemaining,
+        remaining,
         slot
       );
 
@@ -1976,28 +1942,26 @@ function constructLineup(
         order
       );
 
-    if (!selectedPlayer) {
-      selections.push({
-        slot,
-        player: null,
-        category
-      });
+    selections.push({
+      slot,
 
+      player:
+        selectedPlayer,
+
+      category
+    });
+
+    if (
+      !selectedPlayer
+    ) {
       continue;
     }
 
     lineup[slot] =
       selectedPlayer;
 
-    selections.push({
-      slot,
-      player:
-        selectedPlayer,
-      category
-    });
-
     const index =
-      playersRemaining.findIndex(
+      remaining.findIndex(
         player =>
           String(
             player.playerId
@@ -2007,8 +1971,10 @@ function constructLineup(
           )
       );
 
-    if (index >= 0) {
-      playersRemaining.splice(
+    if (
+      index >= 0
+    ) {
+      remaining.splice(
         index,
         1
       );
@@ -2022,7 +1988,8 @@ function constructLineup(
 
     order,
 
-    playersRemaining,
+    playersRemaining:
+      remaining,
 
     complete:
       Object.keys(
@@ -2033,10 +2000,12 @@ function constructLineup(
 
 
 /* =========================================================
-   MASTER CALCULATION
+   COMPLETE CALCULATION
    ========================================================= */
 
-function calculateLineup(data) {
+function calculateLineup(
+  data
+) {
   const players =
     Array.isArray(
       data.players
@@ -2044,16 +2013,16 @@ function calculateLineup(data) {
       ? data.players
       : [];
 
-  if (!players.length) {
+  if (
+    !players.length
+  ) {
     throw new Error(
       "No players were returned."
     );
   }
 
   /*
-   * STEP 1
-   *
-   * Choose formation.
+   * 1. Formation
    */
 
   const formationResult =
@@ -2065,12 +2034,9 @@ function calculateLineup(data) {
     formationResult.selected;
 
   /*
-   * STEP 2 + 3
+   * 2. Training
    *
-   * Determine training using FULL roster.
-   *
-   * No injuries/suspensions/previous match
-   * exclusions yet.
+   * Uses FULL roster.
    */
 
   const trainingResult =
@@ -2085,9 +2051,7 @@ function calculateLineup(data) {
       .training;
 
   /*
-   * STEP 4
-   *
-   * Now filter players for the actual match.
+   * 3. Player availability
    */
 
   const eligibilityResult =
@@ -2099,10 +2063,7 @@ function calculateLineup(data) {
     );
 
   /*
-   * STEP 5
-   *
-   * Calculate ratings only for players
-   * who remain eligible.
+   * 4. Position ratings
    */
 
   const ratedEligiblePlayers =
@@ -2117,10 +2078,7 @@ function calculateLineup(data) {
       );
 
   /*
-   * STEP 6 + 7
-   *
-   * Training positions first,
-   * then remaining positions from the back.
+   * 5. Build lineup
    */
 
   const lineupResult =
@@ -2196,44 +2154,59 @@ function getMatchTypeLabel(
 function getTrainingWeekLabel(
   value
 ) {
-  if (value === "first") {
+  if (
+    value === "first"
+  ) {
     return (
       "First training match"
     );
   }
 
-  if (value === "second") {
+  if (
+    value === "second"
+  ) {
     return (
       "Second training match"
     );
   }
 
-  if (value === "none") {
+  if (
+    value === "none"
+  ) {
     return (
       "Not a training match"
     );
   }
 
   return (
-    value || "-"
+    value ||
+    "-"
   );
 }
 
 
 /* =========================================================
-   RENDER MATCH
+   MATCH DISPLAY
    ========================================================= */
 
-function renderMatchSummary(data) {
+function renderMatchSummary(
+  data
+) {
   const match =
-    data.upcomingMatch || {};
+    data.upcomingMatch ||
+    {};
 
-  if (teamNameElement) {
+  if (
+    teamNameElement
+  ) {
     teamNameElement.textContent =
-      data.teamName || "-";
+      data.teamName ||
+      "-";
   }
 
-  if (matchNameElement) {
+  if (
+    matchNameElement
+  ) {
     if (
       match.homeTeamName &&
       match.awayTeamName
@@ -2246,7 +2219,9 @@ function renderMatchSummary(data) {
     }
   }
 
-  if (matchTypeElement) {
+  if (
+    matchTypeElement
+  ) {
     matchTypeElement.textContent =
       getMatchTypeLabel(
         match.matchType
@@ -2265,12 +2240,15 @@ function renderMatchSummary(data) {
 
 
 /* =========================================================
-   RENDER FORMATION
+   FORMATION DISPLAY
    ========================================================= */
 
-function renderFormation(result) {
+function renderFormation(
+  result
+) {
   const selected =
-    result.selectedFormation;
+    result
+      .selectedFormation;
 
   if (
     selectedFormationElement
@@ -2288,7 +2266,9 @@ function renderFormation(result) {
       );
   }
 
-  if (!formationTableBody) {
+  if (
+    !formationTableBody
+  ) {
     return;
   }
 
@@ -2297,45 +2277,42 @@ function renderFormation(result) {
       .formationResult
       .candidates
       .map(
-        candidate => {
-          const isSelected =
-            candidate.name ===
-            selected.name;
+        candidate => `
+          <tr>
+            <td>
+              ${escapeHtml(
+                candidate.name
+              )}
+            </td>
 
-          return `
-            <tr>
-              <td>
-                ${escapeHtml(
-                  candidate.name
-                )}
-              </td>
+            <td class="number">
+              ${escapeHtml(
+                candidate.experience
+              )}
+            </td>
 
-              <td class="number">
-                ${escapeHtml(
-                  candidate.experience
-                )}
-              </td>
-
-              <td>
-                ${
-                  isSelected
-                    ? "Selected"
-                    : ""
-                }
-              </td>
-            </tr>
-          `;
-        }
+            <td>
+              ${
+                candidate.name ===
+                selected.name
+                  ? "Selected"
+                  : ""
+              }
+            </td>
+          </tr>
+        `
       )
       .join("");
 }
 
 
 /* =========================================================
-   RENDER TRAINING
+   TRAINING DISPLAY
    ========================================================= */
 
-function renderTraining(result) {
+function renderTraining(
+  result
+) {
   const selected =
     result
       .trainingResult
@@ -2350,17 +2327,24 @@ function renderTraining(result) {
         .name;
   }
 
+  /*
+   * Keep this field showing the original
+   * ideal Top-X average.
+   */
+
   if (
     selectedTrainingAverageElement
   ) {
     selectedTrainingAverageElement.textContent =
       round(
-        selected.average,
+        selected.idealAverage,
         2
       ).toFixed(2);
   }
 
-  if (!trainingTableBody) {
+  if (
+    !trainingTableBody
+  ) {
     return;
   }
 
@@ -2377,14 +2361,6 @@ function renderTraining(result) {
             "";
 
           if (
-            !item.compatible
-          ) {
-            status =
-              "Not compatible with formation";
-
-            rowClass =
-              "ineligible-training";
-          } else if (
             !item.hasEnoughPlayers
           ) {
             status =
@@ -2404,10 +2380,19 @@ function renderTraining(result) {
           }
 
           const averageText =
-            item.average === null
+            item.idealAverage ===
+            null
               ? "-"
               : round(
-                  item.average,
+                  item.idealAverage,
+                  2
+                ).toFixed(2);
+
+          const scoreText =
+            item.score === null
+              ? "-"
+              : round(
+                  item.score,
                   2
                 ).toFixed(2);
 
@@ -2431,6 +2416,22 @@ function renderTraining(result) {
 
               <td class="number">
                 ${averageText}
+              </td>
+
+              <td class="number">
+                ${percent(
+                  item.utilization
+                )}
+              </td>
+
+              <td class="number">
+                ${percent(
+                  item.waste
+                )}
+              </td>
+
+              <td class="number">
+                ${scoreText}
               </td>
 
               <td>
@@ -2470,26 +2471,29 @@ function resetPitch() {
         `rating-${slot}`
       );
 
-    if (slotElement) {
+    if (
+      slotElement
+    ) {
       slotElement.classList.add(
         "hidden"
       );
 
       slotElement.classList.remove(
-        "training-slot"
-      );
-
-      slotElement.classList.remove(
+        "training-slot",
         "partial-training-slot"
       );
     }
 
-    if (playerElement) {
+    if (
+      playerElement
+    ) {
       playerElement.textContent =
         "-";
     }
 
-    if (ratingElement) {
+    if (
+      ratingElement
+    ) {
       ratingElement.textContent =
         "";
     }
@@ -2498,10 +2502,12 @@ function resetPitch() {
 
 
 /* =========================================================
-   RENDER LINEUP
+   LINEUP DISPLAY
    ========================================================= */
 
-function renderLineup(result) {
+function renderLineup(
+  result
+) {
   resetPitch();
 
   const formation =
@@ -2510,7 +2516,8 @@ function renderLineup(result) {
       .formation;
 
   const lineupResult =
-    result.lineupResult;
+    result
+      .lineupResult;
 
   for (
     const slot
@@ -2531,7 +2538,9 @@ function renderLineup(result) {
         `rating-${slot}`
       );
 
-    if (!slotElement) {
+    if (
+      !slotElement
+    ) {
       continue;
     }
 
@@ -2546,7 +2555,8 @@ function renderLineup(result) {
       );
 
     if (
-      category === "full"
+      category ===
+      "full"
     ) {
       slotElement.classList.add(
         "training-slot"
@@ -2554,7 +2564,8 @@ function renderLineup(result) {
     }
 
     if (
-      category === "partial"
+      category ===
+      "partial"
     ) {
       slotElement.classList.add(
         "partial-training-slot"
@@ -2567,13 +2578,19 @@ function renderLineup(result) {
           slot
         ];
 
-    if (!player) {
-      if (playerElement) {
+    if (
+      !player
+    ) {
+      if (
+        playerElement
+      ) {
         playerElement.textContent =
           "OPEN";
       }
 
-      if (ratingElement) {
+      if (
+        ratingElement
+      ) {
         ratingElement.textContent =
           "No eligible player";
       }
@@ -2581,27 +2598,30 @@ function renderLineup(result) {
       continue;
     }
 
-    if (playerElement) {
+    if (
+      playerElement
+    ) {
       playerElement.textContent =
         player.name;
     }
 
-    if (ratingElement) {
-      const rating =
-        getPositionRating(
-          player,
-          slot
-        );
-
+    if (
+      ratingElement
+    ) {
       ratingElement.textContent =
         `Rating: ${round(
-          rating,
+          getPositionRating(
+            player,
+            slot
+          ),
           4
         ).toFixed(4)}`;
     }
   }
 
-  if (lineupWarning) {
+  if (
+    lineupWarning
+  ) {
     lineupWarning.style.display =
       lineupResult.complete
         ? "none"
@@ -2611,7 +2631,7 @@ function renderLineup(result) {
 
 
 /* =========================================================
-   RENDER EXCLUDED PLAYERS
+   EXCLUDED PLAYERS
    ========================================================= */
 
 function renderExcludedPlayers(
@@ -2628,7 +2648,9 @@ function renderExcludedPlayers(
       .eligibilityResult
       .excluded;
 
-  if (!excluded.length) {
+  if (
+    !excluded.length
+  ) {
     excludedPlayersTableBody.innerHTML =
       `
         <tr>
@@ -2670,7 +2692,7 @@ function renderExcludedPlayers(
 
 
 /* =========================================================
-   RENDER ELIGIBLE PLAYERS
+   ELIGIBLE PLAYER DIAGNOSTICS
    ========================================================= */
 
 function renderEligiblePlayers(
@@ -2683,16 +2705,24 @@ function renderEligiblePlayers(
   }
 
   const players =
-    [...result.ratedEligiblePlayers]
+    [
+      ...result
+        .ratedEligiblePlayers
+    ]
       .sort(
         (a, b) =>
-          String(a.name)
-            .localeCompare(
-              String(b.name)
+          String(
+            a.name
+          ).localeCompare(
+            String(
+              b.name
             )
+          )
       );
 
-  if (!players.length) {
+  if (
+    !players.length
+  ) {
     eligiblePlayersTableBody.innerHTML =
       `
         <tr>
@@ -2768,17 +2798,19 @@ function renderEligiblePlayers(
 
 
 /* =========================================================
-   RENDER SELECTION ORDER
+   SELECTION ORDER DISPLAY
    ========================================================= */
 
 function renderSelectionOrder(
   result
 ) {
-  if (!selectionOrderList) {
+  if (
+    !selectionOrderList
+  ) {
     return;
   }
 
-  const categoryLabels = {
+  const labels = {
     full:
       "Full training",
 
@@ -2794,34 +2826,29 @@ function renderSelectionOrder(
       .lineupResult
       .selections
       .map(
-        selection => {
-          const playerName =
-            selection.player
-              ?.name ||
-            "OPEN";
-
-          return `
-            <li>
-              <strong>
-                ${escapeHtml(
-                  selection.slot
-                )}
-              </strong>
-
-              -
-
+        selection => `
+          <li>
+            <strong>
               ${escapeHtml(
-                playerName
+                selection.slot
               )}
+            </strong>
 
-              (${escapeHtml(
-                categoryLabels[
-                  selection.category
-                ]
-              )})
-            </li>
-          `;
-        }
+            -
+
+            ${escapeHtml(
+              selection.player
+                ?.name ||
+              "OPEN"
+            )}
+
+            (${escapeHtml(
+              labels[
+                selection.category
+              ]
+            )})
+          </li>
+        `
       )
       .join("");
 }
@@ -2858,14 +2885,14 @@ function getPreviousMatchWarning(
   }
 
   return (
-    ` Previous match data contains ${unresolved.length} ` +
-    `appearance(s) whose training position could not be confirmed.`
+    ` Previous match data contains ${unresolved.length}` +
+    ` appearance(s) whose training position could not be confirmed.`
   );
 }
 
 
 /* =========================================================
-   RENDER EVERYTHING
+   RENDER ALL
    ========================================================= */
 
 function renderEverything(
@@ -2903,11 +2930,13 @@ function renderEverything(
 
 
 /* =========================================================
-   BUILD LINEUP
+   BUILD
    ========================================================= */
 
 function buildLineup() {
-  if (!sourceData) {
+  if (
+    !sourceData
+  ) {
     setStatus(
       "No lineup data has been loaded.",
       "error"
@@ -2932,10 +2961,27 @@ function buildLineup() {
         .selectedFormation
         .name;
 
-    const training =
+    const selectedTraining =
       currentCalculation
-        .selectedTraining
+        .trainingResult
+        .selected;
+
+    const trainingName =
+      selectedTraining
+        .training
         .name;
+
+    const utilization =
+      percent(
+        selectedTraining
+          .utilization
+      );
+
+    const finalScore =
+      round(
+        selectedTraining.score,
+        2
+      ).toFixed(2);
 
     const warning =
       getPreviousMatchWarning(
@@ -2948,7 +2994,7 @@ function buildLineup() {
         .complete
     ) {
       setStatus(
-        `Lineup built: ${formation} - ${training}.${warning}`,
+        `Lineup built: ${formation} - ${trainingName} - ${utilization} utilization - score ${finalScore}.${warning}`,
         warning
           ? "error"
           : "success"
@@ -2975,13 +3021,17 @@ function buildLineup() {
 
 
 /* =========================================================
-   LOAD TEAM
+   LOAD TEAM DATA
    ========================================================= */
 
 async function loadTeam(
   teamId
 ) {
-  if (!validTeamId(teamId)) {
+  if (
+    !validTeamId(
+      teamId
+    )
+  ) {
     setStatus(
       "No valid Hattrick TeamID is selected.",
       "error"
@@ -2998,9 +3048,12 @@ async function loadTeam(
   }
 
   loadedTeamId =
-    String(teamId);
+    String(
+      teamId
+    );
 
-  sourceData = null;
+  sourceData =
+    null;
 
   currentCalculation =
     null;
@@ -3024,14 +3077,13 @@ async function loadTeam(
         loadedTeamId
       );
 
-    /*
-     * Ignore an old response if the active team
-     * changed while the request was running.
-     */
-
     if (
-      String(loadedTeamId) !==
-      String(teamId)
+      String(
+        loadedTeamId
+      ) !==
+      String(
+        teamId
+      )
     ) {
       return;
     }
@@ -3060,7 +3112,8 @@ async function loadTeam(
       error
     );
 
-    sourceData = null;
+    sourceData =
+      null;
 
     currentCalculation =
       null;
@@ -3082,34 +3135,8 @@ async function loadTeam(
 
 
 /* =========================================================
-   TEAM SELECTION SYNC
+   TEAM SELECTION
    ========================================================= */
-
-function loadSelectedTeam() {
-  const teamId =
-    getSelectedTeamId();
-
-  if (!teamId) {
-    setStatus(
-      "Select your Hattrick team first.",
-      "error"
-    );
-
-    if (
-      buildLineupButton
-    ) {
-      buildLineupButton.disabled =
-        true;
-    }
-
-    return;
-  }
-
-  loadTeam(
-    teamId
-  );
-}
-
 
 function setupTeamSelectionListener() {
   window.addEventListener(
@@ -3121,20 +3148,28 @@ function setupTeamSelectionListener() {
           ?.teamId;
 
       if (
-        !validTeamId(teamId)
+        !validTeamId(
+          teamId
+        )
       ) {
         return;
       }
 
       if (
-        String(teamId) ===
-        String(loadedTeamId)
+        String(
+          teamId
+        ) ===
+        String(
+          loadedTeamId
+        )
       ) {
         return;
       }
 
       loadTeam(
-        String(teamId)
+        String(
+          teamId
+        )
       );
     }
   );
@@ -3142,7 +3177,7 @@ function setupTeamSelectionListener() {
 
 
 /* =========================================================
-   INITIALIZATION
+   INITIALIZE
    ========================================================= */
 
 function initializeLineupBuilder() {
@@ -3160,33 +3195,33 @@ function initializeLineupBuilder() {
 
   setupTeamSelectionListener();
 
-  /*
-   * The shared site script may finish setting the
-   * active team shortly after lineup.js loads.
-   *
-   * Try immediately, then retry briefly if needed.
-   */
+  let attempts =
+    0;
 
-  let attempts = 0;
+  const tryLoad =
+    () => {
+      attempts +=
+        1;
 
-  const tryLoad = () => {
-    attempts += 1;
+      const teamId =
+        getSelectedTeamId();
 
-    const teamId =
-      getSelectedTeamId();
-
-    if (teamId) {
-      loadTeam(
+      if (
         teamId
-      );
+      ) {
+        loadTeam(
+          teamId
+        );
 
-      return true;
-    }
+        return true;
+      }
 
-    return false;
-  };
+      return false;
+    };
 
-  if (tryLoad()) {
+  if (
+    tryLoad()
+  ) {
     return;
   }
 
