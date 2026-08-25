@@ -105,7 +105,7 @@ This single formula lets all three priorities compete mathematically every time:
 
 The overall winning combination supplies both initial dropdown selections, but **Training is displayed first**.
 
-- The Training table shows each training type's ideal average, its best formation, and its best combination score.
+- The Training table shows only training-side information: training type, trained skill, ideal weekly trainees, ideal average, and status. Formation choice and combination scoring remain visible in the Formation section.
 - Changing **Training** clears any formation override and selects the lowest-scoring formation among the six combinations for that chosen training type.
 - Changing **Formation** keeps the selected training type fixed and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
 - Clicking **Build Lineup** again clears both overrides and returns to the current overall lowest-scoring training/formation combination.
