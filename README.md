@@ -114,3 +114,22 @@ The overall winning combination supplies both initial dropdown selections, but *
 ### Static asset versioning
 
 The HTML pages append a deployment version query to shared CSS/JavaScript files. This prevents a browser or CDN cache from pairing a newly deployed HTML page with an older `app.js`, `team.js`, or `lineup.js`. The Lineup Builder also initializes immediately when the DOM is already ready and surfaces initialization errors in the page status area instead of remaining silently on `Waiting for team data.`
+
+## Team Page Builder
+
+The Team Page Builder is intentionally limited to senior teams managed by the logged-in Hattrick user. The browser only offers the user's managed-team selector, and `/api/team` independently verifies ownership before returning article data.
+
+The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `arenadetails`, `leaguedetails`, `playerdetails`, `economy`, `players`, and `matchesarchive`. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
+
+The team API must return only data that is used for the public-facing wiki article. In particular, even though authenticated CHPP responses can expose finances, TSI, salary, skills, form, injuries, and other manager-only data, the Team Page Builder does not include those values in its JSON response.
+
+Historical club-record claims are generated only when `matchesarchive` is complete for the current manager's tenure. Archive requests are sequential and capped so a very long history degrades to a partial source status rather than producing unverified "all-time" claims.
+
+## Homepage tool groups
+
+The main index separates the application into two product groups:
+
+- **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
+- **Manager Tools:** Lineup Planner.
+
+Only the Team Page Builder and Lineup Planner are currently active; the other Wiki Builder cards are presented as coming soon.

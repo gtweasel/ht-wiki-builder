@@ -1274,3 +1274,127 @@ select {
   cursor: not-allowed;
   transform: none;
 }
+
+/* Homepage tool status and Team Page Builder refresh */
+.tool-section + .tool-section {
+  margin-top: 56px;
+}
+
+.tool-card-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.tool-card-topline .tool-card-number {
+  flex: 0 0 auto;
+}
+
+.tool-card-badge {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.tool-card-badge-live {
+  background: var(--green-light);
+  color: var(--green);
+}
+
+.tool-card-coming-soon {
+  background: #fbfcfe;
+  border-top-color: var(--gray-300);
+  box-shadow: none;
+}
+
+.tool-card-coming-soon .tool-card-number,
+.tool-card-coming-soon h3 {
+  color: var(--gray-600);
+}
+
+.tool-grid-manager {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.builder-callout-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.builder-callout-item {
+  min-height: 104px;
+  padding: 16px 17px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 7px;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.builder-callout-item strong {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--blue-950);
+  font-size: 13px;
+}
+
+.article-build-summary {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 24px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 7px;
+}
+
+.article-build-summary-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--blue-950);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.article-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.article-chip {
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: var(--green-light);
+  color: var(--green);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.article-chip-muted {
+  background: var(--gray-100);
+  color: var(--gray-600);
+}
+
+.wiki-output-team-page {
+  min-height: 620px;
+}
+
+@media (max-width: 800px) {
+  .tool-grid-manager,
+  .builder-callout-grid,
+  .article-build-summary {
+    grid-template-columns: 1fr;
+  }
+}
