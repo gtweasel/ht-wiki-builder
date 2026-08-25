@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Lineup Builder - HT Wiki Builder</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f4f4f4;
+      color: #222;
+    }
+
+    header {
+      background: #1f5f2c;
+      color: #fff;
+      padding: 18px 20px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header p {
+      margin: 5px 0 0;
+      font-size: 14px;
+      opacity: 0.9;
+    }
+
+    nav {
+      background: #164820;
+      padding: 10px 20px;
+    }
+
+    nav a {
+      color: #fff;
+      text-decoration: none;
+      margin-right: 18px;
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 20px auto;
+      padding: 0 16px 40px;
+    }
+
+    .card {
+      background: #fff;
+      border: 1px solid #d7d7d7;
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 20px;
+    }
+
+    .card h3 {
+      margin-top: 0;
+      font-size: 17px;
+    }
+
+    .status {
+      padding: 12px 14px;
+      border-radius: 6px;
+      background: #eef2ee;
+      border: 1px solid #ccd8ce;
+      margin-bottom: 18px;
+    }
+
+    .status.error {
+      background: #fff0f0;
+      border-color: #d8b4b4;
+      color: #8a1f1f;
+    }
+
+    .status.success {
+      background: #eef8ee;
+      border-color: #b7d8b7;
+      color: #205b20;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+    }
+
+    .summary-item {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 12px;
+      background: #fafafa;
+    }
+
+    .summary-label {
+      display: block;
+      font-size: 12px;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 5px;
+    }
+
+    .summary-value {
+      font-size: 17px;
+      font-weight: bold;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 6px;
+      background: #1f5f2c;
+      color: #fff;
+      padding: 11px 18px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #174a22;
+    }
+
+    button:disabled {
+      background: #999;
+      cursor: not-allowed;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      border: 1px solid #ddd;
+      padding: 9px 10px;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    td.number,
+    th.number {
+      text-align: right;
+    }
+
+    tr.selected-training {
+      background: #e8f5e9;
+      font-weight: bold;
+    }
+
+    tr.ineligible-training {
+      color: #888;
+      background: #f8f8f8;
+    }
+
+    .pitch {
+      background: #4b914e;
+      border: 4px solid #fff;
+      outline: 1px solid #367039;
+      border-radius: 8px;
+      padding: 24px 14px;
+      min-height: 650px;
+      position: relative;
+    }
+
+    .pitch-row {
+      display: flex;
+      justify-content: center;
+      align-items: stretch;
+      gap: 14px;
+      min-height: 105px;
+      margin-bottom: 18px;
+    }
+
+    .pitch-row:last-child {
+      margin-bottom: 0;
+    }
+
+    .player-slot {
+      width: 170px;
+      min-height: 95px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #ddd;
+      border-radius: 7px;
+      padding: 8px;
+      text-align: center;
+    }
+
+    .player-slot.hidden {
+      display: none;
+    }
+
+    .position-name {
+      font-size: 12px;
+      font-weight: bold;
+      color: #555;
+      margin-bottom: 5px;
+    }
+
+    .player-name {
+      font-size: 15px;
+      font-weight: bold;
+      min-height: 18px;
+    }
+
+    .player-rating {
+      margin-top: 5px;
+      font-size: 12px;
+      color: #555;
+    }
+
+    .training-slot {
+      border-color: #f0b000;
+    }
+
+    .partial-training-slot {
+      border-color: #68aee8;
+    }
+
+    .legend {
+      display: flex;
+      gap: 18px;
+      flex-wrap: wrap;
+      font-size: 13px;
+      margin-bottom: 15px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .legend-box {
+      width: 18px;
+      height: 18px;
+      border-radius: 3px;
+      background: #fff;
+      border: 2px solid #ddd;
+    }
+
+    .legend-box.full {
+      border-color: #f0b000;
+    }
+
+    .legend-box.partial {
+      border-color: #68aee8;
+    }
+
+    .warning {
+      padding: 12px;
+      border-radius: 6px;
+      background: #fff4d6;
+      border: 1px solid #e3c46a;
+      margin-bottom: 16px;
+      display: none;
+    }
+
+    .empty-message {
+      color: #777;
+      font-style: italic;
+    }
+
+    details {
+      margin-top: 10px;
+    }
+
+    details summary {
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #666;
+    }
+
+    @media (max-width: 800px) {
+      .pitch {
+        padding: 16px 6px;
+      }
+
+      .pitch-row {
+        gap: 5px;
+      }
+
+      .player-slot {
+        width: 31%;
+        min-width: 0;
+        padding: 6px 3px;
+      }
+
+      .player-name {
+        font-size: 12px;
+      }
+
+      .player-rating {
+        font-size: 11px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <header>
+    <h1>HT Wiki Builder</h1>
+    <p>Lineup Builder</p>
+  </header>
+
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="team.html">Team</a>
+    <a href="lineup.html">Lineup Builder</a>
+  </nav>
+
+  <main>
+
+    <div id="status" class="status">
+      Waiting for team data.
+    </div>
+
+    <section class="card">
+      <h2>Match</h2>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Team</span>
+          <span id="teamName" class="summary-value">-</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Match</span>
+          <span id="matchName" class="summary-value">-</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Match Type</span>
+          <span id="matchType" class="summary-value">-</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Training Week Position</span>
+          <span id="trainingWeekPosition" class="summary-value">-</span>
+        </div>
+      </div>
+
+      <div class="button-row" style="margin-top: 16px;">
+        <button id="buildLineupButton" type="button">
+          Build Lineup
+        </button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Formation</h2>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Selected Formation</span>
+          <span id="selectedFormation" class="summary-value">-</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Formation Experience</span>
+          <span id="selectedFormationExperience" class="summary-value">-</span>
+        </div>
+      </div>
+
+      <details>
+        <summary>Formation experience details</summary>
+
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Formation</th>
+                <th class="number">Experience</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="formationTableBody">
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section class="card">
+      <h2>Training</h2>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-label">Selected Training</span>
+          <span id="selectedTraining" class="summary-value">-</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Skill Average</span>
+          <span id="selectedTrainingAverage" class="summary-value">-</span>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto; margin-top: 16px;">
+        <table>
+          <thead>
+            <tr>
+              <th>Training Type</th>
+              <th>Skill</th>
+              <th class="number">Players Required</th>
+              <th class="number">Top-X Average</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="trainingTableBody">
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Generated Lineup</h2>
+
+      <div id="lineupWarning" class="warning">
+        Not enough eligible players to complete the lineup.
+      </div>
+
+      <div class="legend">
+        <div class="legend-item">
+          <span class="legend-box full"></span>
+          Full training
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-box partial"></span>
+          Partial training
+        </div>
+
+        <div class="legend-item">
+          <span class="legend-box"></span>
+          Other position
+        </div>
+      </div>
+
+      <div class="pitch">
+
+        <div class="pitch-row">
+          <div id="slot-LF" class="player-slot hidden">
+            <div class="position-name">LF</div>
+            <div id="player-LF" class="player-name">-</div>
+            <div id="rating-LF" class="player-rating"></div>
+          </div>
+
+          <div id="slot-CF" class="player-slot hidden">
+            <div class="position-name">CF</div>
+            <div id="player-CF" class="player-name">-</div>
+            <div id="rating-CF" class="player-rating"></div>
+          </div>
+
+          <div id="slot-RF" class="player-slot hidden">
+            <div class="position-name">RF</div>
+            <div id="player-RF" class="player-name">-</div>
+            <div id="rating-RF" class="player-rating"></div>
+          </div>
+        </div>
+
+        <div class="pitch-row">
+          <div id="slot-LW" class="player-slot hidden">
+            <div class="position-name">LW</div>
+            <div id="player-LW" class="player-name">-</div>
+            <div id="rating-LW" class="player-rating"></div>
+          </div>
+
+          <div id="slot-LCM" class="player-slot hidden">
+            <div class="position-name">LCM</div>
+            <div id="player-LCM" class="player-name">-</div>
+            <div id="rating-LCM" class="player-rating"></div>
+          </div>
+
+          <div id="slot-CM" class="player-slot hidden">
+            <div class="position-name">CM</div>
+            <div id="player-CM" class="player-name">-</div>
+            <div id="rating-CM" class="player-rating"></div>
+          </div>
+
+          <div id="slot-RCM" class="player-slot hidden">
+            <div class="position-name">RCM</div>
+            <div id="player-RCM" class="player-name">-</div>
+            <div id="rating-RCM" class="player-rating"></div>
+          </div>
+
+          <div id="slot-RW" class="player-slot hidden">
+            <div class="position-name">RW</div>
+            <div id="player-RW" class="player-name">-</div>
+            <div id="rating-RW" class="player-rating"></div>
+          </div>
+        </div>
+
+        <div class="pitch-row">
+          <div id="slot-LWB" class="player-slot hidden">
+            <div class="position-name">LWB</div>
+            <div id="player-LWB" class="player-name">-</div>
+            <div id="rating-LWB" class="player-rating"></div>
+          </div>
+
+          <div id="slot-LCD" class="player-slot hidden">
+            <div class="position-name">LCD</div>
+            <div id="player-LCD" class="player-name">-</div>
+            <div id="rating-LCD" class="player-rating"></div>
+          </div>
+
+          <div id="slot-CD" class="player-slot hidden">
+            <div class="position-name">CD</div>
+            <div id="player-CD" class="player-name">-</div>
+            <div id="rating-CD" class="player-rating"></div>
+          </div>
+
+          <div id="slot-RCD" class="player-slot hidden">
+            <div class="position-name">RCD</div>
+            <div id="player-RCD" class="player-name">-</div>
+            <div id="rating-RCD" class="player-rating"></div>
+          </div>
+
+          <div id="slot-RWB" class="player-slot hidden">
+            <div class="position-name">RWB</div>
+            <div id="player-RWB" class="player-name">-</div>
+            <div id="rating-RWB" class="player-rating"></div>
+          </div>
+        </div>
+
+        <div class="pitch-row">
+          <div id="slot-GK" class="player-slot hidden">
+            <div class="position-name">GK</div>
+            <div id="player-GK" class="player-name">-</div>
+            <div id="rating-GK" class="player-rating"></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="summary-grid" style="margin-top: 16px;">
+        <div class="summary-item">
+          <span class="summary-label">Captain</span>
+          <span class="summary-value">Coach pick</span>
+        </div>
+
+        <div class="summary-item">
+          <span class="summary-label">Set Pieces</span>
+          <span class="summary-value">Coach pick</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Excluded Players</h2>
+
+      <p class="small">
+        Players removed after formation and training type have been selected.
+      </p>
+
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Reason</th>
+            </tr>
+          </thead>
+          <tbody id="excludedPlayersTableBody">
+            <tr>
+              <td colspan="2" class="empty-message">
+                No exclusions calculated yet.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Diagnostics</h2>
+
+      <details>
+        <summary>Eligible player pool</summary>
+
+        <div style="overflow-x: auto; margin-top: 12px;">
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th class="number">GK</th>
+                <th class="number">CD</th>
+                <th class="number">WB</th>
+                <th class="number">IM</th>
+                <th class="number">WG</th>
+                <th class="number">FW</th>
+              </tr>
+            </thead>
+            <tbody id="eligiblePlayersTableBody">
+            </tbody>
+          </table>
+        </div>
+      </details>
+
+      <details>
+        <summary>Lineup selection order</summary>
+
+        <ol id="selectionOrderList">
+        </ol>
+      </details>
+    </section>
+
+  </main>
+
+  <script src="lineup.js"></script>
+
+</body>
+</html>
