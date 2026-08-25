@@ -75,9 +75,7 @@ function xmlValue(xml, tag) {
     return "";
   }
 
-  return decodeXml(
-    match[1].trim()
-  );
+  return decodeXml(match[1].trim());
 }
 
 function xmlContainer(xml, tag) {
@@ -92,9 +90,7 @@ function xmlContainer(xml, tag) {
 
   const match = xml.match(pattern);
 
-  return match
-    ? match[1]
-    : "";
+  return match ? match[1] : "";
 }
 
 function xmlContainers(xml, tag) {
@@ -117,8 +113,7 @@ function xmlNumber(xml, tag) {
 
   if (
     value === "" ||
-    String(value).toUpperCase() ===
-      "NOT AVAILABLE"
+    String(value).toUpperCase() === "NOT AVAILABLE"
   ) {
     return null;
   }
@@ -195,14 +190,10 @@ async function chppFetch(context, query) {
       ])
       .sort((a, b) => {
         if (a[0] === b[0]) {
-          return a[1].localeCompare(
-            b[1]
-          );
+          return a[1].localeCompare(b[1]);
         }
 
-        return a[0].localeCompare(
-          b[0]
-        );
+        return a[0].localeCompare(b[0]);
       })
       .map(
         ([key, value]) =>
@@ -250,17 +241,13 @@ async function chppFetch(context, query) {
     {
       method: "GET",
       headers: {
-        Authorization:
-          authorization,
-
-        "User-Agent":
-          "HT Wiki Builder/0.1"
+        Authorization: authorization,
+        "User-Agent": "HT Wiki Builder/0.1"
       }
     }
   );
 
-  const xml =
-    await response.text();
+  const xml = await response.text();
 
   if (!response.ok) {
     throw makeError(
@@ -317,8 +304,7 @@ function parseTeamDetails(
     String(requestedTeamId)
   ) {
     throw makeError(
-      "Hattrick returned a different team than requested.",
-      502
+      "Hattrick returned a different team than requested."
     );
   }
 
@@ -328,10 +314,6 @@ function parseTeamDetails(
       "UserID"
     );
 
-  /*
-   * Same method used by the existing team endpoint:
-   * the root UserID before <User> is the logged-in user.
-   */
   const rootBeforeUser =
     teamDetailsXml.split(
       /<User(?:\s|>)/i
@@ -427,101 +409,97 @@ function parsePlayers(
 
   const players =
     playerXmlList.map(
-      playerXml => {
-        const player = {
-          playerId:
-            xmlNumber(
-              playerXml,
-              "PlayerID"
-            ),
+      playerXml => ({
+        playerId:
+          xmlNumber(
+            playerXml,
+            "PlayerID"
+          ),
 
-          name:
-            xmlValue(
-              playerXml,
-              "PlayerName"
-            ),
+        name:
+          xmlValue(
+            playerXml,
+            "PlayerName"
+          ),
 
-          age:
-            xmlNumber(
-              playerXml,
-              "Age"
-            ),
+        age:
+          xmlNumber(
+            playerXml,
+            "Age"
+          ),
 
-          ageDays:
-            xmlNumber(
-              playerXml,
-              "AgeDays"
-            ),
+        ageDays:
+          xmlNumber(
+            playerXml,
+            "AgeDays"
+          ),
 
-          form:
-            xmlNumber(
-              playerXml,
-              "PlayerForm"
-            ),
+        form:
+          xmlNumber(
+            playerXml,
+            "PlayerForm"
+          ),
 
-          stamina:
-            xmlNumber(
-              playerXml,
-              "StaminaSkill"
-            ),
+        stamina:
+          xmlNumber(
+            playerXml,
+            "StaminaSkill"
+          ),
 
-          keeper:
-            xmlNumber(
-              playerXml,
-              "KeeperSkill"
-            ),
+        keeper:
+          xmlNumber(
+            playerXml,
+            "KeeperSkill"
+          ),
 
-          defending:
-            xmlNumber(
-              playerXml,
-              "DefenderSkill"
-            ),
+        defending:
+          xmlNumber(
+            playerXml,
+            "DefenderSkill"
+          ),
 
-          playmaking:
-            xmlNumber(
-              playerXml,
-              "PlaymakerSkill"
-            ),
+        playmaking:
+          xmlNumber(
+            playerXml,
+            "PlaymakerSkill"
+          ),
 
-          winger:
-            xmlNumber(
-              playerXml,
-              "WingerSkill"
-            ),
+        winger:
+          xmlNumber(
+            playerXml,
+            "WingerSkill"
+          ),
 
-          passing:
-            xmlNumber(
-              playerXml,
-              "PassingSkill"
-            ),
+        passing:
+          xmlNumber(
+            playerXml,
+            "PassingSkill"
+          ),
 
-          scoring:
-            xmlNumber(
-              playerXml,
-              "ScorerSkill"
-            ),
+        scoring:
+          xmlNumber(
+            playerXml,
+            "ScorerSkill"
+          ),
 
-          setPieces:
-            xmlNumber(
-              playerXml,
-              "SetPiecesSkill"
-            ),
+        setPieces:
+          xmlNumber(
+            playerXml,
+            "SetPiecesSkill"
+          ),
 
-          injuryLevel:
-            xmlNumber(
-              playerXml,
-              "InjuryLevel"
-            ),
+        injuryLevel:
+          xmlNumber(
+            playerXml,
+            "InjuryLevel"
+          ),
 
-          cards:
-            xmlNumber(
-              playerXml,
-              "Cards"
-            )
-        };
-
-        return player;
-      }
+        cards:
+          xmlNumber(
+            playerXml,
+            "Cards"
+          )
+      })
     );
 
   if (!players.length) {
@@ -530,10 +508,6 @@ function parsePlayers(
     );
   }
 
-  /*
-   * Skills are only returned for the logged-in
-   * manager's own players.
-   */
   const missingSkillData =
     players.some(player =>
       player.age === null ||
@@ -551,17 +525,10 @@ function parsePlayers(
 
   if (missingSkillData) {
     throw makeError(
-      "Hattrick did not return all player skill data.",
-      502
+      "Hattrick did not return all player skill data."
     );
   }
 
-  /*
-   * Cards and InjuryLevel become NOT AVAILABLE
-   * while the team is actively playing a match.
-   *
-   * Do not guess availability in that situation.
-   */
   const missingAvailabilityData =
     players.some(player =>
       player.injuryLevel === null ||
@@ -583,15 +550,18 @@ function parsePlayers(
    FORMATION EXPERIENCE
    ========================================================= */
 
+/*
+ * These are the six formation-experience values
+ * currently exposed through CHPP training XML.
+ */
+
 const REQUIRED_FORMATIONS = [
-  "5-5-0",
-  "5-4-1",
-  "4-5-1",
-  "5-3-2",
-  "4-4-2",
-  "3-5-2",
   "4-3-3",
-  "3-4-3"
+  "4-5-1",
+  "3-5-2",
+  "5-3-2",
+  "3-4-3",
+  "5-4-1"
 ];
 
 function parseFormationExperience(
@@ -628,12 +598,6 @@ function parseFormationExperience(
 
   const formationExperience = {};
 
-  /*
-   * Parse every Experience### field returned by CHPP.
-   *
-   * That means we do not hard-code only the six fields
-   * listed on the older public documentation page.
-   */
   const pattern =
     /<Experience(\d{3})(?:\s[^>]*)?>([\s\S]*?)<\/Experience\1>/gi;
 
@@ -665,14 +629,6 @@ function parseFormationExperience(
     ] = value;
   }
 
-  /*
-   * Do not silently ignore one of the formations
-   * used by the algorithm.
-   *
-   * If CHPP calls any of these something unexpected,
-   * V1 should tell us instead of choosing the wrong
-   * formation.
-   */
   const missing =
     REQUIRED_FORMATIONS.filter(
       formation =>
@@ -692,7 +648,7 @@ function parseFormationExperience(
 
 
 /* =========================================================
-   WORLD / TRAINING DATE
+   WORLD DETAILS / TRAINING DATE
    ========================================================= */
 
 function findLeagueSchedule(
@@ -729,8 +685,7 @@ function findLeagueSchedule(
     }
 
     return {
-      leagueId:
-        id,
+      leagueId: id,
 
       leagueName:
         xmlValue(
@@ -767,9 +722,7 @@ function parseHattrickDate(value) {
   const milliseconds =
     Date.parse(normalized);
 
-  return Number.isFinite(
-    milliseconds
-  )
+  return Number.isFinite(milliseconds)
     ? milliseconds
     : null;
 }
@@ -896,33 +849,24 @@ function getUpcomingMatch(matches) {
 
 
 /* =========================================================
-   TRAINING-WEEK POSITION
+   TRAINING WEEK POSITION
    ========================================================= */
 
-/*
- * These are senior club matches that count toward
- * normal weekly training.
- *
- * Masters is intentionally excluded.
- */
 const TRAINING_MATCH_TYPES =
   new Set([
-    1, // League
-    2, // Qualification
-    3, // Cup
-    4, // Friendly
-    5, // Friendly - cup rules
-    8, // International friendly
-    9  // International friendly - cup rules
+    1,
+    2,
+    3,
+    4,
+    5,
+    8,
+    9
   ]);
 
 function determineTrainingWeekPosition(
   upcomingMatch,
   nextTrainingDate
 ) {
-  /*
-   * Masters does not count as a training match.
-   */
   if (
     !TRAINING_MATCH_TYPES.has(
       upcomingMatch.matchType
@@ -944,14 +888,6 @@ function determineTrainingWeekPosition(
     );
   }
 
-  /*
-   * If the upcoming match happens before the next
-   * training update, it is the second match of the
-   * current training week.
-   *
-   * If the next training update happens first,
-   * the upcoming match begins the next training week.
-   */
   if (
     upcomingMatch.matchDateMs <
     trainingDateMs
@@ -1082,14 +1018,6 @@ function parsePreviousAppearances(
 
   const appearances = [];
 
-  /*
-   * This is retained separately so we can inspect
-   * real CHPP behavior during V1 testing.
-   *
-   * If a player has a rating but CHPP does not return
-   * PositionCode, we know he played but cannot safely
-   * determine the training role from matchLineup alone.
-   */
   const unresolvedAppearances =
     [];
 
@@ -1158,14 +1086,6 @@ function parsePreviousAppearances(
       continue;
     }
 
-    /*
-     * RoleIDs 19-21 are documented as replaced
-     * players. A positive star rating can also tell us
-     * a player actually appeared.
-     *
-     * Keep these visible for diagnostics instead of
-     * pretending we know which training line he used.
-     */
     if (
       (
         roleId !== null &&
@@ -1233,11 +1153,6 @@ export async function onRequestGet(
   }
 
   try {
-    /*
-     * First request:
-     * confirm this is the logged-in manager's team
-     * and obtain the league ID.
-     */
     const teamDetailsXml =
       await chppFetch(
         context,
@@ -1259,11 +1174,6 @@ export async function onRequestGet(
         requestedTeamId
       );
 
-    /*
-     * The Lineup Builder needs private skill data,
-     * training information, match data and the
-     * league's next training-update time.
-     */
     const [
       playersXml,
       trainingXml,
@@ -1382,10 +1292,6 @@ export async function onRequestGet(
       unresolvedAppearances: []
     };
 
-    /*
-     * Previous-match exclusions only matter
-     * for the second training match.
-     */
     if (
       upcomingMatch.trainingWeekPosition ===
       "second"
@@ -1446,7 +1352,8 @@ export async function onRequestGet(
           previousMatch.awayTeamName,
 
         appearances:
-          previousAppearanceData.appearances,
+          previousAppearanceData
+            .appearances,
 
         unresolvedAppearances:
           previousAppearanceData
