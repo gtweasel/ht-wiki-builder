@@ -155,6 +155,21 @@ function formatDate(value) {
   return `${day} ${months[month - 1]} ${year}`;
 }
 
+function makeKitFilename(teamName, type) {
+  const safeName = String(teamName || "")
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  if (!safeName) {
+    return "";
+  }
+
+  return `[[File:${safeName}_${type}.png|125px]]`;
+}
+
 function getField(id) {
   return document.getElementById(id);
 }
@@ -311,6 +326,27 @@ function populateWikiFields(data) {
       formatDate(data.activationDate)
     );
   }
+
+  setField(
+    "field-homekit",
+    "include-homekit",
+    makeKitFilename(data.teamName, "home"),
+    true
+  );
+
+  setField(
+    "field-awaykit",
+    "include-awaykit",
+    makeKitFilename(data.teamName, "away"),
+    true
+  );
+
+  setField(
+    "field-thirdkit",
+    "include-thirdkit",
+    makeKitFilename(data.teamName, "third"),
+    true
+  );
 
   setField(
     "field-intro",
