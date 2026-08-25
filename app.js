@@ -84,6 +84,15 @@ function renderSelectedTeam(team) {
   selectedTeam = team;
   saveTeamId(team.teamId);
 
+  window.dispatchEvent(
+  new CustomEvent("htwb:team-selected", {
+    detail: {
+      teamId: team.teamId,
+      teamName: team.teamName
+    }
+  })
+);
+
   teamName.textContent =
     team.teamName || "Hattrick team";
 
