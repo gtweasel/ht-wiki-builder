@@ -421,9 +421,16 @@ function htwbApiTeamParsePlayers(
     return {
       playerId: htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerID"),
       name: htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerName"),
-      number: htwbApiTeamAvailableValue(
-        htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerNumber")
-      ),
+      number: (() => {
+        const htwbApiTeamPlayerNumber = htwbApiTeamAvailableValue(
+          htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerNumber")
+        );
+
+        // CHPP uses 100 as the sentinel for "no shirt number assigned".
+        return htwbApiTeamPlayerNumber === "100"
+          ? ""
+          : htwbApiTeamPlayerNumber;
+      })(),
       age: htwbApiTeamAvailableValue(
         htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "Age")
       ),
