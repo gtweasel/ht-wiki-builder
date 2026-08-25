@@ -1239,10 +1239,13 @@ export async function onRequestGet(
               "training",
 
             version:
-              "1.2",
+              "2.2",
 
             actionType:
-              "view"
+              "view",
+
+            teamID:
+              htwbApiLineupRequestedTeamId
           }
         ),
 

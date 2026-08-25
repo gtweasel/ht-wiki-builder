@@ -43,3 +43,11 @@ After the starting XI is complete, the Lineup Builder selects both match roles f
 - **Set Pieces:** Hattrick confirms that Set Pieces and Experience matter for normal direct set pieces, but does not publish their exact relative weighting. The official automatic fallback chooses the player with the highest Set Pieces skill, so HT Wiki Builder selects the highest-SP starting outfielder and uses Experience only as a tie-breaker. The player in the GK slot is excluded because goalkeepers cannot be the ordinary set-pieces taker.
 
 The lineup API includes each player's `Experience` and `Leadership` values from the CHPP `players` file so these calculations use the same source roster as the rest of the builder.
+
+## Secondary-team lineup support
+
+Every team-scoped CHPP request used by the Lineup Builder must receive the currently selected `TeamID`. In particular, the training request uses CHPP training v2.2 and passes `teamID`, so formation experience is loaded for the selected primary or secondary senior team rather than falling back to the account's default team.
+## External Hattrick links
+
+Use the recruitment URL `https://www.hattrick.org/?inviteRef=TS7E2C` only for links whose purpose is to invite a new manager, such as **Join Hattrick**, **Get a team**, or **New to Hattrick**. Keep ordinary Hattrick navigation, CHPP authorization, team/player/match links, and HT Wiki links on their normal direct URLs. Recruitment links should be clearly identified because successful recruitment may earn the site creator Hattrick reward points.
+
