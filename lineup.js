@@ -24,74 +24,74 @@
    DOM
    ========================================================= */
 
-const statusElement =
-  document.getElementById("status");
+const htwbLineupStatusElement =
+  document.getElementById("lineup-status");
 
-const buildLineupButton =
-  document.getElementById("buildLineupButton");
+const htwbLineupBuildLineupButton =
+  document.getElementById("lineup-build-button");
 
-const teamNameElement =
-  document.getElementById("teamName");
+const htwbLineupTeamNameElement =
+  document.getElementById("lineup-summary-team-name");
 
-const matchNameElement =
-  document.getElementById("matchName");
+const htwbLineupMatchNameElement =
+  document.getElementById("lineup-summary-match-name");
 
-const matchTypeElement =
-  document.getElementById("matchType");
+const htwbLineupMatchTypeElement =
+  document.getElementById("lineup-summary-match-type");
 
-const trainingWeekPositionElement =
+const htwbLineupTrainingWeekPositionElement =
   document.getElementById(
-    "trainingWeekPosition"
+    "lineup-summary-training-week-position"
   );
 
-const selectedFormationElement =
+const htwbLineupSelectedFormationElement =
   document.getElementById(
-    "selectedFormation"
+    "lineup-selected-formation"
   );
 
-const selectedFormationExperienceElement =
+const htwbLineupSelectedFormationExperienceElement =
   document.getElementById(
-    "selectedFormationExperience"
+    "lineup-selected-formation-experience"
   );
 
-const formationTableBody =
+const htwbLineupFormationTableBody =
   document.getElementById(
-    "formationTableBody"
+    "lineup-formation-table-body"
   );
 
-const selectedTrainingElement =
+const htwbLineupSelectedTrainingElement =
   document.getElementById(
-    "selectedTraining"
+    "lineup-selected-training"
   );
 
-const selectedTrainingAverageElement =
+const htwbLineupSelectedTrainingAverageElement =
   document.getElementById(
-    "selectedTrainingAverage"
+    "lineup-selected-training-average"
   );
 
-const trainingTableBody =
+const htwbLineupTrainingTableBody =
   document.getElementById(
-    "trainingTableBody"
+    "lineup-training-table-body"
   );
 
-const lineupWarning =
+const htwbLineupLineupWarning =
   document.getElementById(
-    "lineupWarning"
+    "lineup-warning"
   );
 
-const excludedPlayersTableBody =
+const htwbLineupExcludedPlayersTableBody =
   document.getElementById(
-    "excludedPlayersTableBody"
+    "lineup-excluded-players-table-body"
   );
 
-const eligiblePlayersTableBody =
+const htwbLineupEligiblePlayersTableBody =
   document.getElementById(
-    "eligiblePlayersTableBody"
+    "lineup-eligible-players-table-body"
   );
 
-const selectionOrderList =
+const htwbLineupSelectionOrderList =
   document.getElementById(
-    "selectionOrderList"
+    "lineup-selection-order-list"
   );
 
 
@@ -99,7 +99,7 @@ const selectionOrderList =
    STORAGE
    ========================================================= */
 
-const TEAM_STORAGE_KEY =
+const HTWB_LINEUP_TEAM_STORAGE_KEY =
   "htwb_selected_team_id";
 
 
@@ -119,7 +119,7 @@ const TEAM_STORAGE_KEY =
  * when the number of central players allows it.
  */
 
-const FORMATIONS = {
+const HTWB_LINEUP_FORMATIONS = {
   "4-3-3": {
     defenders: 4,
     midfielders: 3,
@@ -287,7 +287,7 @@ const FORMATIONS = {
  * RF
  */
 
-const POSITION_ORDER = [
+const HTWB_LINEUP_POSITION_ORDER = [
   "GK",
 
   "CD",
@@ -326,7 +326,7 @@ const POSITION_ORDER = [
  * utilization.
  */
 
-const TRAINING_TYPES = [
+const HTWB_LINEUP_TRAINING_TYPES = [
   {
     id: "keeper",
 
@@ -360,9 +360,9 @@ const TRAINING_TYPES = [
 
     tiePriority: 2,
 
-    utilization(formation) {
+    utilization(htwbLineupFormation) {
       return (
-        formation.defenders /
+        htwbLineupFormation.defenders /
         5
       );
     },
@@ -385,9 +385,9 @@ const TRAINING_TYPES = [
 
     tiePriority: 3,
 
-    utilization(formation) {
+    utilization(htwbLineupFormation) {
       return (
-        formation.midfielders /
+        htwbLineupFormation.midfielders /
         5
       );
     },
@@ -452,11 +452,11 @@ const TRAINING_TYPES = [
      */
     tiePriority: 5,
 
-    utilization(formation) {
+    utilization(htwbLineupFormation) {
       return (
         (
-          formation.defenders +
-          formation.midfielders
+          htwbLineupFormation.defenders +
+          htwbLineupFormation.midfielders
         ) /
         10
       );
@@ -482,9 +482,9 @@ const TRAINING_TYPES = [
 
     tiePriority: 6,
 
-    utilization(formation) {
+    utilization(htwbLineupFormation) {
       return (
-        formation.forwards /
+        htwbLineupFormation.forwards /
         3
       );
     },
@@ -533,7 +533,7 @@ const TRAINING_TYPES = [
  * Favor players with HIGH Form.
  */
 
-const HIGH_FORM_MATCH_TYPES =
+const HTWB_LINEUP_HIGH_FORM_MATCH_TYPES =
   new Set([
     1,
     2,
@@ -551,7 +551,7 @@ const HIGH_FORM_MATCH_TYPES =
  * Favor players with LOW Form.
  */
 
-const LOW_FORM_MATCH_TYPES =
+const HTWB_LINEUP_LOW_FORM_MATCH_TYPES =
   new Set([
     4,
     5,
@@ -568,7 +568,7 @@ const LOW_FORM_MATCH_TYPES =
  * Cup
  */
 
-const SUSPENSION_MATCH_TYPES =
+const HTWB_LINEUP_SUSPENSION_MATCH_TYPES =
   new Set([
     1,
     2,
@@ -580,69 +580,69 @@ const SUSPENSION_MATCH_TYPES =
    STATE
    ========================================================= */
 
-let sourceData = null;
+let htwbLineupSourceData = null;
 
-let currentCalculation = null;
+let htwbLineupCurrentCalculation = null;
 
-let loadedTeamId = null;
+let htwbLineupLoadedTeamId = null;
 
 
 /* =========================================================
    BASIC HELPERS
    ========================================================= */
 
-function numberValue(
-  value,
-  fallback = 0
+function htwbLineupNumberValue(
+  htwbLineupValue,
+  htwbLineupFallback = 0
 ) {
-  const number =
-    Number(value);
+  const htwbLineupNumber =
+    Number(htwbLineupValue);
 
-  return Number.isFinite(number)
-    ? number
-    : fallback;
+  return Number.isFinite(htwbLineupNumber)
+    ? htwbLineupNumber
+    : htwbLineupFallback;
 }
 
 
-function average(values) {
-  if (!values.length) {
+function htwbLineupAverage(htwbLineupValues) {
+  if (!htwbLineupValues.length) {
     return null;
   }
 
   return (
-    values.reduce(
-      (sum, value) =>
-        sum + value,
+    htwbLineupValues.reduce(
+      (htwbLineupSum, htwbLineupValue) =>
+        htwbLineupSum + htwbLineupValue,
       0
     ) /
-    values.length
+    htwbLineupValues.length
   );
 }
 
 
-function round(
-  value,
-  decimals = 2
+function htwbLineupRound(
+  htwbLineupValue,
+  htwbLineupDecimals = 2
 ) {
-  const factor =
-    10 ** decimals;
+  const htwbLineupFactor =
+    10 ** htwbLineupDecimals;
 
   return (
     Math.round(
       (
-        value +
+        htwbLineupValue +
         Number.EPSILON
       ) *
-      factor
+      htwbLineupFactor
     ) /
-    factor
+    htwbLineupFactor
   );
 }
 
 
-function escapeHtml(value) {
+function htwbLineupEscapeHtml(htwbLineupValue) {
   return String(
-    value ?? ""
+    htwbLineupValue ?? ""
   )
     .replaceAll(
       "&",
@@ -667,10 +667,10 @@ function escapeHtml(value) {
 }
 
 
-function percent(value) {
+function htwbLineupPercent(htwbLineupValue) {
   return (
-    `${round(
-      value * 100,
+    `${htwbLineupRound(
+      htwbLineupValue * 100,
       1
     ).toFixed(1)}%`
   );
@@ -681,23 +681,23 @@ function percent(value) {
    STATUS
    ========================================================= */
 
-function setStatus(
-  message,
-  type = ""
+function htwbLineupSetStatus(
+  htwbLineupMessage,
+  htwbLineupType = ""
 ) {
-  if (!statusElement) {
+  if (!htwbLineupStatusElement) {
     return;
   }
 
-  statusElement.textContent =
-    message;
+  htwbLineupStatusElement.textContent =
+    htwbLineupMessage;
 
-  statusElement.className =
-    "status";
+  htwbLineupStatusElement.className =
+    "lineup-status";
 
-  if (type) {
-    statusElement.classList.add(
-      type
+  if (htwbLineupType) {
+    htwbLineupStatusElement.classList.add(
+      htwbLineupType
     );
   }
 }
@@ -707,38 +707,38 @@ function setStatus(
    TEAM ID
    ========================================================= */
 
-function validTeamId(value) {
+function htwbLineupValidTeamId(htwbLineupValue) {
   return /^\d+$/.test(
     String(
-      value || ""
+      htwbLineupValue || ""
     )
   );
 }
 
 
-function getUrlTeamId() {
-  const params =
+function htwbLineupGetUrlTeamId() {
+  const htwbLineupParams =
     new URLSearchParams(
       window.location.search
     );
 
-  const teamId =
-    params.get(
+  const htwbLineupTeamId =
+    htwbLineupParams.get(
       "teamId"
     );
 
-  return validTeamId(teamId)
-    ? teamId
+  return htwbLineupValidTeamId(htwbLineupTeamId)
+    ? htwbLineupTeamId
     : "";
 }
 
 
-function getSelectedTeamId() {
-  const urlTeamId =
-    getUrlTeamId();
+function htwbLineupGetSelectedTeamId() {
+  const htwbLineupUrlTeamId =
+    htwbLineupGetUrlTeamId();
 
-  if (urlTeamId) {
-    return urlTeamId;
+  if (htwbLineupUrlTeamId) {
+    return htwbLineupUrlTeamId;
   }
 
   if (
@@ -748,34 +748,34 @@ function getSelectedTeamId() {
       .getSelectedTeamId ===
       "function"
   ) {
-    const selected =
+    const htwbLineupSelected =
       window
         .HTWikiBuilder
         .getSelectedTeamId();
 
     if (
-      validTeamId(
-        selected
+      htwbLineupValidTeamId(
+        htwbLineupSelected
       )
     ) {
       return String(
-        selected
+        htwbLineupSelected
       );
     }
   }
 
-  const stored =
+  const htwbLineupStored =
     localStorage.getItem(
-      TEAM_STORAGE_KEY
+      HTWB_LINEUP_TEAM_STORAGE_KEY
     );
 
   if (
-    validTeamId(
-      stored
+    htwbLineupValidTeamId(
+      htwbLineupStored
     )
   ) {
     return String(
-      stored
+      htwbLineupStored
     );
   }
 
@@ -787,12 +787,12 @@ function getSelectedTeamId() {
    API
    ========================================================= */
 
-async function loadLineupData(
-  teamId
+async function htwbLineupLoadLineupData(
+  htwbLineupTeamId
 ) {
-  const response =
+  const htwbLineupResponse =
     await fetch(
-      `/api/lineup?teamId=${encodeURIComponent(teamId)}`,
+      `/api/lineup?teamId=${encodeURIComponent(htwbLineupTeamId)}`,
       {
         method:
           "GET",
@@ -804,19 +804,19 @@ async function loadLineupData(
       }
     );
 
-  let data;
+  let htwbLineupData;
 
   try {
-    data =
-      await response.json();
-  } catch (error) {
+    htwbLineupData =
+      await htwbLineupResponse.json();
+  } catch (htwbLineupError) {
     throw new Error(
       "The lineup API returned an invalid response."
     );
   }
 
   if (
-    response.status === 401
+    htwbLineupResponse.status === 401
   ) {
     throw new Error(
       "Your Hattrick login has expired. Please log in again."
@@ -824,22 +824,22 @@ async function loadLineupData(
   }
 
   if (
-    response.status === 403
+    htwbLineupResponse.status === 403
   ) {
     throw new Error(
-      data.error ||
+      htwbLineupData.error ||
       "The Lineup Builder can only use your own team."
     );
   }
 
-  if (!response.ok) {
+  if (!htwbLineupResponse.ok) {
     throw new Error(
-      data.error ||
-      `Server returned ${response.status}`
+      htwbLineupData.error ||
+      `Server returned ${htwbLineupResponse.status}`
     );
   }
 
-  return data;
+  return htwbLineupData;
 }
 
 
@@ -847,47 +847,47 @@ async function loadLineupData(
    POSITION ROLE HELPERS
    ========================================================= */
 
-function getSlotRole(slot) {
+function htwbLineupGetSlotRole(htwbLineupSlot) {
   if (
-    slot === "GK"
+    htwbLineupSlot === "GK"
   ) {
     return "GK";
   }
 
   if (
-    slot === "CD" ||
-    slot === "LCD" ||
-    slot === "RCD"
+    htwbLineupSlot === "CD" ||
+    htwbLineupSlot === "LCD" ||
+    htwbLineupSlot === "RCD"
   ) {
     return "CD";
   }
 
   if (
-    slot === "LWB" ||
-    slot === "RWB"
+    htwbLineupSlot === "LWB" ||
+    htwbLineupSlot === "RWB"
   ) {
     return "WB";
   }
 
   if (
-    slot === "CM" ||
-    slot === "LCM" ||
-    slot === "RCM"
+    htwbLineupSlot === "CM" ||
+    htwbLineupSlot === "LCM" ||
+    htwbLineupSlot === "RCM"
   ) {
     return "IM";
   }
 
   if (
-    slot === "LW" ||
-    slot === "RW"
+    htwbLineupSlot === "LW" ||
+    htwbLineupSlot === "RW"
   ) {
     return "WG";
   }
 
   if (
-    slot === "CF" ||
-    slot === "LF" ||
-    slot === "RF"
+    htwbLineupSlot === "CF" ||
+    htwbLineupSlot === "LF" ||
+    htwbLineupSlot === "RF"
   ) {
     return "FW";
   }
@@ -896,41 +896,41 @@ function getSlotRole(slot) {
 }
 
 
-function roleMatchesTrainingRole(
-  role,
-  trainingRole
+function htwbLineupRoleMatchesTrainingRole(
+  htwbLineupRole,
+  htwbLineupTrainingRole
 ) {
   if (
-    trainingRole ===
+    htwbLineupTrainingRole ===
     "ALL"
   ) {
     return true;
   }
 
   if (
-    trainingRole ===
+    htwbLineupTrainingRole ===
     "DEFENDER"
   ) {
     return (
-      role === "CD" ||
-      role === "WB"
+      htwbLineupRole === "CD" ||
+      htwbLineupRole === "WB"
     );
   }
 
   return (
-    role ===
-    trainingRole
+    htwbLineupRole ===
+    htwbLineupTrainingRole
   );
 }
 
 
-function slotMatchesTrainingRole(
-  slot,
-  trainingRole
+function htwbLineupSlotMatchesTrainingRole(
+  htwbLineupSlot,
+  htwbLineupTrainingRole
 ) {
-  return roleMatchesTrainingRole(
-    getSlotRole(slot),
-    trainingRole
+  return htwbLineupRoleMatchesTrainingRole(
+    htwbLineupGetSlotRole(htwbLineupSlot),
+    htwbLineupTrainingRole
   );
 }
 
@@ -947,80 +947,80 @@ function slotMatchesTrainingRole(
  * 3. More midfielders
  */
 
-function selectFormation(
-  formationExperience
+function htwbLineupSelectFormation(
+  htwbLineupFormationExperience
 ) {
-  const candidates =
+  const htwbLineupCandidates =
     Object.entries(
-      FORMATIONS
+      HTWB_LINEUP_FORMATIONS
     )
       .map(
         ([
-          name,
-          formation
+          htwbLineupName,
+          htwbLineupFormation
         ]) => {
-          const experience =
+          const htwbLineupExperience =
             Number(
-              formationExperience?.[
-                name
+              htwbLineupFormationExperience?.[
+                htwbLineupName
               ]
             );
 
           return {
-            name,
-            formation,
-            experience
+            name: htwbLineupName,
+            formation: htwbLineupFormation,
+            experience: htwbLineupExperience
           };
         }
       )
       .filter(
-        candidate =>
+        htwbLineupCandidate =>
           Number.isFinite(
-            candidate.experience
+            htwbLineupCandidate.experience
           )
       );
 
-  if (!candidates.length) {
+  if (!htwbLineupCandidates.length) {
     throw new Error(
       "No usable formation experience values were returned."
     );
   }
 
-  candidates.sort(
-    (a, b) => {
+  htwbLineupCandidates.sort(
+    (htwbLineupA, htwbLineupB) => {
       if (
-        a.experience !==
-        b.experience
+        htwbLineupA.experience !==
+        htwbLineupB.experience
       ) {
         return (
-          a.experience -
-          b.experience
+          htwbLineupA.experience -
+          htwbLineupB.experience
         );
       }
 
       if (
-        a.formation.defenders !==
-        b.formation.defenders
+        htwbLineupA.formation.defenders !==
+        htwbLineupB.formation.defenders
       ) {
         return (
-          b.formation.defenders -
-          a.formation.defenders
+          htwbLineupB.formation.defenders -
+          htwbLineupA.formation.defenders
         );
       }
 
       if (
-        a.formation.midfielders !==
-        b.formation.midfielders
+        htwbLineupA.formation.midfielders !==
+        htwbLineupB.formation.midfielders
       ) {
         return (
-          b.formation.midfielders -
-          a.formation.midfielders
+          htwbLineupB.formation.midfielders -
+          htwbLineupA.formation.midfielders
         );
       }
 
       return (
-        a.name.localeCompare(
-          b.name
+        htwbLineupA.name.localeCompare(
+          htwbLineupB.name
         )
       );
     }
@@ -1028,9 +1028,9 @@ function selectFormation(
 
   return {
     selected:
-      candidates[0],
+      htwbLineupCandidates[0],
 
-    candidates
+    candidates: htwbLineupCandidates
   };
 }
 
@@ -1046,29 +1046,29 @@ function selectFormation(
  * Formation utilization does NOT alter this.
  */
 
-function calculateTrainingAverage(
-  players,
-  training
+function htwbLineupCalculateTrainingAverage(
+  htwbLineupPlayers,
+  htwbLineupTraining
 ) {
-  const values =
-    players
+  const htwbLineupValues =
+    htwbLineupPlayers
       .map(
-        player =>
+        htwbLineupPlayer =>
           Number(
-            player[
-              training.skill
+            htwbLineupPlayer[
+              htwbLineupTraining.skill
             ]
           )
       )
       .filter(
-        value =>
+        htwbLineupValue =>
           Number.isFinite(
-            value
+            htwbLineupValue
           )
       )
       .sort(
-        (a, b) =>
-          b - a
+        (htwbLineupA, htwbLineupB) =>
+          htwbLineupB - htwbLineupA
       );
 
   /*
@@ -1079,16 +1079,16 @@ function calculateTrainingAverage(
    */
 
   if (
-    values.length <
-    training.requiredPlayers
+    htwbLineupValues.length <
+    htwbLineupTraining.requiredPlayers
   ) {
     return null;
   }
 
-  return average(
-    values.slice(
+  return htwbLineupAverage(
+    htwbLineupValues.slice(
       0,
-      training.requiredPlayers
+      htwbLineupTraining.requiredPlayers
     )
   );
 }
@@ -1113,93 +1113,93 @@ function calculateTrainingAverage(
  * 9 / .90 = 10
  */
 
-function selectTraining(
-  players,
-  formation
+function htwbLineupSelectTraining(
+  htwbLineupPlayers,
+  htwbLineupFormation
 ) {
-  const results =
-    TRAINING_TYPES.map(
-      training => {
-        const idealAverage =
-          calculateTrainingAverage(
-            players,
-            training
+  const htwbLineupResults =
+    HTWB_LINEUP_TRAINING_TYPES.map(
+      htwbLineupTraining => {
+        const htwbLineupIdealAverage =
+          htwbLineupCalculateTrainingAverage(
+            htwbLineupPlayers,
+            htwbLineupTraining
           );
 
-        const utilization =
+        const htwbLineupUtilization =
           Math.max(
             0,
             Math.min(
               1,
-              numberValue(
-                training.utilization(
-                  formation
+              htwbLineupNumberValue(
+                htwbLineupTraining.utilization(
+                  htwbLineupFormation
                 ),
                 0
               )
             )
           );
 
-        const waste =
+        const htwbLineupWaste =
           1 -
-          utilization;
+          htwbLineupUtilization;
 
-        let score = null;
+        let htwbLineupScore = null;
 
         if (
-          idealAverage !== null &&
-          utilization > 0
+          htwbLineupIdealAverage !== null &&
+          htwbLineupUtilization > 0
         ) {
-          score =
-            idealAverage /
-            utilization;
+          htwbLineupScore =
+            htwbLineupIdealAverage /
+            htwbLineupUtilization;
         }
 
         return {
-          training,
+          training: htwbLineupTraining,
 
-          idealAverage,
+          idealAverage: htwbLineupIdealAverage,
 
-          utilization,
+          utilization: htwbLineupUtilization,
 
-          waste,
+          waste: htwbLineupWaste,
 
-          score,
+          score: htwbLineupScore,
 
           hasEnoughPlayers:
-            idealAverage !== null
+            htwbLineupIdealAverage !== null
         };
       }
     );
 
-  const candidates =
-    results
+  const htwbLineupCandidates =
+    htwbLineupResults
       .filter(
-        result =>
-          result.hasEnoughPlayers &&
-          result.utilization > 0 &&
-          result.score !== null
+        htwbLineupResult =>
+          htwbLineupResult.hasEnoughPlayers &&
+          htwbLineupResult.utilization > 0 &&
+          htwbLineupResult.score !== null
       )
       .sort(
-        (a, b) => {
+        (htwbLineupA, htwbLineupB) => {
           if (
-            a.score !==
-            b.score
+            htwbLineupA.score !==
+            htwbLineupB.score
           ) {
             return (
-              a.score -
-              b.score
+              htwbLineupA.score -
+              htwbLineupB.score
             );
           }
 
           return (
-            a.training.tiePriority -
-            b.training.tiePriority
+            htwbLineupA.training.tiePriority -
+            htwbLineupB.training.tiePriority
           );
         }
       );
 
-  if (!candidates.length) {
+  if (!htwbLineupCandidates.length) {
     throw new Error(
       "No training type can be calculated from the current roster."
     );
@@ -1207,9 +1207,9 @@ function selectTraining(
 
   return {
     selected:
-      candidates[0],
+      htwbLineupCandidates[0],
 
-    results
+    results: htwbLineupResults
   };
 }
 
@@ -1218,31 +1218,31 @@ function selectTraining(
    TRAINING SLOT HELPERS
    ========================================================= */
 
-function getTrainingSlots(
-  formation,
-  training,
-  type
+function htwbLineupGetTrainingSlots(
+  htwbLineupFormation,
+  htwbLineupTraining,
+  htwbLineupType
 ) {
-  const roles =
-    type === "full"
-      ? training.fullRoles
-      : training.partialRoles;
+  const htwbLineupRoles =
+    htwbLineupType === "full"
+      ? htwbLineupTraining.fullRoles
+      : htwbLineupTraining.partialRoles;
 
-  return POSITION_ORDER.filter(
-    slot => {
+  return HTWB_LINEUP_POSITION_ORDER.filter(
+    htwbLineupSlot => {
       if (
-        !formation
+        !htwbLineupFormation
           .slots
-          .includes(slot)
+          .includes(htwbLineupSlot)
       ) {
         return false;
       }
 
-      return roles.some(
-        role =>
-          slotMatchesTrainingRole(
-            slot,
-            role
+      return htwbLineupRoles.some(
+        htwbLineupRole =>
+          htwbLineupSlotMatchesTrainingRole(
+            htwbLineupSlot,
+            htwbLineupRole
           )
       );
     }
@@ -1254,45 +1254,45 @@ function getTrainingSlots(
    PREVIOUS MATCH TRAINING
    ========================================================= */
 
-function playerWasPreviouslyTrained(
-  player,
-  training,
-  previousTrainingMatch
+function htwbLineupPlayerWasPreviouslyTrained(
+  htwbLineupPlayer,
+  htwbLineupTraining,
+  htwbLineupPreviousTrainingMatch
 ) {
-  const appearances =
-    previousTrainingMatch
+  const htwbLineupAppearances =
+    htwbLineupPreviousTrainingMatch
       ?.appearances ||
     [];
 
-  const trainingRoles = [
-    ...training.fullRoles,
-    ...training.partialRoles
+  const htwbLineupTrainingRoles = [
+    ...htwbLineupTraining.fullRoles,
+    ...htwbLineupTraining.partialRoles
   ];
 
-  return appearances.some(
-    appearance => {
+  return htwbLineupAppearances.some(
+    htwbLineupAppearance => {
       if (
         String(
-          appearance.playerId
+          htwbLineupAppearance.playerId
         ) !==
         String(
-          player.playerId
+          htwbLineupPlayer.playerId
         )
       ) {
         return false;
       }
 
-      const role =
+      const htwbLineupRole =
         String(
-          appearance.role ||
+          htwbLineupAppearance.role ||
           ""
         ).toUpperCase();
 
-      return trainingRoles.some(
-        trainingRole =>
-          roleMatchesTrainingRole(
-            role,
-            trainingRole
+      return htwbLineupTrainingRoles.some(
+        htwbLineupTrainingRole =>
+          htwbLineupRoleMatchesTrainingRole(
+            htwbLineupRole,
+            htwbLineupTrainingRole
           )
       );
     }
@@ -1304,32 +1304,32 @@ function playerWasPreviouslyTrained(
    PLAYER ELIGIBILITY
    ========================================================= */
 
-function filterEligiblePlayers(
-  players,
-  upcomingMatch,
-  training,
-  previousTrainingMatch
+function htwbLineupFilterEligiblePlayers(
+  htwbLineupPlayers,
+  htwbLineupUpcomingMatch,
+  htwbLineupTraining,
+  htwbLineupPreviousTrainingMatch
 ) {
-  const eligible = [];
+  const htwbLineupEligible = [];
 
-  const excluded = [];
+  const htwbLineupExcluded = [];
 
-  const matchType =
-    numberValue(
-      upcomingMatch?.matchType,
+  const htwbLineupMatchType =
+    htwbLineupNumberValue(
+      htwbLineupUpcomingMatch?.matchType,
       0
     );
 
-  const secondTrainingMatch =
-    upcomingMatch
+  const htwbLineupSecondTrainingMatch =
+    htwbLineupUpcomingMatch
       ?.trainingWeekPosition ===
       "second";
 
   for (
-    const player
-    of players
+    const htwbLineupPlayer
+    of htwbLineupPlayers
   ) {
-    const reasons = [];
+    const htwbLineupReasons = [];
 
     /*
      * -1 healthy
@@ -1338,12 +1338,12 @@ function filterEligiblePlayers(
      */
 
     if (
-      numberValue(
-        player.injuryLevel,
+      htwbLineupNumberValue(
+        htwbLineupPlayer.injuryLevel,
         -1
       ) > 0
     ) {
-      reasons.push(
+      htwbLineupReasons.push(
         "Injured"
       );
     }
@@ -1353,15 +1353,15 @@ function filterEligiblePlayers(
      */
 
     if (
-      SUSPENSION_MATCH_TYPES.has(
-        matchType
+      HTWB_LINEUP_SUSPENSION_MATCH_TYPES.has(
+        htwbLineupMatchType
       ) &&
-      numberValue(
-        player.cards,
+      htwbLineupNumberValue(
+        htwbLineupPlayer.cards,
         0
       ) === 3
     ) {
-      reasons.push(
+      htwbLineupReasons.push(
         "Suspended"
       );
     }
@@ -1375,35 +1375,35 @@ function filterEligiblePlayers(
      */
 
     if (
-      secondTrainingMatch &&
-      playerWasPreviouslyTrained(
-        player,
-        training,
-        previousTrainingMatch
+      htwbLineupSecondTrainingMatch &&
+      htwbLineupPlayerWasPreviouslyTrained(
+        htwbLineupPlayer,
+        htwbLineupTraining,
+        htwbLineupPreviousTrainingMatch
       )
     ) {
-      reasons.push(
+      htwbLineupReasons.push(
         "Already used in a training position this week"
       );
     }
 
     if (
-      reasons.length
+      htwbLineupReasons.length
     ) {
-      excluded.push({
-        player,
-        reasons
+      htwbLineupExcluded.push({
+        player: htwbLineupPlayer,
+        reasons: htwbLineupReasons
       });
     } else {
-      eligible.push(
-        player
+      htwbLineupEligible.push(
+        htwbLineupPlayer
       );
     }
   }
 
   return {
-    eligible,
-    excluded
+    eligible: htwbLineupEligible,
+    excluded: htwbLineupExcluded
   };
 }
 
@@ -1412,46 +1412,46 @@ function filterEligiblePlayers(
    FORM
    ========================================================= */
 
-function getFormFactor(
-  player,
-  upcomingMatch
+function htwbLineupGetFormFactor(
+  htwbLineupPlayer,
+  htwbLineupUpcomingMatch
 ) {
-  const form =
-    numberValue(
-      player.form,
+  const htwbLineupForm =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.form,
       0
     );
 
-  const matchType =
-    numberValue(
-      upcomingMatch?.matchType,
+  const htwbLineupMatchType =
+    htwbLineupNumberValue(
+      htwbLineupUpcomingMatch?.matchType,
       0
     );
 
   if (
-    HIGH_FORM_MATCH_TYPES.has(
-      matchType
+    HTWB_LINEUP_HIGH_FORM_MATCH_TYPES.has(
+      htwbLineupMatchType
     )
   ) {
     return (
-      form /
+      htwbLineupForm /
       10
     );
   }
 
   if (
-    LOW_FORM_MATCH_TYPES.has(
-      matchType
+    HTWB_LINEUP_LOW_FORM_MATCH_TYPES.has(
+      htwbLineupMatchType
     )
   ) {
     return (
-      (10 - form) /
+      (10 - htwbLineupForm) /
       10
     );
   }
 
   throw new Error(
-    `Unsupported MatchType ${matchType} for form priority.`
+    `Unsupported MatchType ${htwbLineupMatchType} for form priority.`
   );
 }
 
@@ -1460,12 +1460,12 @@ function getFormFactor(
    STAMINA
    ========================================================= */
 
-function getStaminaFactor(
-  player
+function htwbLineupGetStaminaFactor(
+  htwbLineupPlayer
 ) {
   return (
-    numberValue(
-      player.stamina,
+    htwbLineupNumberValue(
+      htwbLineupPlayer.stamina,
       0
     ) /
     10
@@ -1477,31 +1477,31 @@ function getStaminaFactor(
    POTENTIAL TIE BREAKER
    ========================================================= */
 
-function getPotentialTieBreaker(
-  player
+function htwbLineupGetPotentialTieBreaker(
+  htwbLineupPlayer
 ) {
-  const ageInDays =
+  const htwbLineupAgeInDays =
     (
-      numberValue(
-        player.age,
+      htwbLineupNumberValue(
+        htwbLineupPlayer.age,
         0
       ) *
       112
     ) +
-    numberValue(
-      player.ageDays,
+    htwbLineupNumberValue(
+      htwbLineupPlayer.ageDays,
       0
     );
 
-  const potential =
+  const htwbLineupPotential =
     (
       3360 -
-      ageInDays
+      htwbLineupAgeInDays
     ) *
     7;
 
   return (
-    potential /
+    htwbLineupPotential /
     100000
   );
 }
@@ -1511,123 +1511,123 @@ function getPotentialTieBreaker(
    RAW POSITION RATINGS
    ========================================================= */
 
-function calculateRawPositionSkills(
-  player
+function htwbLineupCalculateRawPositionSkills(
+  htwbLineupPlayer
 ) {
-  const keeper =
-    numberValue(
-      player.keeper,
+  const htwbLineupKeeper =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.keeper,
       0
     );
 
-  const defending =
-    numberValue(
-      player.defending,
+  const htwbLineupDefending =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.defending,
       0
     );
 
-  const playmaking =
-    numberValue(
-      player.playmaking,
+  const htwbLineupPlaymaking =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.playmaking,
       0
     );
 
-  const winger =
-    numberValue(
-      player.winger,
+  const htwbLineupWinger =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.winger,
       0
     );
 
-  const passing =
-    numberValue(
-      player.passing,
+  const htwbLineupPassing =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.passing,
       0
     );
 
-  const scoring =
-    numberValue(
-      player.scoring,
+  const htwbLineupScoring =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.scoring,
       0
     );
 
   return {
     GK:
       (
-        keeper *
+        htwbLineupKeeper *
         0.75
       ) +
       (
-        defending *
+        htwbLineupDefending *
         0.25
       ),
 
     CD:
       (
-        defending *
+        htwbLineupDefending *
         0.75
       ) +
       (
-        playmaking *
+        htwbLineupPlaymaking *
         0.25
       ),
 
     WB:
       (
-        defending *
+        htwbLineupDefending *
         (6 / 9)
       ) +
       (
-        playmaking *
+        htwbLineupPlaymaking *
         (1 / 9)
       ) +
       (
-        winger *
+        htwbLineupWinger *
         (2 / 9)
       ),
 
     IM:
       (
-        playmaking *
+        htwbLineupPlaymaking *
         (6 / 9)
       ) +
       (
-        defending *
+        htwbLineupDefending *
         (2 / 9)
       ) +
       (
-        passing *
+        htwbLineupPassing *
         (1 / 9)
       ),
 
     WG:
       (
-        defending *
+        htwbLineupDefending *
         0.10
       ) +
       (
-        playmaking *
+        htwbLineupPlaymaking *
         0.20
       ) +
       (
-        winger *
+        htwbLineupWinger *
         0.60
       ) +
       (
-        passing *
+        htwbLineupPassing *
         0.10
       ),
 
     FW:
       (
-        scoring *
+        htwbLineupScoring *
         (6 / 9)
       ) +
       (
-        passing *
+        htwbLineupPassing *
         (2 / 9)
       ) +
       (
-        winger *
+        htwbLineupWinger *
         (1 / 9)
       )
   };
@@ -1638,61 +1638,61 @@ function calculateRawPositionSkills(
    FINAL POSITION RATINGS
    ========================================================= */
 
-function calculatePlayerRatings(
-  player,
-  upcomingMatch
+function htwbLineupCalculatePlayerRatings(
+  htwbLineupPlayer,
+  htwbLineupUpcomingMatch
 ) {
-  const raw =
-    calculateRawPositionSkills(
-      player
+  const htwbLineupRaw =
+    htwbLineupCalculateRawPositionSkills(
+      htwbLineupPlayer
     );
 
-  const formFactor =
-    getFormFactor(
-      player,
-      upcomingMatch
+  const htwbLineupFormFactor =
+    htwbLineupGetFormFactor(
+      htwbLineupPlayer,
+      htwbLineupUpcomingMatch
     );
 
-  const staminaFactor =
-    getStaminaFactor(
-      player
+  const htwbLineupStaminaFactor =
+    htwbLineupGetStaminaFactor(
+      htwbLineupPlayer
     );
 
-  const tieBreaker =
-    getPotentialTieBreaker(
-      player
+  const htwbLineupTieBreaker =
+    htwbLineupGetPotentialTieBreaker(
+      htwbLineupPlayer
     );
 
-  const ratings = {};
+  const htwbLineupRatings = {};
 
   for (
     const [
-      position,
-      rawSkill
+      htwbLineupPosition,
+      htwbLineupRawSkill
     ]
     of Object.entries(
-      raw
+      htwbLineupRaw
     )
   ) {
-    ratings[position] =
+    htwbLineupRatings[htwbLineupPosition] =
       (
-        rawSkill *
-        formFactor *
-        staminaFactor
+        htwbLineupRawSkill *
+        htwbLineupFormFactor *
+        htwbLineupStaminaFactor
       ) +
-      tieBreaker;
+      htwbLineupTieBreaker;
   }
 
   return {
-    ...player,
+    ...htwbLineupPlayer,
 
-    ratings,
+    ratings: htwbLineupRatings,
 
-    formFactor,
+    formFactor: htwbLineupFormFactor,
 
-    staminaFactor,
+    staminaFactor: htwbLineupStaminaFactor,
 
-    tieBreaker
+    tieBreaker: htwbLineupTieBreaker
   };
 }
 
@@ -1701,30 +1701,30 @@ function calculatePlayerRatings(
    POSITION RATING LOOKUP
    ========================================================= */
 
-function getPositionRating(
-  player,
-  slot
+function htwbLineupGetPositionRating(
+  htwbLineupPlayer,
+  htwbLineupSlot
 ) {
-  const role =
-    getSlotRole(
-      slot
+  const htwbLineupRole =
+    htwbLineupGetSlotRole(
+      htwbLineupSlot
     );
 
-  if (!role) {
+  if (!htwbLineupRole) {
     return (
       Number.NEGATIVE_INFINITY
     );
   }
 
-  const rating =
-    player
+  const htwbLineupRating =
+    htwbLineupPlayer
       ?.ratings
-      ?.[role];
+      ?.[htwbLineupRole];
 
   return Number.isFinite(
-    rating
+    htwbLineupRating
   )
-    ? rating
+    ? htwbLineupRating
     : Number.NEGATIVE_INFINITY;
 }
 
@@ -1733,18 +1733,18 @@ function getPositionRating(
    SELECTION ORDER
    ========================================================= */
 
-function buildSelectionOrder(
-  formation,
-  training
+function htwbLineupBuildSelectionOrder(
+  htwbLineupFormation,
+  htwbLineupTraining
 ) {
   /*
    * Full training positions first.
    */
 
-  const fullTrainingSlots =
-    getTrainingSlots(
-      formation,
-      training,
+  const htwbLineupFullTrainingSlots =
+    htwbLineupGetTrainingSlots(
+      htwbLineupFormation,
+      htwbLineupTraining,
       "full"
     );
 
@@ -1752,16 +1752,16 @@ function buildSelectionOrder(
    * Partial training positions second.
    */
 
-  const partialTrainingSlots =
-    getTrainingSlots(
-      formation,
-      training,
+  const htwbLineupPartialTrainingSlots =
+    htwbLineupGetTrainingSlots(
+      htwbLineupFormation,
+      htwbLineupTraining,
       "partial"
     )
       .filter(
-        slot =>
-          !fullTrainingSlots.includes(
-            slot
+        htwbLineupSlot =>
+          !htwbLineupFullTrainingSlots.includes(
+            htwbLineupSlot
           )
       );
 
@@ -1770,38 +1770,38 @@ function buildSelectionOrder(
    * back-to-front order.
    */
 
-  const remainingSlots =
-    POSITION_ORDER
+  const htwbLineupRemainingSlots =
+    HTWB_LINEUP_POSITION_ORDER
       .filter(
-        slot =>
-          formation
+        htwbLineupSlot =>
+          htwbLineupFormation
             .slots
-            .includes(slot)
+            .includes(htwbLineupSlot)
       )
       .filter(
-        slot =>
-          !fullTrainingSlots.includes(
-            slot
+        htwbLineupSlot =>
+          !htwbLineupFullTrainingSlots.includes(
+            htwbLineupSlot
           )
       )
       .filter(
-        slot =>
-          !partialTrainingSlots.includes(
-            slot
+        htwbLineupSlot =>
+          !htwbLineupPartialTrainingSlots.includes(
+            htwbLineupSlot
           )
       );
 
   return {
-    fullTrainingSlots,
+    fullTrainingSlots: htwbLineupFullTrainingSlots,
 
-    partialTrainingSlots,
+    partialTrainingSlots: htwbLineupPartialTrainingSlots,
 
-    remainingSlots,
+    remainingSlots: htwbLineupRemainingSlots,
 
     all: [
-      ...fullTrainingSlots,
-      ...partialTrainingSlots,
-      ...remainingSlots
+      ...htwbLineupFullTrainingSlots,
+      ...htwbLineupPartialTrainingSlots,
+      ...htwbLineupRemainingSlots
     ]
   };
 }
@@ -1811,22 +1811,22 @@ function buildSelectionOrder(
    SLOT CATEGORY
    ========================================================= */
 
-function getSelectionCategory(
-  slot,
-  order
+function htwbLineupGetSelectionCategory(
+  htwbLineupSlot,
+  htwbLineupOrder
 ) {
   if (
-    order
+    htwbLineupOrder
       .fullTrainingSlots
-      .includes(slot)
+      .includes(htwbLineupSlot)
   ) {
     return "full";
   }
 
   if (
-    order
+    htwbLineupOrder
       .partialTrainingSlots
-      .includes(slot)
+      .includes(htwbLineupSlot)
   ) {
     return "partial";
   }
@@ -1848,49 +1848,49 @@ function getSelectionCategory(
  * Do not save him for a later position.
  */
 
-function chooseBestPlayerForSlot(
-  players,
-  slot
+function htwbLineupChooseBestPlayerForSlot(
+  htwbLineupPlayers,
+  htwbLineupSlot
 ) {
   if (
-    !players.length
+    !htwbLineupPlayers.length
   ) {
     return null;
   }
 
-  const sorted =
-    [...players]
+  const htwbLineupSorted =
+    [...htwbLineupPlayers]
       .sort(
-        (a, b) => {
-          const ratingA =
-            getPositionRating(
-              a,
-              slot
+        (htwbLineupA, htwbLineupB) => {
+          const htwbLineupRatingA =
+            htwbLineupGetPositionRating(
+              htwbLineupA,
+              htwbLineupSlot
             );
 
-          const ratingB =
-            getPositionRating(
-              b,
-              slot
+          const htwbLineupRatingB =
+            htwbLineupGetPositionRating(
+              htwbLineupB,
+              htwbLineupSlot
             );
 
           if (
-            ratingA !==
-            ratingB
+            htwbLineupRatingA !==
+            htwbLineupRatingB
           ) {
             return (
-              ratingB -
-              ratingA
+              htwbLineupRatingB -
+              htwbLineupRatingA
             );
           }
 
           return (
-            numberValue(
-              a.playerId,
+            htwbLineupNumberValue(
+              htwbLineupA.playerId,
               0
             ) -
-            numberValue(
-              b.playerId,
+            htwbLineupNumberValue(
+              htwbLineupB.playerId,
               0
             )
           );
@@ -1898,7 +1898,7 @@ function chooseBestPlayerForSlot(
       );
 
   return (
-    sorted[0] ||
+    htwbLineupSorted[0] ||
     null
   );
 }
@@ -1908,92 +1908,92 @@ function chooseBestPlayerForSlot(
    BUILD XI
    ========================================================= */
 
-function constructLineup(
-  eligiblePlayers,
-  formation,
-  training
+function htwbLineupConstructLineup(
+  htwbLineupEligiblePlayers,
+  htwbLineupFormation,
+  htwbLineupTraining
 ) {
-  const remaining =
-    [...eligiblePlayers];
+  const htwbLineupRemaining =
+    [...htwbLineupEligiblePlayers];
 
-  const lineup = {};
+  const htwbLineupLineup = {};
 
-  const selections = [];
+  const htwbLineupSelections = [];
 
-  const order =
-    buildSelectionOrder(
-      formation,
-      training
+  const htwbLineupOrder =
+    htwbLineupBuildSelectionOrder(
+      htwbLineupFormation,
+      htwbLineupTraining
     );
 
   for (
-    const slot
-    of order.all
+    const htwbLineupSlot
+    of htwbLineupOrder.all
   ) {
-    const selectedPlayer =
-      chooseBestPlayerForSlot(
-        remaining,
-        slot
+    const htwbLineupSelectedPlayer =
+      htwbLineupChooseBestPlayerForSlot(
+        htwbLineupRemaining,
+        htwbLineupSlot
       );
 
-    const category =
-      getSelectionCategory(
-        slot,
-        order
+    const htwbLineupCategory =
+      htwbLineupGetSelectionCategory(
+        htwbLineupSlot,
+        htwbLineupOrder
       );
 
-    selections.push({
-      slot,
+    htwbLineupSelections.push({
+      slot: htwbLineupSlot,
 
       player:
-        selectedPlayer,
+        htwbLineupSelectedPlayer,
 
-      category
+      category: htwbLineupCategory
     });
 
     if (
-      !selectedPlayer
+      !htwbLineupSelectedPlayer
     ) {
       continue;
     }
 
-    lineup[slot] =
-      selectedPlayer;
+    htwbLineupLineup[htwbLineupSlot] =
+      htwbLineupSelectedPlayer;
 
-    const index =
-      remaining.findIndex(
-        player =>
+    const htwbLineupIndex =
+      htwbLineupRemaining.findIndex(
+        htwbLineupPlayer =>
           String(
-            player.playerId
+            htwbLineupPlayer.playerId
           ) ===
           String(
-            selectedPlayer.playerId
+            htwbLineupSelectedPlayer.playerId
           )
       );
 
     if (
-      index >= 0
+      htwbLineupIndex >= 0
     ) {
-      remaining.splice(
-        index,
+      htwbLineupRemaining.splice(
+        htwbLineupIndex,
         1
       );
     }
   }
 
   return {
-    lineup,
+    lineup: htwbLineupLineup,
 
-    selections,
+    selections: htwbLineupSelections,
 
-    order,
+    order: htwbLineupOrder,
 
     playersRemaining:
-      remaining,
+      htwbLineupRemaining,
 
     complete:
       Object.keys(
-        lineup
+        htwbLineupLineup
       ).length === 11
   };
 }
@@ -2003,18 +2003,18 @@ function constructLineup(
    COMPLETE CALCULATION
    ========================================================= */
 
-function calculateLineup(
-  data
+function htwbLineupCalculateLineup(
+  htwbLineupData
 ) {
-  const players =
+  const htwbLineupPlayers =
     Array.isArray(
-      data.players
+      htwbLineupData.players
     )
-      ? data.players
+      ? htwbLineupData.players
       : [];
 
   if (
-    !players.length
+    !htwbLineupPlayers.length
   ) {
     throw new Error(
       "No players were returned."
@@ -2025,13 +2025,13 @@ function calculateLineup(
    * 1. Formation
    */
 
-  const formationResult =
-    selectFormation(
-      data.formationExperience
+  const htwbLineupFormationResult =
+    htwbLineupSelectFormation(
+      htwbLineupData.formationExperience
     );
 
-  const selectedFormation =
-    formationResult.selected;
+  const htwbLineupSelectedFormation =
+    htwbLineupFormationResult.selected;
 
   /*
    * 2. Training
@@ -2039,14 +2039,14 @@ function calculateLineup(
    * Uses FULL roster.
    */
 
-  const trainingResult =
-    selectTraining(
-      players,
-      selectedFormation.formation
+  const htwbLineupTrainingResult =
+    htwbLineupSelectTraining(
+      htwbLineupPlayers,
+      htwbLineupSelectedFormation.formation
     );
 
-  const selectedTraining =
-    trainingResult
+  const htwbLineupSelectedTraining =
+    htwbLineupTrainingResult
       .selected
       .training;
 
@@ -2054,26 +2054,26 @@ function calculateLineup(
    * 3. Player availability
    */
 
-  const eligibilityResult =
-    filterEligiblePlayers(
-      players,
-      data.upcomingMatch,
-      selectedTraining,
-      data.previousTrainingMatch
+  const htwbLineupEligibilityResult =
+    htwbLineupFilterEligiblePlayers(
+      htwbLineupPlayers,
+      htwbLineupData.upcomingMatch,
+      htwbLineupSelectedTraining,
+      htwbLineupData.previousTrainingMatch
     );
 
   /*
    * 4. Position ratings
    */
 
-  const ratedEligiblePlayers =
-    eligibilityResult
+  const htwbLineupRatedEligiblePlayers =
+    htwbLineupEligibilityResult
       .eligible
       .map(
-        player =>
-          calculatePlayerRatings(
-            player,
-            data.upcomingMatch
+        htwbLineupPlayer =>
+          htwbLineupCalculatePlayerRatings(
+            htwbLineupPlayer,
+            htwbLineupData.upcomingMatch
           )
       );
 
@@ -2081,27 +2081,27 @@ function calculateLineup(
    * 5. Build lineup
    */
 
-  const lineupResult =
-    constructLineup(
-      ratedEligiblePlayers,
-      selectedFormation.formation,
-      selectedTraining
+  const htwbLineupLineupResult =
+    htwbLineupConstructLineup(
+      htwbLineupRatedEligiblePlayers,
+      htwbLineupSelectedFormation.formation,
+      htwbLineupSelectedTraining
     );
 
   return {
-    formationResult,
+    formationResult: htwbLineupFormationResult,
 
-    selectedFormation,
+    selectedFormation: htwbLineupSelectedFormation,
 
-    trainingResult,
+    trainingResult: htwbLineupTrainingResult,
 
-    selectedTraining,
+    selectedTraining: htwbLineupSelectedTraining,
 
-    eligibilityResult,
+    eligibilityResult: htwbLineupEligibilityResult,
 
-    ratedEligiblePlayers,
+    ratedEligiblePlayers: htwbLineupRatedEligiblePlayers,
 
-    lineupResult
+    lineupResult: htwbLineupLineupResult
   };
 }
 
@@ -2110,10 +2110,10 @@ function calculateLineup(
    MATCH LABELS
    ========================================================= */
 
-function getMatchTypeLabel(
-  matchType
+function htwbLineupGetMatchTypeLabel(
+  htwbLineupMatchType
 ) {
-  const labels = {
+  const htwbLineupLabels = {
     1:
       "League",
 
@@ -2140,22 +2140,22 @@ function getMatchTypeLabel(
   };
 
   return (
-    labels[
-      numberValue(
-        matchType,
+    htwbLineupLabels[
+      htwbLineupNumberValue(
+        htwbLineupMatchType,
         0
       )
     ] ||
-    `Match Type ${matchType}`
+    `Match Type ${htwbLineupMatchType}`
   );
 }
 
 
-function getTrainingWeekLabel(
-  value
+function htwbLineupGetTrainingWeekLabel(
+  htwbLineupValue
 ) {
   if (
-    value === "first"
+    htwbLineupValue === "first"
   ) {
     return (
       "First training match"
@@ -2163,7 +2163,7 @@ function getTrainingWeekLabel(
   }
 
   if (
-    value === "second"
+    htwbLineupValue === "second"
   ) {
     return (
       "Second training match"
@@ -2171,7 +2171,7 @@ function getTrainingWeekLabel(
   }
 
   if (
-    value === "none"
+    htwbLineupValue === "none"
   ) {
     return (
       "Not a training match"
@@ -2179,7 +2179,7 @@ function getTrainingWeekLabel(
   }
 
   return (
-    value ||
+    htwbLineupValue ||
     "-"
   );
 }
@@ -2189,51 +2189,51 @@ function getTrainingWeekLabel(
    MATCH DISPLAY
    ========================================================= */
 
-function renderMatchSummary(
-  data
+function htwbLineupRenderMatchSummary(
+  htwbLineupData
 ) {
-  const match =
-    data.upcomingMatch ||
+  const htwbLineupMatch =
+    htwbLineupData.upcomingMatch ||
     {};
 
   if (
-    teamNameElement
+    htwbLineupTeamNameElement
   ) {
-    teamNameElement.textContent =
-      data.teamName ||
+    htwbLineupTeamNameElement.textContent =
+      htwbLineupData.teamName ||
       "-";
   }
 
   if (
-    matchNameElement
+    htwbLineupMatchNameElement
   ) {
     if (
-      match.homeTeamName &&
-      match.awayTeamName
+      htwbLineupMatch.homeTeamName &&
+      htwbLineupMatch.awayTeamName
     ) {
-      matchNameElement.textContent =
-        `${match.homeTeamName} vs ${match.awayTeamName}`;
+      htwbLineupMatchNameElement.textContent =
+        `${htwbLineupMatch.homeTeamName} vs ${htwbLineupMatch.awayTeamName}`;
     } else {
-      matchNameElement.textContent =
+      htwbLineupMatchNameElement.textContent =
         "-";
     }
   }
 
   if (
-    matchTypeElement
+    htwbLineupMatchTypeElement
   ) {
-    matchTypeElement.textContent =
-      getMatchTypeLabel(
-        match.matchType
+    htwbLineupMatchTypeElement.textContent =
+      htwbLineupGetMatchTypeLabel(
+        htwbLineupMatch.matchType
       );
   }
 
   if (
-    trainingWeekPositionElement
+    htwbLineupTrainingWeekPositionElement
   ) {
-    trainingWeekPositionElement.textContent =
-      getTrainingWeekLabel(
-        match.trainingWeekPosition
+    htwbLineupTrainingWeekPositionElement.textContent =
+      htwbLineupGetTrainingWeekLabel(
+        htwbLineupMatch.trainingWeekPosition
       );
   }
 }
@@ -2243,58 +2243,58 @@ function renderMatchSummary(
    FORMATION DISPLAY
    ========================================================= */
 
-function renderFormation(
-  result
+function htwbLineupRenderFormation(
+  htwbLineupResult
 ) {
-  const selected =
-    result
+  const htwbLineupSelected =
+    htwbLineupResult
       .selectedFormation;
 
   if (
-    selectedFormationElement
+    htwbLineupSelectedFormationElement
   ) {
-    selectedFormationElement.textContent =
-      selected.name;
+    htwbLineupSelectedFormationElement.textContent =
+      htwbLineupSelected.name;
   }
 
   if (
-    selectedFormationExperienceElement
+    htwbLineupSelectedFormationExperienceElement
   ) {
-    selectedFormationExperienceElement.textContent =
+    htwbLineupSelectedFormationExperienceElement.textContent =
       String(
-        selected.experience
+        htwbLineupSelected.experience
       );
   }
 
   if (
-    !formationTableBody
+    !htwbLineupFormationTableBody
   ) {
     return;
   }
 
-  formationTableBody.innerHTML =
-    result
+  htwbLineupFormationTableBody.innerHTML =
+    htwbLineupResult
       .formationResult
       .candidates
       .map(
-        candidate => `
+        htwbLineupCandidate => `
           <tr>
             <td>
-              ${escapeHtml(
-                candidate.name
+              ${htwbLineupEscapeHtml(
+                htwbLineupCandidate.name
               )}
             </td>
 
             <td class="number">
-              ${escapeHtml(
-                candidate.experience
+              ${htwbLineupEscapeHtml(
+                htwbLineupCandidate.experience
               )}
             </td>
 
             <td>
               ${
-                candidate.name ===
-                selected.name
+                htwbLineupCandidate.name ===
+                htwbLineupSelected.name
                   ? "Selected"
                   : ""
               }
@@ -2310,19 +2310,19 @@ function renderFormation(
    TRAINING DISPLAY
    ========================================================= */
 
-function renderTraining(
-  result
+function htwbLineupRenderTraining(
+  htwbLineupResult
 ) {
-  const selected =
-    result
+  const htwbLineupSelected =
+    htwbLineupResult
       .trainingResult
       .selected;
 
   if (
-    selectedTrainingElement
+    htwbLineupSelectedTrainingElement
   ) {
-    selectedTrainingElement.textContent =
-      selected
+    htwbLineupSelectedTrainingElement.textContent =
+      htwbLineupSelected
         .training
         .name;
   }
@@ -2333,110 +2333,110 @@ function renderTraining(
    */
 
   if (
-    selectedTrainingAverageElement
+    htwbLineupSelectedTrainingAverageElement
   ) {
-    selectedTrainingAverageElement.textContent =
-      round(
-        selected.idealAverage,
+    htwbLineupSelectedTrainingAverageElement.textContent =
+      htwbLineupRound(
+        htwbLineupSelected.idealAverage,
         2
       ).toFixed(2);
   }
 
   if (
-    !trainingTableBody
+    !htwbLineupTrainingTableBody
   ) {
     return;
   }
 
-  trainingTableBody.innerHTML =
-    result
+  htwbLineupTrainingTableBody.innerHTML =
+    htwbLineupResult
       .trainingResult
       .results
       .map(
-        item => {
-          let status =
+        htwbLineupItem => {
+          let htwbLineupStatus =
             "Eligible";
 
-          let rowClass =
+          let htwbLineupRowClass =
             "";
 
           if (
-            !item.hasEnoughPlayers
+            !htwbLineupItem.hasEnoughPlayers
           ) {
-            status =
+            htwbLineupStatus =
               "Not enough players";
 
-            rowClass =
+            htwbLineupRowClass =
               "ineligible-training";
           } else if (
-            item.training.id ===
-            selected.training.id
+            htwbLineupItem.training.id ===
+            htwbLineupSelected.training.id
           ) {
-            status =
+            htwbLineupStatus =
               "Selected";
 
-            rowClass =
+            htwbLineupRowClass =
               "selected-training";
           }
 
-          const averageText =
-            item.idealAverage ===
+          const htwbLineupAverageText =
+            htwbLineupItem.idealAverage ===
             null
               ? "-"
-              : round(
-                  item.idealAverage,
+              : htwbLineupRound(
+                  htwbLineupItem.idealAverage,
                   2
                 ).toFixed(2);
 
-          const scoreText =
-            item.score === null
+          const htwbLineupScoreText =
+            htwbLineupItem.score === null
               ? "-"
-              : round(
-                  item.score,
+              : htwbLineupRound(
+                  htwbLineupItem.score,
                   2
                 ).toFixed(2);
 
           return `
-            <tr class="${rowClass}">
+            <tr class="${htwbLineupRowClass}">
               <td>
-                ${escapeHtml(
-                  item.training.name
+                ${htwbLineupEscapeHtml(
+                  htwbLineupItem.training.name
                 )}
-              </td>
-
-              <td>
-                ${escapeHtml(
-                  item.training.skill
-                )}
-              </td>
-
-              <td class="number">
-                ${item.training.requiredPlayers}
-              </td>
-
-              <td class="number">
-                ${averageText}
-              </td>
-
-              <td class="number">
-                ${percent(
-                  item.utilization
-                )}
-              </td>
-
-              <td class="number">
-                ${percent(
-                  item.waste
-                )}
-              </td>
-
-              <td class="number">
-                ${scoreText}
               </td>
 
               <td>
-                ${escapeHtml(
-                  status
+                ${htwbLineupEscapeHtml(
+                  htwbLineupItem.training.skill
+                )}
+              </td>
+
+              <td class="number">
+                ${htwbLineupItem.training.requiredPlayers}
+              </td>
+
+              <td class="number">
+                ${htwbLineupAverageText}
+              </td>
+
+              <td class="number">
+                ${htwbLineupPercent(
+                  htwbLineupItem.utilization
+                )}
+              </td>
+
+              <td class="number">
+                ${htwbLineupPercent(
+                  htwbLineupItem.waste
+                )}
+              </td>
+
+              <td class="number">
+                ${htwbLineupScoreText}
+              </td>
+
+              <td>
+                ${htwbLineupEscapeHtml(
+                  htwbLineupStatus
                 )}
               </td>
             </tr>
@@ -2451,50 +2451,50 @@ function renderTraining(
    RESET PITCH
    ========================================================= */
 
-function resetPitch() {
+function htwbLineupResetPitch() {
   for (
-    const slot
-    of POSITION_ORDER
+    const htwbLineupSlot
+    of HTWB_LINEUP_POSITION_ORDER
   ) {
-    const slotElement =
+    const htwbLineupSlotElement =
       document.getElementById(
-        `slot-${slot}`
+        `lineup-slot-${htwbLineupSlot.toLowerCase()}`
       );
 
-    const playerElement =
+    const htwbLineupPlayerElement =
       document.getElementById(
-        `player-${slot}`
+        `lineup-player-${htwbLineupSlot.toLowerCase()}`
       );
 
-    const ratingElement =
+    const htwbLineupRatingElement =
       document.getElementById(
-        `rating-${slot}`
+        `lineup-rating-${htwbLineupSlot.toLowerCase()}`
       );
 
     if (
-      slotElement
+      htwbLineupSlotElement
     ) {
-      slotElement.classList.add(
+      htwbLineupSlotElement.classList.add(
         "hidden"
       );
 
-      slotElement.classList.remove(
+      htwbLineupSlotElement.classList.remove(
         "training-slot",
         "partial-training-slot"
       );
     }
 
     if (
-      playerElement
+      htwbLineupPlayerElement
     ) {
-      playerElement.textContent =
-        "-";
+      htwbLineupPlayerElement.textContent =
+        "";
     }
 
     if (
-      ratingElement
+      htwbLineupRatingElement
     ) {
-      ratingElement.textContent =
+      htwbLineupRatingElement.textContent =
         "";
     }
   }
@@ -2505,93 +2505,93 @@ function resetPitch() {
    LINEUP DISPLAY
    ========================================================= */
 
-function renderLineup(
-  result
+function htwbLineupRenderLineup(
+  htwbLineupResult
 ) {
-  resetPitch();
+  htwbLineupResetPitch();
 
-  const formation =
-    result
+  const htwbLineupFormation =
+    htwbLineupResult
       .selectedFormation
       .formation;
 
-  const lineupResult =
-    result
+  const htwbLineupLineupResult =
+    htwbLineupResult
       .lineupResult;
 
   for (
-    const slot
-    of formation.slots
+    const htwbLineupSlot
+    of htwbLineupFormation.slots
   ) {
-    const slotElement =
+    const htwbLineupSlotElement =
       document.getElementById(
-        `slot-${slot}`
+        `lineup-slot-${htwbLineupSlot.toLowerCase()}`
       );
 
-    const playerElement =
+    const htwbLineupPlayerElement =
       document.getElementById(
-        `player-${slot}`
+        `lineup-player-${htwbLineupSlot.toLowerCase()}`
       );
 
-    const ratingElement =
+    const htwbLineupRatingElement =
       document.getElementById(
-        `rating-${slot}`
+        `lineup-rating-${htwbLineupSlot.toLowerCase()}`
       );
 
     if (
-      !slotElement
+      !htwbLineupSlotElement
     ) {
       continue;
     }
 
-    slotElement.classList.remove(
+    htwbLineupSlotElement.classList.remove(
       "hidden"
     );
 
-    const category =
-      getSelectionCategory(
-        slot,
-        lineupResult.order
+    const htwbLineupCategory =
+      htwbLineupGetSelectionCategory(
+        htwbLineupSlot,
+        htwbLineupLineupResult.order
       );
 
     if (
-      category ===
+      htwbLineupCategory ===
       "full"
     ) {
-      slotElement.classList.add(
+      htwbLineupSlotElement.classList.add(
         "training-slot"
       );
     }
 
     if (
-      category ===
+      htwbLineupCategory ===
       "partial"
     ) {
-      slotElement.classList.add(
+      htwbLineupSlotElement.classList.add(
         "partial-training-slot"
       );
     }
 
-    const player =
-      lineupResult
+    const htwbLineupPlayer =
+      htwbLineupLineupResult
         .lineup[
-          slot
+          htwbLineupSlot
         ];
 
     if (
-      !player
+      !htwbLineupPlayer
     ) {
       if (
-        playerElement
+        htwbLineupPlayerElement
       ) {
-        playerElement.textContent =
+        htwbLineupPlayerElement.textContent =
           "OPEN";
       }
 
       if (
-        ratingElement
+        htwbLineupRatingElement
       ) {
-        ratingElement.textContent =
+        htwbLineupRatingElement.textContent =
           "No eligible player";
       }
 
@@ -2599,20 +2599,20 @@ function renderLineup(
     }
 
     if (
-      playerElement
+      htwbLineupPlayerElement
     ) {
-      playerElement.textContent =
-        player.name;
+      htwbLineupPlayerElement.textContent =
+        htwbLineupPlayer.name;
     }
 
     if (
-      ratingElement
+      htwbLineupRatingElement
     ) {
-      ratingElement.textContent =
-        `Rating: ${round(
-          getPositionRating(
-            player,
-            slot
+      htwbLineupRatingElement.textContent =
+        `Rating: ${htwbLineupRound(
+          htwbLineupGetPositionRating(
+            htwbLineupPlayer,
+            htwbLineupSlot
           ),
           4
         ).toFixed(4)}`;
@@ -2620,12 +2620,10 @@ function renderLineup(
   }
 
   if (
-    lineupWarning
+    htwbLineupLineupWarning
   ) {
-    lineupWarning.style.display =
-      lineupResult.complete
-        ? "none"
-        : "block";
+    htwbLineupLineupWarning.hidden =
+      htwbLineupLineupResult.complete;
   }
 }
 
@@ -2634,24 +2632,24 @@ function renderLineup(
    EXCLUDED PLAYERS
    ========================================================= */
 
-function renderExcludedPlayers(
-  result
+function htwbLineupRenderExcludedPlayers(
+  htwbLineupResult
 ) {
   if (
-    !excludedPlayersTableBody
+    !htwbLineupExcludedPlayersTableBody
   ) {
     return;
   }
 
-  const excluded =
-    result
+  const htwbLineupExcluded =
+    htwbLineupResult
       .eligibilityResult
       .excluded;
 
   if (
-    !excluded.length
+    !htwbLineupExcluded.length
   ) {
-    excludedPlayersTableBody.innerHTML =
+    htwbLineupExcludedPlayersTableBody.innerHTML =
       `
         <tr>
           <td
@@ -2666,20 +2664,20 @@ function renderExcludedPlayers(
     return;
   }
 
-  excludedPlayersTableBody.innerHTML =
-    excluded
+  htwbLineupExcludedPlayersTableBody.innerHTML =
+    htwbLineupExcluded
       .map(
-        item => `
+        htwbLineupItem => `
           <tr>
             <td>
-              ${escapeHtml(
-                item.player.name
+              ${htwbLineupEscapeHtml(
+                htwbLineupItem.player.name
               )}
             </td>
 
             <td>
-              ${escapeHtml(
-                item.reasons.join(
+              ${htwbLineupEscapeHtml(
+                htwbLineupItem.reasons.join(
                   ", "
                 )
               )}
@@ -2695,35 +2693,35 @@ function renderExcludedPlayers(
    ELIGIBLE PLAYER DIAGNOSTICS
    ========================================================= */
 
-function renderEligiblePlayers(
-  result
+function htwbLineupRenderEligiblePlayers(
+  htwbLineupResult
 ) {
   if (
-    !eligiblePlayersTableBody
+    !htwbLineupEligiblePlayersTableBody
   ) {
     return;
   }
 
-  const players =
+  const htwbLineupPlayers =
     [
-      ...result
+      ...htwbLineupResult
         .ratedEligiblePlayers
     ]
       .sort(
-        (a, b) =>
+        (htwbLineupA, htwbLineupB) =>
           String(
-            a.name
+            htwbLineupA.name
           ).localeCompare(
             String(
-              b.name
+              htwbLineupB.name
             )
           )
       );
 
   if (
-    !players.length
+    !htwbLineupPlayers.length
   ) {
-    eligiblePlayersTableBody.innerHTML =
+    htwbLineupEligiblePlayersTableBody.innerHTML =
       `
         <tr>
           <td
@@ -2738,55 +2736,55 @@ function renderEligiblePlayers(
     return;
   }
 
-  eligiblePlayersTableBody.innerHTML =
-    players
+  htwbLineupEligiblePlayersTableBody.innerHTML =
+    htwbLineupPlayers
       .map(
-        player => `
+        htwbLineupPlayer => `
           <tr>
             <td>
-              ${escapeHtml(
-                player.name
+              ${htwbLineupEscapeHtml(
+                htwbLineupPlayer.name
               )}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.GK,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.GK,
                 4
               ).toFixed(4)}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.CD,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.CD,
                 4
               ).toFixed(4)}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.WB,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.WB,
                 4
               ).toFixed(4)}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.IM,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.IM,
                 4
               ).toFixed(4)}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.WG,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.WG,
                 4
               ).toFixed(4)}
             </td>
 
             <td class="number">
-              ${round(
-                player.ratings.FW,
+              ${htwbLineupRound(
+                htwbLineupPlayer.ratings.FW,
                 4
               ).toFixed(4)}
             </td>
@@ -2801,16 +2799,16 @@ function renderEligiblePlayers(
    SELECTION ORDER DISPLAY
    ========================================================= */
 
-function renderSelectionOrder(
-  result
+function htwbLineupRenderSelectionOrder(
+  htwbLineupResult
 ) {
   if (
-    !selectionOrderList
+    !htwbLineupSelectionOrderList
   ) {
     return;
   }
 
-  const labels = {
+  const htwbLineupLabels = {
     full:
       "Full training",
 
@@ -2821,30 +2819,30 @@ function renderSelectionOrder(
       "Other"
   };
 
-  selectionOrderList.innerHTML =
-    result
+  htwbLineupSelectionOrderList.innerHTML =
+    htwbLineupResult
       .lineupResult
       .selections
       .map(
-        selection => `
+        htwbLineupSelection => `
           <li>
             <strong>
-              ${escapeHtml(
-                selection.slot
+              ${htwbLineupEscapeHtml(
+                htwbLineupSelection.slot
               )}
             </strong>
 
             -
 
-            ${escapeHtml(
-              selection.player
+            ${htwbLineupEscapeHtml(
+              htwbLineupSelection.player
                 ?.name ||
               "OPEN"
             )}
 
-            (${escapeHtml(
-              labels[
-                selection.category
+            (${htwbLineupEscapeHtml(
+              htwbLineupLabels[
+                htwbLineupSelection.category
               ]
             )})
           </li>
@@ -2858,11 +2856,11 @@ function renderSelectionOrder(
    PREVIOUS MATCH DIAGNOSTIC
    ========================================================= */
 
-function getPreviousMatchWarning(
-  data
+function htwbLineupGetPreviousMatchWarning(
+  htwbLineupData
 ) {
   if (
-    data
+    htwbLineupData
       ?.upcomingMatch
       ?.trainingWeekPosition !==
       "second"
@@ -2870,22 +2868,22 @@ function getPreviousMatchWarning(
     return "";
   }
 
-  const unresolved =
-    data
+  const htwbLineupUnresolved =
+    htwbLineupData
       ?.previousTrainingMatch
       ?.unresolvedAppearances;
 
   if (
     !Array.isArray(
-      unresolved
+      htwbLineupUnresolved
     ) ||
-    !unresolved.length
+    !htwbLineupUnresolved.length
   ) {
     return "";
   }
 
   return (
-    ` Previous match data contains ${unresolved.length}` +
+    ` Previous match data contains ${htwbLineupUnresolved.length}` +
     ` appearance(s) whose training position could not be confirmed.`
   );
 }
@@ -2895,36 +2893,36 @@ function getPreviousMatchWarning(
    RENDER ALL
    ========================================================= */
 
-function renderEverything(
-  data,
-  result
+function htwbLineupRenderEverything(
+  htwbLineupData,
+  htwbLineupResult
 ) {
-  renderMatchSummary(
-    data
+  htwbLineupRenderMatchSummary(
+    htwbLineupData
   );
 
-  renderFormation(
-    result
+  htwbLineupRenderFormation(
+    htwbLineupResult
   );
 
-  renderTraining(
-    result
+  htwbLineupRenderTraining(
+    htwbLineupResult
   );
 
-  renderLineup(
-    result
+  htwbLineupRenderLineup(
+    htwbLineupResult
   );
 
-  renderExcludedPlayers(
-    result
+  htwbLineupRenderExcludedPlayers(
+    htwbLineupResult
   );
 
-  renderEligiblePlayers(
-    result
+  htwbLineupRenderEligiblePlayers(
+    htwbLineupResult
   );
 
-  renderSelectionOrder(
-    result
+  htwbLineupRenderSelectionOrder(
+    htwbLineupResult
   );
 }
 
@@ -2933,11 +2931,11 @@ function renderEverything(
    BUILD
    ========================================================= */
 
-function buildLineup() {
+function htwbLineupBuildLineup() {
   if (
-    !sourceData
+    !htwbLineupSourceData
   ) {
-    setStatus(
+    htwbLineupSetStatus(
       "No lineup data has been loaded.",
       "error"
     );
@@ -2946,73 +2944,73 @@ function buildLineup() {
   }
 
   try {
-    currentCalculation =
-      calculateLineup(
-        sourceData
+    htwbLineupCurrentCalculation =
+      htwbLineupCalculateLineup(
+        htwbLineupSourceData
       );
 
-    renderEverything(
-      sourceData,
-      currentCalculation
+    htwbLineupRenderEverything(
+      htwbLineupSourceData,
+      htwbLineupCurrentCalculation
     );
 
-    const formation =
-      currentCalculation
+    const htwbLineupFormation =
+      htwbLineupCurrentCalculation
         .selectedFormation
         .name;
 
-    const selectedTraining =
-      currentCalculation
+    const htwbLineupSelectedTraining =
+      htwbLineupCurrentCalculation
         .trainingResult
         .selected;
 
-    const trainingName =
-      selectedTraining
+    const htwbLineupTrainingName =
+      htwbLineupSelectedTraining
         .training
         .name;
 
-    const utilization =
-      percent(
-        selectedTraining
+    const htwbLineupUtilization =
+      htwbLineupPercent(
+        htwbLineupSelectedTraining
           .utilization
       );
 
-    const finalScore =
-      round(
-        selectedTraining.score,
+    const htwbLineupFinalScore =
+      htwbLineupRound(
+        htwbLineupSelectedTraining.score,
         2
       ).toFixed(2);
 
-    const warning =
-      getPreviousMatchWarning(
-        sourceData
+    const htwbLineupWarning =
+      htwbLineupGetPreviousMatchWarning(
+        htwbLineupSourceData
       );
 
     if (
-      currentCalculation
+      htwbLineupCurrentCalculation
         .lineupResult
         .complete
     ) {
-      setStatus(
-        `Lineup built: ${formation} - ${trainingName} - ${utilization} utilization - score ${finalScore}.${warning}`,
-        warning
+      htwbLineupSetStatus(
+        `Lineup built: ${htwbLineupFormation} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - score ${htwbLineupFinalScore}.${htwbLineupWarning}`,
+        htwbLineupWarning
           ? "error"
           : "success"
       );
     } else {
-      setStatus(
-        `Lineup calculated, but fewer than 11 eligible players were available.${warning}`,
+      htwbLineupSetStatus(
+        `Lineup calculated, but fewer than 11 eligible players were available.${htwbLineupWarning}`,
         "error"
       );
     }
-  } catch (error) {
+  } catch (htwbLineupError) {
     console.error(
       "Lineup calculation error:",
-      error
+      htwbLineupError
     );
 
-    setStatus(
-      error.message ||
+    htwbLineupSetStatus(
+      htwbLineupError.message ||
       "Could not calculate the lineup.",
       "error"
     );
@@ -3024,109 +3022,109 @@ function buildLineup() {
    LOAD TEAM DATA
    ========================================================= */
 
-async function loadTeam(
-  teamId
+async function htwbLineupLoadTeam(
+  htwbLineupTeamId
 ) {
   if (
-    !validTeamId(
-      teamId
+    !htwbLineupValidTeamId(
+      htwbLineupTeamId
     )
   ) {
-    setStatus(
+    htwbLineupSetStatus(
       "No valid Hattrick TeamID is selected.",
       "error"
     );
 
     if (
-      buildLineupButton
+      htwbLineupBuildLineupButton
     ) {
-      buildLineupButton.disabled =
+      htwbLineupBuildLineupButton.disabled =
         true;
     }
 
     return;
   }
 
-  loadedTeamId =
+  htwbLineupLoadedTeamId =
     String(
-      teamId
+      htwbLineupTeamId
     );
 
-  sourceData =
+  htwbLineupSourceData =
     null;
 
-  currentCalculation =
+  htwbLineupCurrentCalculation =
     null;
 
   if (
-    buildLineupButton
+    htwbLineupBuildLineupButton
   ) {
-    buildLineupButton.disabled =
+    htwbLineupBuildLineupButton.disabled =
       true;
   }
 
-  resetPitch();
+  htwbLineupResetPitch();
 
-  setStatus(
+  htwbLineupSetStatus(
     "Loading lineup data from Hattrick..."
   );
 
   try {
-    const data =
-      await loadLineupData(
-        loadedTeamId
+    const htwbLineupData =
+      await htwbLineupLoadLineupData(
+        htwbLineupLoadedTeamId
       );
 
     if (
       String(
-        loadedTeamId
+        htwbLineupLoadedTeamId
       ) !==
       String(
-        teamId
+        htwbLineupTeamId
       )
     ) {
       return;
     }
 
-    sourceData =
-      data;
+    htwbLineupSourceData =
+      htwbLineupData;
 
-    renderMatchSummary(
-      sourceData
+    htwbLineupRenderMatchSummary(
+      htwbLineupSourceData
     );
 
     if (
-      buildLineupButton
+      htwbLineupBuildLineupButton
     ) {
-      buildLineupButton.disabled =
+      htwbLineupBuildLineupButton.disabled =
         false;
     }
 
-    setStatus(
+    htwbLineupSetStatus(
       "Lineup data loaded. Ready to build.",
       "success"
     );
-  } catch (error) {
+  } catch (htwbLineupError) {
     console.error(
       "Lineup data load error:",
-      error
+      htwbLineupError
     );
 
-    sourceData =
+    htwbLineupSourceData =
       null;
 
-    currentCalculation =
+    htwbLineupCurrentCalculation =
       null;
 
     if (
-      buildLineupButton
+      htwbLineupBuildLineupButton
     ) {
-      buildLineupButton.disabled =
+      htwbLineupBuildLineupButton.disabled =
         true;
     }
 
-    setStatus(
-      error.message ||
+    htwbLineupSetStatus(
+      htwbLineupError.message ||
       "Could not load lineup data.",
       "error"
     );
@@ -3138,18 +3136,18 @@ async function loadTeam(
    TEAM SELECTION
    ========================================================= */
 
-function setupTeamSelectionListener() {
+function htwbLineupSetupTeamSelectionListener() {
   window.addEventListener(
     "htwb:team-selected",
-    event => {
-      const teamId =
-        event
+    htwbLineupEvent => {
+      const htwbLineupTeamId =
+        htwbLineupEvent
           ?.detail
           ?.teamId;
 
       if (
-        !validTeamId(
-          teamId
+        !htwbLineupValidTeamId(
+          htwbLineupTeamId
         )
       ) {
         return;
@@ -3157,18 +3155,18 @@ function setupTeamSelectionListener() {
 
       if (
         String(
-          teamId
+          htwbLineupTeamId
         ) ===
         String(
-          loadedTeamId
+          htwbLineupLoadedTeamId
         )
       ) {
         return;
       }
 
-      loadTeam(
+      htwbLineupLoadTeam(
         String(
-          teamId
+          htwbLineupTeamId
         )
       );
     }
@@ -3180,37 +3178,37 @@ function setupTeamSelectionListener() {
    INITIALIZE
    ========================================================= */
 
-function initializeLineupBuilder() {
+function htwbLineupInitializeLineupBuilder() {
   if (
-    buildLineupButton
+    htwbLineupBuildLineupButton
   ) {
-    buildLineupButton.disabled =
+    htwbLineupBuildLineupButton.disabled =
       true;
 
-    buildLineupButton.addEventListener(
+    htwbLineupBuildLineupButton.addEventListener(
       "click",
-      buildLineup
+      htwbLineupBuildLineup
     );
   }
 
-  setupTeamSelectionListener();
+  htwbLineupSetupTeamSelectionListener();
 
-  let attempts =
+  let htwbLineupAttempts =
     0;
 
-  const tryLoad =
+  const htwbLineupTryLoad =
     () => {
-      attempts +=
+      htwbLineupAttempts +=
         1;
 
-      const teamId =
-        getSelectedTeamId();
+      const htwbLineupTeamId =
+        htwbLineupGetSelectedTeamId();
 
       if (
-        teamId
+        htwbLineupTeamId
       ) {
-        loadTeam(
-          teamId
+        htwbLineupLoadTeam(
+          htwbLineupTeamId
         );
 
         return true;
@@ -3220,26 +3218,26 @@ function initializeLineupBuilder() {
     };
 
   if (
-    tryLoad()
+    htwbLineupTryLoad()
   ) {
     return;
   }
 
-  const timer =
+  const htwbLineupTimer =
     setInterval(
       () => {
         if (
-          tryLoad() ||
-          attempts >= 20
+          htwbLineupTryLoad() ||
+          htwbLineupAttempts >= 20
         ) {
           clearInterval(
-            timer
+            htwbLineupTimer
           );
 
           if (
-            !loadedTeamId
+            !htwbLineupLoadedTeamId
           ) {
-            setStatus(
+            htwbLineupSetStatus(
               "Select your Hattrick team first.",
               "error"
             );
@@ -3257,5 +3255,5 @@ function initializeLineupBuilder() {
 
 document.addEventListener(
   "DOMContentLoaded",
-  initializeLineupBuilder
+  htwbLineupInitializeLineupBuilder
 );

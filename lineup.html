@@ -9,6 +9,11 @@
 
   <title>Lineup Builder - HT Wiki Builder</title>
 
+  <meta
+    name="description"
+    content="Build a Hattrick lineup from CHPP formation, training, eligibility, and player data."
+  >
+
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
@@ -18,356 +23,6 @@
   >
 
   <link rel="stylesheet" href="/styles.css">
-
-  <style>
-    /*
-     * Lineup-specific layout only.
-     *
-     * General colors, typography, buttons, page layout,
-     * header, footer, sections, etc. come from /styles.css.
-     */
-
-    .lineup-summary {
-      display: grid;
-      grid-template-columns: repeat(
-        auto-fit,
-        minmax(180px, 1fr)
-      );
-      gap: 16px;
-      margin-top: 20px;
-    }
-
-    .lineup-summary-item {
-      min-width: 0;
-    }
-
-    .lineup-summary-label {
-      display: block;
-      margin-bottom: 5px;
-      font-size: 0.8rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      opacity: 0.65;
-    }
-
-    .lineup-summary-value {
-      display: block;
-      font-size: 1.05rem;
-      font-weight: 700;
-      overflow-wrap: anywhere;
-    }
-
-    .lineup-table-wrap {
-      width: 100%;
-      margin-top: 20px;
-      overflow-x: auto;
-    }
-
-    .lineup-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .lineup-table th,
-    .lineup-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-      text-align: left;
-      vertical-align: middle;
-      white-space: nowrap;
-    }
-
-    .lineup-table th {
-      font-weight: 700;
-    }
-
-    .lineup-table .number {
-      text-align: right;
-    }
-
-    .selected-training {
-      font-weight: 700;
-    }
-
-    .ineligible-training {
-      opacity: 0.45;
-    }
-
-    .lineup-note {
-      margin-top: 16px;
-      font-size: 0.9rem;
-      line-height: 1.5;
-      opacity: 0.7;
-    }
-
-    .lineup-details {
-      margin-top: 20px;
-    }
-
-    .lineup-details summary {
-      cursor: pointer;
-      font-weight: 600;
-    }
-
-    /*
-     * Pitch
-     */
-
-    .lineup-pitch {
-      margin-top: 24px;
-      padding: 28px 18px;
-      border: 1px solid rgba(0, 0, 0, 0.14);
-      border-radius: 8px;
-    }
-
-    .lineup-row {
-      display: grid;
-      align-items: stretch;
-      justify-content: center;
-      gap: 14px;
-      margin-bottom: 24px;
-    }
-
-    .lineup-row:last-child {
-      margin-bottom: 0;
-    }
-
-    /*
-     * GK
-     */
-
-    .lineup-row-gk {
-      grid-template-columns: minmax(130px, 170px);
-    }
-
-    /*
-     * LWB LCD CD RCD RWB
-     */
-
-    .lineup-row-defense {
-      grid-template-columns: repeat(
-        5,
-        minmax(110px, 1fr)
-      );
-    }
-
-    /*
-     * LW LCM CM RCM RW
-     */
-
-    .lineup-row-midfield {
-      grid-template-columns: repeat(
-        5,
-        minmax(110px, 1fr)
-      );
-    }
-
-    /*
-     * LF CF RF
-     */
-
-    .lineup-row-forwards {
-      grid-template-columns: repeat(
-        3,
-        minmax(130px, 170px)
-      );
-    }
-
-    .lineup-position {
-      min-width: 0;
-      min-height: 92px;
-      padding: 12px 8px;
-      border: 1px solid rgba(0, 0, 0, 0.22);
-      border-radius: 6px;
-      text-align: center;
-    }
-
-    /*
-     * lineup.js currently adds .hidden to positions
-     * that are not used by the selected formation.
-     *
-     * For this page we intentionally KEEP those boxes
-     * visible. They simply remain blank and muted.
-     */
-
-    .lineup-position.hidden {
-      display: block !important;
-      visibility: visible !important;
-      opacity: 0.28;
-    }
-
-    .lineup-position:not(.hidden) {
-      opacity: 1;
-    }
-
-    .lineup-position-name {
-      margin-bottom: 8px;
-      font-family: "Barlow Condensed", sans-serif;
-      font-size: 0.9rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-    }
-
-    .lineup-player-name {
-      min-height: 20px;
-      font-weight: 700;
-      overflow-wrap: anywhere;
-    }
-
-    .lineup-player-rating {
-      min-height: 18px;
-      margin-top: 5px;
-      font-size: 0.78rem;
-      opacity: 0.65;
-    }
-
-    /*
-     * Full-training slots are solid/heavier.
-     * Partial-training slots are dashed.
-     *
-     * No separate color palette is introduced.
-     */
-
-    .lineup-position.training-slot {
-      border-width: 3px;
-    }
-
-    .lineup-position.partial-training-slot {
-      border-width: 3px;
-      border-style: dashed;
-    }
-
-    .lineup-legend {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 18px;
-      margin-top: 18px;
-      font-size: 0.88rem;
-    }
-
-    .lineup-legend-item {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-    }
-
-    .lineup-legend-box {
-      width: 18px;
-      height: 18px;
-      border: 1px solid currentColor;
-      border-radius: 3px;
-    }
-
-    .lineup-legend-box-full {
-      border-width: 3px;
-    }
-
-    .lineup-legend-box-partial {
-      border-width: 3px;
-      border-style: dashed;
-    }
-
-    .lineup-legend-box-unused {
-      opacity: 0.28;
-    }
-
-    #lineupWarning {
-      margin-top: 20px;
-    }
-
-    #lineupWarning[style*="display: none"] {
-      display: none !important;
-    }
-
-    .lineup-coach-picks {
-      display: grid;
-      grid-template-columns: repeat(
-        2,
-        minmax(180px, 1fr)
-      );
-      gap: 16px;
-      margin-top: 24px;
-    }
-
-    .lineup-diagnostics-list {
-      margin-top: 16px;
-    }
-
-    @media (max-width: 900px) {
-      .lineup-pitch {
-        padding: 20px 10px;
-      }
-
-      .lineup-row {
-        gap: 7px;
-      }
-
-      .lineup-position {
-        min-height: 82px;
-        padding: 9px 4px;
-      }
-
-      .lineup-position-name {
-        font-size: 0.8rem;
-      }
-
-      .lineup-player-name {
-        font-size: 0.8rem;
-      }
-
-      .lineup-player-rating {
-        font-size: 0.7rem;
-      }
-
-      .lineup-row-defense,
-      .lineup-row-midfield {
-        grid-template-columns: repeat(
-          5,
-          minmax(0, 1fr)
-        );
-      }
-
-      .lineup-row-forwards {
-        grid-template-columns: repeat(
-          3,
-          minmax(0, 1fr)
-        );
-      }
-    }
-
-    @media (max-width: 600px) {
-      .lineup-pitch {
-        padding-left: 5px;
-        padding-right: 5px;
-      }
-
-      .lineup-row {
-        gap: 4px;
-        margin-bottom: 16px;
-      }
-
-      .lineup-position {
-        min-height: 75px;
-        padding: 7px 2px;
-      }
-
-      .lineup-position-name {
-        font-size: 0.7rem;
-      }
-
-      .lineup-player-name {
-        font-size: 0.7rem;
-      }
-
-      .lineup-player-rating {
-        font-size: 0.62rem;
-      }
-
-      .lineup-coach-picks {
-        grid-template-columns: 1fr;
-      }
-    }
-  </style>
 </head>
 
 <body>
@@ -533,8 +188,9 @@
 
 
           <div
-            id="status"
+            id="lineup-status"
             class="builder-status"
+            aria-live="polite"
           >
             Waiting for team data.
           </div>
@@ -548,7 +204,7 @@
               </span>
 
               <span
-                id="teamName"
+                id="lineup-summary-team-name"
                 class="lineup-summary-value"
               >
                 -
@@ -562,7 +218,7 @@
               </span>
 
               <span
-                id="matchName"
+                id="lineup-summary-match-name"
                 class="lineup-summary-value"
               >
                 -
@@ -576,7 +232,7 @@
               </span>
 
               <span
-                id="matchType"
+                id="lineup-summary-match-type"
                 class="lineup-summary-value"
               >
                 -
@@ -590,7 +246,7 @@
               </span>
 
               <span
-                id="trainingWeekPosition"
+                id="lineup-summary-training-week-position"
                 class="lineup-summary-value"
               >
                 -
@@ -603,7 +259,7 @@
           <div class="builder-actions">
 
             <button
-              id="buildLineupButton"
+              id="lineup-build-button"
               class="button button-primary"
               type="button"
               disabled
@@ -653,7 +309,7 @@
               </span>
 
               <span
-                id="selectedFormation"
+                id="lineup-selected-formation"
                 class="lineup-summary-value"
               >
                 -
@@ -667,7 +323,7 @@
               </span>
 
               <span
-                id="selectedFormationExperience"
+                id="lineup-selected-formation-experience"
                 class="lineup-summary-value"
               >
                 -
@@ -703,7 +359,7 @@
                   </tr>
                 </thead>
 
-                <tbody id="formationTableBody">
+                <tbody id="lineup-formation-table-body">
                 </tbody>
 
               </table>
@@ -752,7 +408,7 @@
               </span>
 
               <span
-                id="selectedTraining"
+                id="lineup-selected-training"
                 class="lineup-summary-value"
               >
                 -
@@ -766,7 +422,7 @@
               </span>
 
               <span
-                id="selectedTrainingAverage"
+                id="lineup-selected-training-average"
                 class="lineup-summary-value"
               >
                 -
@@ -818,7 +474,7 @@
                 </tr>
               </thead>
 
-              <tbody id="trainingTableBody">
+              <tbody id="lineup-training-table-body">
               </tbody>
 
             </table>
@@ -865,9 +521,9 @@
 
 
           <div
-            id="lineupWarning"
+            id="lineup-warning"
             class="builder-notice"
-            style="display: none;"
+            hidden
           >
             Not enough eligible players are available to complete
             the lineup.
@@ -930,7 +586,7 @@
             <div class="lineup-row lineup-row-gk">
 
               <div
-                id="slot-GK"
+                id="lineup-slot-gk"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -938,12 +594,12 @@
                 </div>
 
                 <div
-                  id="player-GK"
+                  id="lineup-player-gk"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-GK"
+                  id="lineup-rating-gk"
                   class="lineup-player-rating"
                 ></div>
               </div>
@@ -959,7 +615,7 @@
             <div class="lineup-row lineup-row-defense">
 
               <div
-                id="slot-LWB"
+                id="lineup-slot-lwb"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -967,19 +623,19 @@
                 </div>
 
                 <div
-                  id="player-LWB"
+                  id="lineup-player-lwb"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-LWB"
+                  id="lineup-rating-lwb"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-LCD"
+                id="lineup-slot-lcd"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -987,19 +643,19 @@
                 </div>
 
                 <div
-                  id="player-LCD"
+                  id="lineup-player-lcd"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-LCD"
+                  id="lineup-rating-lcd"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-CD"
+                id="lineup-slot-cd"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1007,19 +663,19 @@
                 </div>
 
                 <div
-                  id="player-CD"
+                  id="lineup-player-cd"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-CD"
+                  id="lineup-rating-cd"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-RCD"
+                id="lineup-slot-rcd"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1027,19 +683,19 @@
                 </div>
 
                 <div
-                  id="player-RCD"
+                  id="lineup-player-rcd"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-RCD"
+                  id="lineup-rating-rcd"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-RWB"
+                id="lineup-slot-rwb"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1047,12 +703,12 @@
                 </div>
 
                 <div
-                  id="player-RWB"
+                  id="lineup-player-rwb"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-RWB"
+                  id="lineup-rating-rwb"
                   class="lineup-player-rating"
                 ></div>
               </div>
@@ -1068,7 +724,7 @@
             <div class="lineup-row lineup-row-midfield">
 
               <div
-                id="slot-LW"
+                id="lineup-slot-lw"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1076,19 +732,19 @@
                 </div>
 
                 <div
-                  id="player-LW"
+                  id="lineup-player-lw"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-LW"
+                  id="lineup-rating-lw"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-LCM"
+                id="lineup-slot-lcm"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1096,19 +752,19 @@
                 </div>
 
                 <div
-                  id="player-LCM"
+                  id="lineup-player-lcm"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-LCM"
+                  id="lineup-rating-lcm"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-CM"
+                id="lineup-slot-cm"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1116,19 +772,19 @@
                 </div>
 
                 <div
-                  id="player-CM"
+                  id="lineup-player-cm"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-CM"
+                  id="lineup-rating-cm"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-RCM"
+                id="lineup-slot-rcm"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1136,19 +792,19 @@
                 </div>
 
                 <div
-                  id="player-RCM"
+                  id="lineup-player-rcm"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-RCM"
+                  id="lineup-rating-rcm"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-RW"
+                id="lineup-slot-rw"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1156,12 +812,12 @@
                 </div>
 
                 <div
-                  id="player-RW"
+                  id="lineup-player-rw"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-RW"
+                  id="lineup-rating-rw"
                   class="lineup-player-rating"
                 ></div>
               </div>
@@ -1177,7 +833,7 @@
             <div class="lineup-row lineup-row-forwards">
 
               <div
-                id="slot-LF"
+                id="lineup-slot-lf"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1185,19 +841,19 @@
                 </div>
 
                 <div
-                  id="player-LF"
+                  id="lineup-player-lf"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-LF"
+                  id="lineup-rating-lf"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-CF"
+                id="lineup-slot-cf"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1205,19 +861,19 @@
                 </div>
 
                 <div
-                  id="player-CF"
+                  id="lineup-player-cf"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-CF"
+                  id="lineup-rating-cf"
                   class="lineup-player-rating"
                 ></div>
               </div>
 
 
               <div
-                id="slot-RF"
+                id="lineup-slot-rf"
                 class="lineup-position hidden"
               >
                 <div class="lineup-position-name">
@@ -1225,12 +881,12 @@
                 </div>
 
                 <div
-                  id="player-RF"
+                  id="lineup-player-rf"
                   class="lineup-player-name"
                 ></div>
 
                 <div
-                  id="rating-RF"
+                  id="lineup-rating-rf"
                   class="lineup-player-rating"
                 ></div>
               </div>
@@ -1313,7 +969,7 @@
                 </tr>
               </thead>
 
-              <tbody id="excludedPlayersTableBody">
+              <tbody id="lineup-excluded-players-table-body">
                 <tr>
                   <td colspan="2">
                     No exclusions calculated yet.
@@ -1399,7 +1055,7 @@
                   </tr>
                 </thead>
 
-                <tbody id="eligiblePlayersTableBody">
+                <tbody id="lineup-eligible-players-table-body">
                 </tbody>
 
               </table>
@@ -1416,7 +1072,7 @@
             </summary>
 
             <ol
-              id="selectionOrderList"
+              id="lineup-selection-order-list"
               class="lineup-diagnostics-list"
             >
             </ol>

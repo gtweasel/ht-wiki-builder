@@ -1,26 +1,28 @@
-const teamLoadForm = document.getElementById("team-load-form");
-const teamIdInput = document.getElementById("team-id-input");
-const teamLoadStatus = document.getElementById("team-load-status");
+"use strict";
 
-const wikiFieldsSection = document.getElementById(
+const htwbTeamTeamLoadForm = document.getElementById("team-load-form");
+const htwbTeamTeamIdInput = document.getElementById("team-id-input");
+const htwbTeamTeamLoadStatus = document.getElementById("team-load-status");
+
+const htwbTeamWikiFieldsSection = document.getElementById(
   "wiki-fields-section"
 );
 
-const wikiOutputSection = document.getElementById(
+const htwbTeamWikiOutputSection = document.getElementById(
   "wiki-output-section"
 );
 
-const wikiFieldsForm = document.getElementById(
+const htwbTeamWikiFieldsForm = document.getElementById(
   "wiki-fields-form"
 );
 
-const wikiOutput = document.getElementById("wiki-output");
-const copyButton = document.getElementById("copy-wiki-output");
-const copyStatus = document.getElementById("copy-status");
+const htwbTeamWikiOutput = document.getElementById("wiki-output");
+const htwbTeamCopyButton = document.getElementById("copy-wiki-output");
+const htwbTeamCopyStatus = document.getElementById("copy-status");
 
-const TEAM_PAGE_STORAGE_KEY = "htwb_selected_team_id";
+const HTWB_TEAM_TEAM_PAGE_STORAGE_KEY = "htwb_selected_team_id";
 
-const infoboxFields = [
+const htwbTeamInfoboxFields = [
   ["teamname", "field-teamname", "include-teamname"],
   ["teamid", "field-teamid", "include-teamid"],
   ["logouri", "field-logouri", "include-logouri"],
@@ -60,74 +62,74 @@ const infoboxFields = [
   ]
 ];
 
-function setStatus(message, type = "") {
-  teamLoadStatus.hidden = false;
-  teamLoadStatus.textContent = message;
-  teamLoadStatus.className = "builder-status";
+function htwbTeamSetStatus(htwbTeamMessage, htwbTeamType = "") {
+  htwbTeamTeamLoadStatus.hidden = false;
+  htwbTeamTeamLoadStatus.textContent = htwbTeamMessage;
+  htwbTeamTeamLoadStatus.className = "builder-status";
 
-  if (type) {
-    teamLoadStatus.classList.add(`builder-status-${type}`);
+  if (htwbTeamType) {
+    htwbTeamTeamLoadStatus.classList.add(`builder-status-${htwbTeamType}`);
   }
 }
 
-function clearStatus() {
-  teamLoadStatus.hidden = true;
-  teamLoadStatus.textContent = "";
-  teamLoadStatus.className = "builder-status";
+function htwbTeamClearStatus() {
+  htwbTeamTeamLoadStatus.hidden = true;
+  htwbTeamTeamLoadStatus.textContent = "";
+  htwbTeamTeamLoadStatus.className = "builder-status";
 }
 
-function ordinal(value) {
-  const number = Number(value);
+function htwbTeamOrdinal(htwbTeamValue) {
+  const htwbTeamNumber = Number(htwbTeamValue);
 
-  if (!Number.isFinite(number) || number <= 0) {
-    return value || "";
+  if (!Number.isFinite(htwbTeamNumber) || htwbTeamNumber <= 0) {
+    return htwbTeamValue || "";
   }
 
-  const mod100 = number % 100;
+  const htwbTeamMod100 = htwbTeamNumber % 100;
 
-  if (mod100 >= 11 && mod100 <= 13) {
-    return `${number}th`;
+  if (htwbTeamMod100 >= 11 && htwbTeamMod100 <= 13) {
+    return `${htwbTeamNumber}th`;
   }
 
-  switch (number % 10) {
+  switch (htwbTeamNumber % 10) {
     case 1:
-      return `${number}st`;
+      return `${htwbTeamNumber}st`;
     case 2:
-      return `${number}nd`;
+      return `${htwbTeamNumber}nd`;
     case 3:
-      return `${number}rd`;
+      return `${htwbTeamNumber}rd`;
     default:
-      return `${number}th`;
+      return `${htwbTeamNumber}th`;
   }
 }
 
-function formatNumber(value) {
-  const number = Number(value);
+function htwbTeamFormatNumber(htwbTeamValue) {
+  const htwbTeamNumber = Number(htwbTeamValue);
 
-  if (!Number.isFinite(number)) {
-    return value || "";
+  if (!Number.isFinite(htwbTeamNumber)) {
+    return htwbTeamValue || "";
   }
 
-  return number.toLocaleString("en-US");
+  return htwbTeamNumber.toLocaleString("en-US");
 }
 
-function formatDate(value) {
-  if (!value) {
+function htwbTeamFormatDate(htwbTeamValue) {
+  if (!htwbTeamValue) {
     return "";
   }
 
-  const datePart = value.split(" ")[0];
-  const parts = datePart.split("-");
+  const htwbTeamDatePart = htwbTeamValue.split(" ")[0];
+  const htwbTeamParts = htwbTeamDatePart.split("-");
 
-  if (parts.length !== 3) {
-    return value;
+  if (htwbTeamParts.length !== 3) {
+    return htwbTeamValue;
   }
 
-  const year = Number(parts[0]);
-  const month = Number(parts[1]);
-  const day = Number(parts[2]);
+  const htwbTeamYear = Number(htwbTeamParts[0]);
+  const htwbTeamMonth = Number(htwbTeamParts[1]);
+  const htwbTeamDay = Number(htwbTeamParts[2]);
 
-  const months = [
+  const htwbTeamMonths = [
     "January",
     "February",
     "March",
@@ -143,86 +145,86 @@ function formatDate(value) {
   ];
 
   if (
-    !year ||
-    month < 1 ||
-    month > 12 ||
-    day < 1 ||
-    day > 31
+    !htwbTeamYear ||
+    htwbTeamMonth < 1 ||
+    htwbTeamMonth > 12 ||
+    htwbTeamDay < 1 ||
+    htwbTeamDay > 31
   ) {
-    return value;
+    return htwbTeamValue;
   }
 
-  return `${day} ${months[month - 1]} ${year}`;
+  return `${htwbTeamDay} ${htwbTeamMonths[htwbTeamMonth - 1]} ${htwbTeamYear}`;
 }
 
-function makeKitMarkup(teamId, type) {
-  if (!teamId) {
+function htwbTeamMakeKitMarkup(htwbTeamTeamId, htwbTeamType) {
+  if (!htwbTeamTeamId) {
     return "";
   }
 
-  return `[[File:${teamId}_${type}.png|125px]]`;
+  return `[[File:${htwbTeamTeamId}_${htwbTeamType}.png|125px]]`;
 }
 
-function makeSeasonLink(teamName, season) {
-  if (!teamName || !season) {
+function htwbTeamMakeSeasonLink(htwbTeamTeamName, htwbTeamSeason) {
+  if (!htwbTeamTeamName || !htwbTeamSeason) {
     return "";
   }
 
-  return `[[${teamName}/Season ${season}|Season ${season}]]`;
+  return `[[${htwbTeamTeamName}/Season ${htwbTeamSeason}|Season ${htwbTeamSeason}]]`;
 }
 
-function makePreviousSeasonResult(data) {
-  if (data.previousSeasonResult) {
-    return data.previousSeasonResult;
+function htwbTeamMakePreviousSeasonResult(htwbTeamData) {
+  if (htwbTeamData.previousSeasonResult) {
+    return htwbTeamData.previousSeasonResult;
   }
 
   if (
-    data.previousLeaguePosition &&
-    data.previousLeague &&
-    data.previousSeason
+    htwbTeamData.previousLeaguePosition &&
+    htwbTeamData.previousLeague &&
+    htwbTeamData.previousSeason
   ) {
     return (
-      `${ordinal(data.previousLeaguePosition)}, ` +
-      `${data.previousLeague} ` +
-      `(Season ${data.previousSeason})`
+      `${htwbTeamOrdinal(htwbTeamData.previousLeaguePosition)}, ` +
+      `${htwbTeamData.previousLeague} ` +
+      `(Season ${htwbTeamData.previousSeason})`
     );
   }
 
   return "";
 }
 
-function getField(id) {
-  return document.getElementById(id);
+function htwbTeamGetField(htwbTeamId) {
+  return document.getElementById(htwbTeamId);
 }
 
-function setField(inputId, checkboxId, value, checked = null) {
-  const input = getField(inputId);
-  const checkbox = getField(checkboxId);
+function htwbTeamSetField(htwbTeamInputId, htwbTeamCheckboxId, htwbTeamValue, htwbTeamChecked = null) {
+  const htwbTeamInput = htwbTeamGetField(htwbTeamInputId);
+  const htwbTeamCheckbox = htwbTeamGetField(htwbTeamCheckboxId);
 
-  if (!input || !checkbox) {
+  if (!htwbTeamInput || !htwbTeamCheckbox) {
     return;
   }
 
-  const finalValue =
-    value === null || value === undefined
+  const htwbTeamFinalValue =
+    htwbTeamValue === null || htwbTeamValue === undefined
       ? ""
-      : String(value);
+      : String(htwbTeamValue);
 
-  input.value = finalValue;
+  htwbTeamInput.value = htwbTeamFinalValue;
 
-  if (checked === null) {
-    checkbox.checked = finalValue.trim() !== "";
+  if (htwbTeamChecked === null) {
+    htwbTeamCheckbox.checked = htwbTeamFinalValue.trim() !== "";
   } else {
-    checkbox.checked = Boolean(checked);
+    htwbTeamCheckbox.checked = Boolean(htwbTeamChecked);
   }
 }
 
-function clearWikiFields() {
-  for (const [, inputId, checkboxId] of infoboxFields) {
-    setField(inputId, checkboxId, "", false);
+function htwbTeamClearWikiFields() {
+  for (const [, htwbTeamInputId, htwbTeamCheckboxId] of htwbTeamInfoboxFields) {
+    htwbTeamSetField(htwbTeamInputId, htwbTeamCheckboxId, "", false);
   }
 
-  setField(
+  htwbTeamSetField(
     "field-intro",
     "include-intro",
     "",
@@ -230,317 +232,317 @@ function clearWikiFields() {
   );
 }
 
-function createIntro(data) {
-  if (!data.teamName) {
+function htwbTeamCreateIntro(htwbTeamData) {
+  if (!htwbTeamData.teamName) {
     return "";
   }
 
-  let intro = `'''${data.teamName}''' is a Hattrick club`;
+  let htwbTeamIntro = `'''${htwbTeamData.teamName}''' is a Hattrick club`;
 
-  if (data.region && data.country) {
-    intro += ` based in [[${data.region}]], [[${data.country}]]`;
-  } else if (data.country) {
-    intro += ` based in [[${data.country}]]`;
+  if (htwbTeamData.region && htwbTeamData.country) {
+    htwbTeamIntro += ` based in [[${htwbTeamData.region}]], [[${htwbTeamData.country}]]`;
+  } else if (htwbTeamData.country) {
+    htwbTeamIntro += ` based in [[${htwbTeamData.country}]]`;
   }
 
-  if (data.managerName) {
-    intro += `, managed by ${data.managerName}`;
+  if (htwbTeamData.managerName) {
+    htwbTeamIntro += `, managed by ${htwbTeamData.managerName}`;
   }
 
-  intro += ".";
+  htwbTeamIntro += ".";
 
-  if (data.league) {
-    intro += ` The team currently competes in ${data.league}.`;
+  if (htwbTeamData.league) {
+    htwbTeamIntro += ` The team currently competes in ${htwbTeamData.league}.`;
   }
 
-  return intro;
+  return htwbTeamIntro;
 }
 
-function populateWikiFields(data) {
-  clearWikiFields();
+function htwbTeamPopulateWikiFields(htwbTeamData) {
+  htwbTeamClearWikiFields();
 
-  setField(
+  htwbTeamSetField(
     "field-teamname",
     "include-teamname",
-    data.teamName
+    htwbTeamData.teamName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-teamid",
     "include-teamid",
-    data.teamId
+    htwbTeamData.teamId
   );
 
-  setField(
+  htwbTeamSetField(
     "field-logouri",
     "include-logouri",
-    data.teamId
-      ? `${data.teamId}.png`
+    htwbTeamData.teamId
+      ? `${htwbTeamData.teamId}.png`
       : "",
     true
   );
 
-  setField(
+  htwbTeamSetField(
     "field-manager",
     "include-manager",
-    data.managerName
+    htwbTeamData.managerName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-shortname",
     "include-shortname",
-    data.shortTeamName
+    htwbTeamData.shortTeamName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-region",
     "include-region",
-    data.region
+    htwbTeamData.region
   );
 
-  setField(
+  htwbTeamSetField(
     "field-country",
     "include-country",
-    data.country
+    htwbTeamData.country
   );
 
-  setField(
+  htwbTeamSetField(
     "field-league",
     "include-league",
-    data.league
+    htwbTeamData.league
   );
 
-  setField(
+  htwbTeamSetField(
     "field-league-pos",
     "include-league-pos",
-    ordinal(data.leaguePosition)
+    htwbTeamOrdinal(htwbTeamData.leaguePosition)
   );
 
-  setField(
+  htwbTeamSetField(
     "field-league-pos-last",
     "include-league-pos-last",
-    makePreviousSeasonResult(data)
+    htwbTeamMakePreviousSeasonResult(htwbTeamData)
   );
 
-  setField(
+  htwbTeamSetField(
     "field-arena",
     "include-arena",
-    data.arenaName
+    htwbTeamData.arenaName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-capacity",
     "include-capacity",
-    data.arenaCapacity
-      ? formatNumber(data.arenaCapacity)
+    htwbTeamData.arenaCapacity
+      ? htwbTeamFormatNumber(htwbTeamData.arenaCapacity)
       : ""
   );
 
-  setField(
+  htwbTeamSetField(
     "field-coach",
     "include-coach",
-    data.coachName
+    htwbTeamData.coachName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-coach-nat",
     "include-coach-nat",
-    data.coachNationality
+    htwbTeamData.coachNationality
   );
 
-  setField(
+  htwbTeamSetField(
     "field-fanclub",
     "include-fanclub",
-    data.fanclubName
+    htwbTeamData.fanclubName
   );
 
-  setField(
+  htwbTeamSetField(
     "field-fanclub-size",
     "include-fanclub-size",
-    data.fanclubSize
-      ? formatNumber(data.fanclubSize)
+    htwbTeamData.fanclubSize
+      ? htwbTeamFormatNumber(htwbTeamData.fanclubSize)
       : ""
   );
 
   if (
-    data.isManagedTeam &&
-    data.activationDate
+    htwbTeamData.isManagedTeam &&
+    htwbTeamData.activationDate
   ) {
-    setField(
+    htwbTeamSetField(
       "field-founded",
       "include-founded",
-      formatDate(data.activationDate)
+      htwbTeamFormatDate(htwbTeamData.activationDate)
     );
   }
 
-  setField(
+  htwbTeamSetField(
     "field-homekit",
     "include-homekit",
-    makeKitMarkup(data.teamId, "home"),
+    htwbTeamMakeKitMarkup(htwbTeamData.teamId, "home"),
     true
   );
 
-  setField(
+  htwbTeamSetField(
     "field-awaykit",
     "include-awaykit",
-    makeKitMarkup(data.teamId, "away"),
+    htwbTeamMakeKitMarkup(htwbTeamData.teamId, "away"),
     true
   );
 
-  setField(
+  htwbTeamSetField(
     "field-thirdkit",
     "include-thirdkit",
-    makeKitMarkup(data.teamId, "third"),
+    htwbTeamMakeKitMarkup(htwbTeamData.teamId, "third"),
     false
   );
 
-  setField(
+  htwbTeamSetField(
     "field-current-season",
     "include-current-season",
-    makeSeasonLink(
-      data.teamName,
-      data.currentSeason
+    htwbTeamMakeSeasonLink(
+      htwbTeamData.teamName,
+      htwbTeamData.currentSeason
     ),
     false
   );
 
-  setField(
+  htwbTeamSetField(
     "field-intro",
     "include-intro",
-    createIntro(data)
+    htwbTeamCreateIntro(htwbTeamData)
   );
 
-  wikiFieldsSection.hidden = false;
-  wikiOutputSection.hidden = true;
+  htwbTeamWikiFieldsSection.hidden = false;
+  htwbTeamWikiOutputSection.hidden = true;
 }
 
-function setupAutomaticCheckboxes() {
-  const fields = document.querySelectorAll(
+function htwbTeamSetupAutomaticCheckboxes() {
+  const htwbTeamFields = document.querySelectorAll(
     ".wiki-field input[type='text'], .wiki-field textarea"
   );
 
-  for (const input of fields) {
-    input.addEventListener("input", () => {
-      const field = input.closest(".wiki-field");
+  for (const htwbTeamInput of htwbTeamFields) {
+    htwbTeamInput.addEventListener("input", () => {
+      const htwbTeamField = htwbTeamInput.closest(".wiki-field");
 
-      if (!field) {
+      if (!htwbTeamField) {
         return;
       }
 
-      const checkbox = field.querySelector(
+      const htwbTeamCheckbox = htwbTeamField.querySelector(
         ".wiki-field-check"
       );
 
-      if (!checkbox) {
+      if (!htwbTeamCheckbox) {
         return;
       }
 
-      checkbox.checked =
-        input.value.trim() !== "";
+      htwbTeamCheckbox.checked =
+        htwbTeamInput.value.trim() !== "";
     });
   }
 }
 
-function setupManagerChoice() {
-  const managerCheck =
-    getField("include-manager");
+function htwbTeamSetupManagerChoice() {
+  const htwbTeamManagerCheck =
+    htwbTeamGetField("include-manager");
 
-  const htuserCheck =
-    getField("include-htuser");
+  const htwbTeamHtuserCheck =
+    htwbTeamGetField("include-htuser");
 
-  if (!managerCheck || !htuserCheck) {
+  if (!htwbTeamManagerCheck || !htwbTeamHtuserCheck) {
     return;
   }
 
-  managerCheck.addEventListener(
+  htwbTeamManagerCheck.addEventListener(
     "change",
     () => {
-      if (managerCheck.checked) {
-        htuserCheck.checked = false;
+      if (htwbTeamManagerCheck.checked) {
+        htwbTeamHtuserCheck.checked = false;
       }
     }
   );
 
-  htuserCheck.addEventListener(
+  htwbTeamHtuserCheck.addEventListener(
     "change",
     () => {
-      if (htuserCheck.checked) {
-        managerCheck.checked = false;
+      if (htwbTeamHtuserCheck.checked) {
+        htwbTeamManagerCheck.checked = false;
       }
     }
   );
 }
 
-function buildInfobox() {
-  const lines = ["{{Infobox club"];
+function htwbTeamBuildInfobox() {
+  const htwbTeamLines = ["{{Infobox club"];
 
   for (
     const [
-      parameter,
-      inputId,
-      checkboxId
-    ] of infoboxFields
+      htwbTeamParameter,
+      htwbTeamInputId,
+      htwbTeamCheckboxId
+    ] of htwbTeamInfoboxFields
   ) {
-    const input = getField(inputId);
-    const checkbox = getField(checkboxId);
+    const htwbTeamInput = htwbTeamGetField(htwbTeamInputId);
+    const htwbTeamCheckbox = htwbTeamGetField(htwbTeamCheckboxId);
 
     if (
-      !input ||
-      !checkbox ||
-      !checkbox.checked
+      !htwbTeamInput ||
+      !htwbTeamCheckbox ||
+      !htwbTeamCheckbox.checked
     ) {
       continue;
     }
 
-    const value = input.value.trim();
+    const htwbTeamValue = htwbTeamInput.value.trim();
 
-    if (!value) {
+    if (!htwbTeamValue) {
       continue;
     }
 
-    lines.push(
-      `| ${parameter} = ${value}`
+    htwbTeamLines.push(
+      `| ${htwbTeamParameter} = ${htwbTeamValue}`
     );
   }
 
-  lines.push("}}");
+  htwbTeamLines.push("}}");
 
-  return lines.join("\n");
+  return htwbTeamLines.join("\n");
 }
 
-function buildWikiMarkup() {
-  const parts = [];
+function htwbTeamBuildWikiMarkup() {
+  const htwbTeamParts = [];
 
-  parts.push(buildInfobox());
+  htwbTeamParts.push(htwbTeamBuildInfobox());
 
-  const introCheck =
-    getField("include-intro");
+  const htwbTeamIntroCheck =
+    htwbTeamGetField("include-intro");
 
-  const intro =
-    getField("field-intro")
+  const htwbTeamIntro =
+    htwbTeamGetField("field-intro")
       .value
       .trim();
 
   if (
-    introCheck.checked &&
-    intro
+    htwbTeamIntroCheck.checked &&
+    htwbTeamIntro
   ) {
-    parts.push(intro);
+    htwbTeamParts.push(htwbTeamIntro);
   }
 
-  return parts.join("\n\n");
+  return htwbTeamParts.join("\n\n");
 }
 
-async function loadTeam(teamId) {
-  clearStatus();
+async function htwbTeamLoadTeam(htwbTeamTeamId) {
+  htwbTeamClearStatus();
 
-  setStatus(
+  htwbTeamSetStatus(
     "Loading team data from Hattrick..."
   );
 
   try {
-    const response = await fetch(
-      `/api/team?teamId=${encodeURIComponent(teamId)}`,
+    const htwbTeamResponse = await fetch(
+      `/api/team?teamId=${encodeURIComponent(htwbTeamTeamId)}`,
       {
         method: "GET",
         headers: {
@@ -549,52 +551,52 @@ async function loadTeam(teamId) {
       }
     );
 
-    const data =
-      await response.json();
+    const htwbTeamData =
+      await htwbTeamResponse.json();
 
-    if (response.status === 401) {
+    if (htwbTeamResponse.status === 401) {
       throw new Error(
         "Your Hattrick login has expired. Please log in again."
       );
     }
 
-    if (!response.ok) {
+    if (!htwbTeamResponse.ok) {
       throw new Error(
-        data.error ||
-        `Server returned ${response.status}`
+        htwbTeamData.error ||
+        `Server returned ${htwbTeamResponse.status}`
       );
     }
 
-    populateWikiFields(data);
+    htwbTeamPopulateWikiFields(htwbTeamData);
 
-    setStatus(
-      `Loaded ${data.teamName} - TeamID ${data.teamId}`,
+    htwbTeamSetStatus(
+      `Loaded ${htwbTeamData.teamName} - TeamID ${htwbTeamData.teamId}`,
       "success"
     );
 
-    wikiFieldsSection.scrollIntoView({
+    htwbTeamWikiFieldsSection.scrollIntoView({
       behavior: "smooth",
       block: "start"
     });
-  } catch (error) {
-    setStatus(
-      error.message ||
+  } catch (htwbTeamError) {
+    htwbTeamSetStatus(
+      htwbTeamError.message ||
       "Could not load team data.",
       "error"
     );
   }
 }
 
-teamLoadForm.addEventListener(
+htwbTeamTeamLoadForm.addEventListener(
   "submit",
-  event => {
-    event.preventDefault();
+  htwbTeamEvent => {
+    htwbTeamEvent.preventDefault();
 
-    const teamId =
-      teamIdInput.value.trim();
+    const htwbTeamTeamId =
+      htwbTeamTeamIdInput.value.trim();
 
-    if (!/^\d+$/.test(teamId)) {
-      setStatus(
+    if (!/^\d+$/.test(htwbTeamTeamId)) {
+      htwbTeamSetStatus(
         "Enter a valid numeric Hattrick TeamID.",
         "error"
       );
@@ -602,104 +604,104 @@ teamLoadForm.addEventListener(
       return;
     }
 
-    loadTeam(teamId);
+    htwbTeamLoadTeam(htwbTeamTeamId);
   }
 );
 
-wikiFieldsForm.addEventListener(
+htwbTeamWikiFieldsForm.addEventListener(
   "submit",
-  event => {
-    event.preventDefault();
+  htwbTeamEvent => {
+    htwbTeamEvent.preventDefault();
 
-    wikiOutput.value =
-      buildWikiMarkup();
+    htwbTeamWikiOutput.value =
+      htwbTeamBuildWikiMarkup();
 
-    wikiOutputSection.hidden = false;
+    htwbTeamWikiOutputSection.hidden = false;
 
-    wikiOutputSection.scrollIntoView({
+    htwbTeamWikiOutputSection.scrollIntoView({
       behavior: "smooth",
       block: "start"
     });
   }
 );
 
-copyButton.addEventListener(
+htwbTeamCopyButton.addEventListener(
   "click",
   async () => {
     try {
       await navigator.clipboard.writeText(
-        wikiOutput.value
+        htwbTeamWikiOutput.value
       );
 
-      copyStatus.textContent =
+      htwbTeamCopyStatus.textContent =
         "Copied.";
-    } catch (error) {
-      wikiOutput.focus();
-      wikiOutput.select();
+    } catch (htwbTeamError) {
+      htwbTeamWikiOutput.focus();
+      htwbTeamWikiOutput.select();
 
-      copyStatus.textContent =
+      htwbTeamCopyStatus.textContent =
         "Select the text and copy it manually.";
     }
   }
 );
 
-function setDefaultTeamId(teamId) {
+function htwbTeamSetDefaultTeamId(htwbTeamTeamId) {
   if (
-    teamId &&
-    /^\d+$/.test(String(teamId))
+    htwbTeamTeamId &&
+    /^\d+$/.test(String(htwbTeamTeamId))
   ) {
-    teamIdInput.value =
-      String(teamId);
+    htwbTeamTeamIdInput.value =
+      String(htwbTeamTeamId);
   }
 }
 
-function syncDefaultTeamId() {
-  const savedTeamId =
+function htwbTeamSyncDefaultTeamId() {
+  const htwbTeamSavedTeamId =
     localStorage.getItem(
-      TEAM_PAGE_STORAGE_KEY
+      HTWB_TEAM_TEAM_PAGE_STORAGE_KEY
     );
 
-  setDefaultTeamId(savedTeamId);
+  htwbTeamSetDefaultTeamId(htwbTeamSavedTeamId);
 
   if (
     window.HTWikiBuilder &&
     window.HTWikiBuilder.getSelectedTeamId
   ) {
-    const activeTeamId =
+    const htwbTeamActiveTeamId =
       window.HTWikiBuilder.getSelectedTeamId();
 
-    setDefaultTeamId(activeTeamId);
+    htwbTeamSetDefaultTeamId(htwbTeamActiveTeamId);
   }
 }
 
-function loadDefaultTeamId() {
-  syncDefaultTeamId();
+function htwbTeamLoadDefaultTeamId() {
+  htwbTeamSyncDefaultTeamId();
 
   window.addEventListener(
     "htwb:team-selected",
-    event => {
-      setDefaultTeamId(
-        event.detail.teamId
+    htwbTeamEvent => {
+      htwbTeamSetDefaultTeamId(
+        htwbTeamEvent.detail.teamId
       );
     }
   );
 
-  let attempts = 0;
+  let htwbTeamAttempts = 0;
 
-  const timer = setInterval(() => {
-    attempts += 1;
+  const htwbTeamTimer = setInterval(() => {
+    htwbTeamAttempts += 1;
 
-    syncDefaultTeamId();
+    htwbTeamSyncDefaultTeamId();
 
     if (
-      teamIdInput.value ||
-      attempts >= 20
+      htwbTeamTeamIdInput.value ||
+      htwbTeamAttempts >= 20
     ) {
-      clearInterval(timer);
+      clearInterval(htwbTeamTimer);
     }
   }, 250);
 }
 
-setupAutomaticCheckboxes();
-setupManagerChoice();
-loadDefaultTeamId();
+htwbTeamSetupAutomaticCheckboxes();
+htwbTeamSetupManagerChoice();
+htwbTeamLoadDefaultTeamId();

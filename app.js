@@ -1,213 +1,215 @@
-const userStatus = document.getElementById("user-status");
-const headerLogin = document.getElementById("header-login");
-const headerLogout = document.getElementById("header-logout");
+"use strict";
 
-const loginPanel = document.getElementById("login-panel");
-const connectedPanel = document.getElementById("connected-panel");
+const htwbAppUserStatus = document.getElementById("user-status");
+const htwbAppHeaderLogin = document.getElementById("header-login");
+const htwbAppHeaderLogout = document.getElementById("header-logout");
 
-const teamName = document.getElementById("team-name");
-const managerName = document.getElementById("manager-name");
-const teamId = document.getElementById("team-id");
+const htwbAppLoginPanel = document.getElementById("login-panel");
+const htwbAppConnectedPanel = document.getElementById("connected-panel");
 
-const TEAM_STORAGE_KEY = "htwb_selected_team_id";
+const htwbAppTeamName = document.getElementById("team-name");
+const htwbAppManagerName = document.getElementById("manager-name");
+const htwbAppTeamId = document.getElementById("team-id");
 
-let accountData = null;
-let selectedTeam = null;
+const HTWB_APP_TEAM_STORAGE_KEY = "htwb_selected_team_id";
 
-function showLoggedOut() {
-  accountData = null;
-  selectedTeam = null;
+let htwbAppAccountData = null;
+let htwbAppSelectedTeam = null;
 
-  userStatus.textContent = "Not connected";
+function htwbAppShowLoggedOut() {
+  htwbAppAccountData = null;
+  htwbAppSelectedTeam = null;
 
-  headerLogin.hidden = false;
-  headerLogout.hidden = true;
+  htwbAppUserStatus.textContent = "Not connected";
 
-  loginPanel.hidden = false;
-  connectedPanel.hidden = true;
+  htwbAppHeaderLogin.hidden = false;
+  htwbAppHeaderLogout.hidden = true;
+
+  htwbAppLoginPanel.hidden = false;
+  htwbAppConnectedPanel.hidden = true;
 }
 
-function getSavedTeamId() {
-  return localStorage.getItem(TEAM_STORAGE_KEY) || "";
+function htwbAppGetSavedTeamId() {
+  return localStorage.getItem(HTWB_APP_TEAM_STORAGE_KEY) || "";
 }
 
-function saveTeamId(id) {
-  if (id) {
-    localStorage.setItem(TEAM_STORAGE_KEY, id);
+function htwbAppSaveTeamId(htwbAppId) {
+  if (htwbAppId) {
+    localStorage.setItem(HTWB_APP_TEAM_STORAGE_KEY, htwbAppId);
   }
 }
 
-function findTeam(id) {
-  if (!accountData || !Array.isArray(accountData.teams)) {
+function htwbAppFindTeam(htwbAppId) {
+  if (!htwbAppAccountData || !Array.isArray(htwbAppAccountData.teams)) {
     return null;
   }
 
-  return accountData.teams.find(
-    team => String(team.teamId) === String(id)
+  return htwbAppAccountData.teams.find(
+    htwbAppTeam => String(htwbAppTeam.teamId) === String(htwbAppId)
   ) || null;
 }
 
-function chooseInitialTeam(data) {
-  const teams = Array.isArray(data.teams)
-    ? data.teams
+function htwbAppChooseInitialTeam(htwbAppData) {
+  const htwbAppTeams = Array.isArray(htwbAppData.teams)
+    ? htwbAppData.teams
     : [];
 
-  if (!teams.length) {
+  if (!htwbAppTeams.length) {
     return null;
   }
 
-  const savedTeam = findTeam(getSavedTeamId());
+  const htwbAppSavedTeam = htwbAppFindTeam(htwbAppGetSavedTeamId());
 
-  if (savedTeam) {
-    return savedTeam;
+  if (htwbAppSavedTeam) {
+    return htwbAppSavedTeam;
   }
 
-  if (data.teamId) {
-    const defaultTeam = findTeam(data.teamId);
+  if (htwbAppData.teamId) {
+    const htwbAppDefaultTeam = htwbAppFindTeam(htwbAppData.teamId);
 
-    if (defaultTeam) {
-      return defaultTeam;
+    if (htwbAppDefaultTeam) {
+      return htwbAppDefaultTeam;
     }
   }
 
-  return teams[0];
+  return htwbAppTeams[0];
 }
 
-function renderSelectedTeam(team) {
-  if (!team) {
-    teamName.textContent = "No managed team found";
-    teamId.textContent = "";
-    userStatus.textContent = "Connected";
+function htwbAppRenderSelectedTeam(htwbAppTeam) {
+  if (!htwbAppTeam) {
+    htwbAppTeamName.textContent = "No managed team found";
+    htwbAppTeamId.textContent = "";
+    htwbAppUserStatus.textContent = "Connected";
     return;
   }
 
-  selectedTeam = team;
-  saveTeamId(team.teamId);
+  htwbAppSelectedTeam = htwbAppTeam;
+  htwbAppSaveTeamId(htwbAppTeam.teamId);
 
   window.dispatchEvent(
-  new CustomEvent("htwb:team-selected", {
-    detail: {
-      teamId: team.teamId,
-      teamName: team.teamName
-    }
-  })
-);
+    new CustomEvent("htwb:team-selected", {
+      detail: {
+        teamId: htwbAppTeam.teamId,
+        teamName: htwbAppTeam.teamName
+      }
+    })
+  );
 
-  teamName.textContent =
-    team.teamName || "Hattrick team";
+  htwbAppTeamName.textContent =
+    htwbAppTeam.teamName || "Hattrick team";
 
-  teamId.textContent =
-    team.teamId
-      ? `TeamID: ${team.teamId}`
+  htwbAppTeamId.textContent =
+    htwbAppTeam.teamId
+      ? `TeamID: ${htwbAppTeam.teamId}`
       : "";
 
-  userStatus.textContent =
-    team.teamName || "Connected";
+  htwbAppUserStatus.textContent =
+    htwbAppTeam.teamName || "Connected";
 }
 
-function removeTeamSelector() {
-  const existing =
+function htwbAppRemoveTeamSelector() {
+  const htwbAppExisting =
     document.getElementById("team-selector-wrapper");
 
-  if (existing) {
-    existing.remove();
+  if (htwbAppExisting) {
+    htwbAppExisting.remove();
   }
 }
 
-function createTeamSelector(teams) {
-  removeTeamSelector();
+function htwbAppCreateTeamSelector(htwbAppTeams) {
+  htwbAppRemoveTeamSelector();
 
-  if (!Array.isArray(teams) || teams.length <= 1) {
+  if (!Array.isArray(htwbAppTeams) || htwbAppTeams.length <= 1) {
     return;
   }
 
-  const wrapper = document.createElement("div");
-  wrapper.id = "team-selector-wrapper";
-  wrapper.className = "team-selector-wrapper";
+  const htwbAppWrapper = document.createElement("div");
+  htwbAppWrapper.id = "team-selector-wrapper";
+  htwbAppWrapper.className = "team-selector-wrapper";
 
-  const label = document.createElement("label");
-  label.htmlFor = "team-selector";
-  label.textContent = "Active team";
+  const htwbAppLabel = document.createElement("label");
+  htwbAppLabel.htmlFor = "team-selector";
+  htwbAppLabel.textContent = "Active team";
 
-  const select = document.createElement("select");
-  select.id = "team-selector";
-  select.className = "team-selector";
+  const htwbAppSelect = document.createElement("select");
+  htwbAppSelect.id = "team-selector";
+  htwbAppSelect.className = "team-selector";
 
-  for (const team of teams) {
-    const option = document.createElement("option");
+  for (const htwbAppTeam of htwbAppTeams) {
+    const htwbAppOption = document.createElement("option");
 
-    option.value = team.teamId;
-    option.textContent =
-      `${team.teamName} - TeamID ${team.teamId}`;
+    htwbAppOption.value = htwbAppTeam.teamId;
+    htwbAppOption.textContent =
+      `${htwbAppTeam.teamName} - TeamID ${htwbAppTeam.teamId}`;
 
     if (
-      selectedTeam &&
-      String(team.teamId) ===
-        String(selectedTeam.teamId)
+      htwbAppSelectedTeam &&
+      String(htwbAppTeam.teamId) ===
+        String(htwbAppSelectedTeam.teamId)
     ) {
-      option.selected = true;
+      htwbAppOption.selected = true;
     }
 
-    select.appendChild(option);
+    htwbAppSelect.appendChild(htwbAppOption);
   }
 
-  select.addEventListener("change", event => {
-    const team = findTeam(event.target.value);
+  htwbAppSelect.addEventListener("change", htwbAppEvent => {
+    const htwbAppTeam = htwbAppFindTeam(htwbAppEvent.target.value);
 
-    if (team) {
-      renderSelectedTeam(team);
+    if (htwbAppTeam) {
+      htwbAppRenderSelectedTeam(htwbAppTeam);
     }
   });
 
-  wrapper.appendChild(label);
-  wrapper.appendChild(select);
+  htwbAppWrapper.appendChild(htwbAppLabel);
+  htwbAppWrapper.appendChild(htwbAppSelect);
 
-  connectedPanel.appendChild(wrapper);
+  htwbAppConnectedPanel.appendChild(htwbAppWrapper);
 }
 
-function showLoggedIn(data) {
-  accountData = data;
+function htwbAppShowLoggedIn(htwbAppData) {
+  htwbAppAccountData = htwbAppData;
 
-  headerLogin.hidden = true;
-  headerLogout.hidden = false;
+  htwbAppHeaderLogin.hidden = true;
+  htwbAppHeaderLogout.hidden = false;
 
-  loginPanel.hidden = true;
-  connectedPanel.hidden = false;
+  htwbAppLoginPanel.hidden = true;
+  htwbAppConnectedPanel.hidden = false;
 
-  managerName.textContent =
-    data.managerName
-      ? `Manager: ${data.managerName}`
+  htwbAppManagerName.textContent =
+    htwbAppData.managerName
+      ? `Manager: ${htwbAppData.managerName}`
       : "";
 
-  selectedTeam = chooseInitialTeam(data);
+  htwbAppSelectedTeam = htwbAppChooseInitialTeam(htwbAppData);
 
-  renderSelectedTeam(selectedTeam);
-  createTeamSelector(data.teams);
+  htwbAppRenderSelectedTeam(htwbAppSelectedTeam);
+  htwbAppCreateTeamSelector(htwbAppData.teams);
 }
 
-async function loadUser() {
+async function htwbAppLoadUser() {
   try {
-    const response = await fetch("/api/me", {
+    const htwbAppResponse = await fetch("/api/me", {
       method: "GET",
       headers: {
         Accept: "application/json"
       }
     });
 
-    if (response.status === 401) {
-      showLoggedOut();
+    if (htwbAppResponse.status === 401) {
+      htwbAppShowLoggedOut();
       return;
     }
 
-    if (!response.ok) {
+    if (!htwbAppResponse.ok) {
       throw new Error(
-        `Server returned ${response.status}`
+        `Server returned ${htwbAppResponse.status}`
       );
     }
 
-    const data = await response.json();
+    const htwbAppData = await htwbAppResponse.json();
 
-    showLoggedIn(data);
+    htwbAppShowLoggedIn(htwbAppData);
 
     if (
       window.location.search.includes("login=success")
@@ -218,33 +220,33 @@ async function loadUser() {
         "/"
       );
     }
-  } catch (error) {
+  } catch (htwbAppError) {
     console.error(
       "Could not load Hattrick account:",
-      error
+      htwbAppError
     );
 
-    showLoggedOut();
+    htwbAppShowLoggedOut();
   }
 }
 
 window.HTWikiBuilder = {
   getSelectedTeamId() {
-    return selectedTeam
-      ? selectedTeam.teamId
+    return htwbAppSelectedTeam
+      ? htwbAppSelectedTeam.teamId
       : "";
   },
 
   getSelectedTeam() {
-    return selectedTeam;
+    return htwbAppSelectedTeam;
   },
 
   getManagedTeams() {
-    return accountData &&
-      Array.isArray(accountData.teams)
-      ? accountData.teams
+    return htwbAppAccountData &&
+      Array.isArray(htwbAppAccountData.teams)
+      ? htwbAppAccountData.teams
       : [];
   }
 };
 
-loadUser();
+htwbAppLoadUser();
