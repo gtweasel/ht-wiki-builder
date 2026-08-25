@@ -1,5 +1,5 @@
-function enc(value) {
-  return encodeURIComponent(value)
+function htwbAuthLoginEnc(htwbAuthLoginValue) {
+  return encodeURIComponent(htwbAuthLoginValue)
     .replace(/!/g, "%21")
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
@@ -7,101 +7,101 @@ function enc(value) {
     .replace(/\*/g, "%2A");
 }
 
-function nonce() {
+function htwbAuthLoginNonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-async function hmacSha1(key, text) {
-  const cryptoKey = await crypto.subtle.importKey(
+async function htwbAuthLoginHmacSha1(htwbAuthLoginKey, htwbAuthLoginText) {
+  const htwbAuthLoginCryptoKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(key),
+    new TextEncoder().encode(htwbAuthLoginKey),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"]
   );
 
-  const signature = await crypto.subtle.sign(
+  const htwbAuthLoginSignature = await crypto.subtle.sign(
     "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(text)
+    htwbAuthLoginCryptoKey,
+    new TextEncoder().encode(htwbAuthLoginText)
   );
 
-  return btoa(String.fromCharCode(...new Uint8Array(signature)));
+  return btoa(String.fromCharCode(...new Uint8Array(htwbAuthLoginSignature)));
 }
 
-export async function onRequestGet(context) {
-  const requestTokenUrl =
+export async function onRequestGet(htwbAuthLoginContext) {
+  const htwbAuthLoginRequestTokenUrl =
     "https://chpp.hattrick.org/oauth/request_token.ashx";
 
-  const callbackUrl =
+  const htwbAuthLoginCallbackUrl =
     "https://ht-wiki-builder.pages.dev/auth/callback";
 
-  const oauth = {
-    oauth_callback: callbackUrl,
-    oauth_consumer_key: context.env.CHPP_CONSUMER_KEY,
-    oauth_nonce: nonce(),
+  const htwbAuthLoginOauth = {
+    oauth_callback: htwbAuthLoginCallbackUrl,
+    oauth_consumer_key: htwbAuthLoginContext.env.CHPP_CONSUMER_KEY,
+    oauth_nonce: htwbAuthLoginNonce(),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
     oauth_version: "1.0"
   };
 
-  const parameterString = Object.keys(oauth)
+  const htwbAuthLoginParameterString = Object.keys(htwbAuthLoginOauth)
     .sort()
-    .map(key => `${enc(key)}=${enc(oauth[key])}`)
+    .map(htwbAuthLoginKey => `${htwbAuthLoginEnc(htwbAuthLoginKey)}=${htwbAuthLoginEnc(htwbAuthLoginOauth[htwbAuthLoginKey])}`)
     .join("&");
 
-  const signatureBase =
-    `GET&${enc(requestTokenUrl)}&${enc(parameterString)}`;
+  const htwbAuthLoginSignatureBase =
+    `GET&${htwbAuthLoginEnc(htwbAuthLoginRequestTokenUrl)}&${htwbAuthLoginEnc(htwbAuthLoginParameterString)}`;
 
-  const signingKey =
-    `${enc(context.env.CHPP_CONSUMER_SECRET)}&`;
+  const htwbAuthLoginSigningKey =
+    `${htwbAuthLoginEnc(htwbAuthLoginContext.env.CHPP_CONSUMER_SECRET)}&`;
 
-  oauth.oauth_signature =
-    await hmacSha1(signingKey, signatureBase);
+  htwbAuthLoginOauth.oauth_signature =
+    await htwbAuthLoginHmacSha1(htwbAuthLoginSigningKey, htwbAuthLoginSignatureBase);
 
-  const authorization =
+  const htwbAuthLoginAuthorization =
     "OAuth " +
-    Object.keys(oauth)
+    Object.keys(htwbAuthLoginOauth)
       .sort()
-      .map(key => `${enc(key)}="${enc(oauth[key])}"`)
+      .map(htwbAuthLoginKey => `${htwbAuthLoginEnc(htwbAuthLoginKey)}="${htwbAuthLoginEnc(htwbAuthLoginOauth[htwbAuthLoginKey])}"`)
       .join(", ");
 
-  const response = await fetch(requestTokenUrl, {
+  const htwbAuthLoginResponse = await fetch(htwbAuthLoginRequestTokenUrl, {
     method: "GET",
     headers: {
-      Authorization: authorization,
+      Authorization: htwbAuthLoginAuthorization,
       "User-Agent": "HT Wiki Builder/0.1"
     }
   });
 
-  const body = await response.text();
+  const htwbAuthLoginBody = await htwbAuthLoginResponse.text();
 
-  if (!response.ok) {
-    return new Response(body, {
-      status: response.status
+  if (!htwbAuthLoginResponse.ok) {
+    return new Response(htwbAuthLoginBody, {
+      status: htwbAuthLoginResponse.status
     });
   }
 
-  const data = new URLSearchParams(body);
+  const htwbAuthLoginData = new URLSearchParams(htwbAuthLoginBody);
 
-  const token = data.get("oauth_token");
-  const tokenSecret = data.get("oauth_token_secret");
+  const htwbAuthLoginToken = htwbAuthLoginData.get("oauth_token");
+  const htwbAuthLoginTokenSecret = htwbAuthLoginData.get("oauth_token_secret");
 
-  if (!token || !tokenSecret) {
+  if (!htwbAuthLoginToken || !htwbAuthLoginTokenSecret) {
     return new Response("Could not obtain request token.", {
       status: 500
     });
   }
 
-  const redirectUrl =
-    `https://chpp.hattrick.org/oauth/authorize.aspx?oauth_token=${enc(token)}`;
+  const htwbAuthLoginRedirectUrl =
+    `https://chpp.hattrick.org/oauth/authorize.aspx?oauth_token=${htwbAuthLoginEnc(htwbAuthLoginToken)}`;
 
   return new Response(null, {
     status: 302,
     headers: {
-      Location: redirectUrl,
+      Location: htwbAuthLoginRedirectUrl,
       "Set-Cookie":
-        `chpp_request_secret=${enc(tokenSecret)}; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
+        `chpp_request_secret=${htwbAuthLoginEnc(htwbAuthLoginTokenSecret)}; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=600`
     }
   });
 }

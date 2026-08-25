@@ -1,5 +1,5 @@
-function enc(value) {
-  return encodeURIComponent(value)
+function htwbAuthCallbackEnc(htwbAuthCallbackValue) {
+  return encodeURIComponent(htwbAuthCallbackValue)
     .replace(/!/g, "%21")
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
@@ -7,156 +7,156 @@ function enc(value) {
     .replace(/\*/g, "%2A");
 }
 
-function nonce() {
+function htwbAuthCallbackNonce() {
   return crypto.randomUUID().replace(/-/g, "");
 }
 
-function getCookie(request, name) {
-  const cookie = request.headers.get("Cookie") || "";
+function htwbAuthCallbackGetCookie(htwbAuthCallbackRequest, htwbAuthCallbackName) {
+  const htwbAuthCallbackCookie = htwbAuthCallbackRequest.headers.get("Cookie") || "";
 
-  for (const part of cookie.split(";")) {
-    const [key, ...value] = part.trim().split("=");
+  for (const htwbAuthCallbackPart of htwbAuthCallbackCookie.split(";")) {
+    const [htwbAuthCallbackKey, ...htwbAuthCallbackValue] = htwbAuthCallbackPart.trim().split("=");
 
-    if (key === name) {
-      return decodeURIComponent(value.join("="));
+    if (htwbAuthCallbackKey === htwbAuthCallbackName) {
+      return decodeURIComponent(htwbAuthCallbackValue.join("="));
     }
   }
 
   return null;
 }
 
-async function hmacSha1(key, text) {
-  const cryptoKey = await crypto.subtle.importKey(
+async function htwbAuthCallbackHmacSha1(htwbAuthCallbackKey, htwbAuthCallbackText) {
+  const htwbAuthCallbackCryptoKey = await crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(key),
+    new TextEncoder().encode(htwbAuthCallbackKey),
     { name: "HMAC", hash: "SHA-1" },
     false,
     ["sign"]
   );
 
-  const signature = await crypto.subtle.sign(
+  const htwbAuthCallbackSignature = await crypto.subtle.sign(
     "HMAC",
-    cryptoKey,
-    new TextEncoder().encode(text)
+    htwbAuthCallbackCryptoKey,
+    new TextEncoder().encode(htwbAuthCallbackText)
   );
 
   return btoa(
-    String.fromCharCode(...new Uint8Array(signature))
+    String.fromCharCode(...new Uint8Array(htwbAuthCallbackSignature))
   );
 }
 
-export async function onRequestGet(context) {
-  const url = new URL(context.request.url);
+export async function onRequestGet(htwbAuthCallbackContext) {
+  const htwbAuthCallbackUrl = new URL(htwbAuthCallbackContext.request.url);
 
-  const requestToken =
-    url.searchParams.get("oauth_token");
+  const htwbAuthCallbackRequestToken =
+    htwbAuthCallbackUrl.searchParams.get("oauth_token");
 
-  const verifier =
-    url.searchParams.get("oauth_verifier");
+  const htwbAuthCallbackVerifier =
+    htwbAuthCallbackUrl.searchParams.get("oauth_verifier");
 
-  const requestSecret =
-    getCookie(context.request, "chpp_request_secret");
+  const htwbAuthCallbackRequestSecret =
+    htwbAuthCallbackGetCookie(htwbAuthCallbackContext.request, "chpp_request_secret");
 
-  if (!requestToken || !verifier || !requestSecret) {
+  if (!htwbAuthCallbackRequestToken || !htwbAuthCallbackVerifier || !htwbAuthCallbackRequestSecret) {
     return new Response(
       "Missing OAuth authorization information.",
       { status: 400 }
     );
   }
 
-  const accessTokenUrl =
+  const htwbAuthCallbackAccessTokenUrl =
     "https://chpp.hattrick.org/oauth/access_token.ashx";
 
-  const callbackUrl =
+  const htwbAuthCallbackCallbackUrl =
     "https://ht-wiki-builder.pages.dev/auth/callback";
 
-  const oauth = {
-    oauth_callback: callbackUrl,
-    oauth_consumer_key: context.env.CHPP_CONSUMER_KEY,
-    oauth_nonce: nonce(),
+  const htwbAuthCallbackOauth = {
+    oauth_callback: htwbAuthCallbackCallbackUrl,
+    oauth_consumer_key: htwbAuthCallbackContext.env.CHPP_CONSUMER_KEY,
+    oauth_nonce: htwbAuthCallbackNonce(),
     oauth_signature_method: "HMAC-SHA1",
     oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
-    oauth_token: requestToken,
-    oauth_verifier: verifier,
+    oauth_token: htwbAuthCallbackRequestToken,
+    oauth_verifier: htwbAuthCallbackVerifier,
     oauth_version: "1.0"
   };
 
-  const parameterString = Object.keys(oauth)
+  const htwbAuthCallbackParameterString = Object.keys(htwbAuthCallbackOauth)
     .sort()
-    .map(key => `${enc(key)}=${enc(oauth[key])}`)
+    .map(htwbAuthCallbackKey => `${htwbAuthCallbackEnc(htwbAuthCallbackKey)}=${htwbAuthCallbackEnc(htwbAuthCallbackOauth[htwbAuthCallbackKey])}`)
     .join("&");
 
-  const signatureBase =
-    `GET&${enc(accessTokenUrl)}&${enc(parameterString)}`;
+  const htwbAuthCallbackSignatureBase =
+    `GET&${htwbAuthCallbackEnc(htwbAuthCallbackAccessTokenUrl)}&${htwbAuthCallbackEnc(htwbAuthCallbackParameterString)}`;
 
-  const signingKey =
-    `${enc(context.env.CHPP_CONSUMER_SECRET)}&${enc(requestSecret)}`;
+  const htwbAuthCallbackSigningKey =
+    `${htwbAuthCallbackEnc(htwbAuthCallbackContext.env.CHPP_CONSUMER_SECRET)}&${htwbAuthCallbackEnc(htwbAuthCallbackRequestSecret)}`;
 
-  oauth.oauth_signature =
-    await hmacSha1(signingKey, signatureBase);
+  htwbAuthCallbackOauth.oauth_signature =
+    await htwbAuthCallbackHmacSha1(htwbAuthCallbackSigningKey, htwbAuthCallbackSignatureBase);
 
-  const authorization =
+  const htwbAuthCallbackAuthorization =
     "OAuth " +
-    Object.keys(oauth)
+    Object.keys(htwbAuthCallbackOauth)
       .sort()
-      .map(key => `${enc(key)}="${enc(oauth[key])}"`)
+      .map(htwbAuthCallbackKey => `${htwbAuthCallbackEnc(htwbAuthCallbackKey)}="${htwbAuthCallbackEnc(htwbAuthCallbackOauth[htwbAuthCallbackKey])}"`)
       .join(", ");
 
-  const response = await fetch(accessTokenUrl, {
+  const htwbAuthCallbackResponse = await fetch(htwbAuthCallbackAccessTokenUrl, {
     method: "GET",
     headers: {
-      Authorization: authorization,
+      Authorization: htwbAuthCallbackAuthorization,
       "User-Agent": "HT Wiki Builder/0.1"
     }
   });
 
-  const body = await response.text();
+  const htwbAuthCallbackBody = await htwbAuthCallbackResponse.text();
 
-  if (!response.ok) {
-    return new Response(body, {
-      status: response.status
+  if (!htwbAuthCallbackResponse.ok) {
+    return new Response(htwbAuthCallbackBody, {
+      status: htwbAuthCallbackResponse.status
     });
   }
 
-  const data = new URLSearchParams(body);
+  const htwbAuthCallbackData = new URLSearchParams(htwbAuthCallbackBody);
 
-  const accessToken =
-    data.get("oauth_token");
+  const htwbAuthCallbackAccessToken =
+    htwbAuthCallbackData.get("oauth_token");
 
-  const accessSecret =
-    data.get("oauth_token_secret");
+  const htwbAuthCallbackAccessSecret =
+    htwbAuthCallbackData.get("oauth_token_secret");
 
-  if (!accessToken || !accessSecret) {
+  if (!htwbAuthCallbackAccessToken || !htwbAuthCallbackAccessSecret) {
     return new Response(
       "Could not obtain access token.",
       { status: 500 }
     );
   }
 
-  const headers = new Headers();
+  const htwbAuthCallbackHeaders = new Headers();
 
-  headers.set(
+  htwbAuthCallbackHeaders.set(
     "Location",
     "/?login=success"
   );
 
-  headers.append(
+  htwbAuthCallbackHeaders.append(
     "Set-Cookie",
-    `chpp_access_token=${enc(accessToken)}; Path=/; HttpOnly; Secure; SameSite=Lax`
+    `chpp_access_token=${htwbAuthCallbackEnc(htwbAuthCallbackAccessToken)}; Path=/; HttpOnly; Secure; SameSite=Lax`
   );
 
-  headers.append(
+  htwbAuthCallbackHeaders.append(
     "Set-Cookie",
-    `chpp_access_secret=${enc(accessSecret)}; Path=/; HttpOnly; Secure; SameSite=Lax`
+    `chpp_access_secret=${htwbAuthCallbackEnc(htwbAuthCallbackAccessSecret)}; Path=/; HttpOnly; Secure; SameSite=Lax`
   );
 
-  headers.append(
+  htwbAuthCallbackHeaders.append(
     "Set-Cookie",
     "chpp_request_secret=; Path=/auth; HttpOnly; Secure; SameSite=Lax; Max-Age=0"
   );
 
   return new Response(null, {
     status: 302,
-    headers
+    headers: htwbAuthCallbackHeaders
   });
 }
