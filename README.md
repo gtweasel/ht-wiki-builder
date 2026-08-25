@@ -51,3 +51,54 @@ Every team-scoped CHPP request used by the Lineup Builder must receive the curre
 
 Use the recruitment URL `https://www.hattrick.org/?inviteRef=TS7E2C` only for links whose purpose is to invite a new manager, such as **Join Hattrick**, **Get a team**, or **New to Hattrick**. Keep ordinary Hattrick navigation, CHPP authorization, team/player/match links, and HT Wiki links on their normal direct URLs. Recruitment links should be clearly identified because successful recruitment may earn the site creator Hattrick reward points.
 
+
+
+## Lineup training and formation recommendation
+
+The Lineup Builder recommendation is intentionally sequential: **training need first, formation second, lineup third**.
+
+### Training recommendation
+
+All senior-team Hattrick training types are considered except the combined **Scoring and Set Pieces** type:
+
+- Keeper
+- Defending
+- Playmaking
+- Winger
+- Passing
+- Scoring
+- Set Pieces
+- Defending (Defenders, Keepers + All Midfielders)
+- Winger (Winger + Attackers)
+- Passing (Defenders + All Midfielders)
+
+Each type is evaluated with its full ideal weekly trainee group. Formation utilization does not alter this stage. The type with the **lowest ideal skill average** is recommended. The coach is retained in roster data so the UI can show `Excluded: Coach`, but the coach is not included in training-average calculations.
+
+### Formation recommendation
+
+Once training is selected, every one of the six formation-experience values returned by CHPP is evaluated:
+
+- 4-3-3
+- 4-5-1
+- 3-5-2
+- 5-3-2
+- 3-4-3
+- 5-4-1
+
+No formation is pre-excluded because of utilization and there is no formation-experience threshold. For the selected training type:
+
+`Training Waste Slots = Ideal Slots Per Match - Effective Training Slots`
+
+`FE Cost = log2(Formation Experience + 1)`
+
+`Formation Score = Training Waste Slots + FE Cost`
+
+The **lowest Formation Score wins**. The continuous logarithmic FE term lets utilization normally dominate while increasingly low formation experience can naturally outweigh lost training slots without a hard-coded cutoff. Exact score ties prefer higher utilization, then lower formation experience.
+
+### User overrides
+
+After the first build, Training and Formation are both dropdowns.
+
+- Changing **Training** clears any formation override, rescans all six formations for that training type, selects the new recommended formation, and rebuilds everything downstream.
+- Changing **Formation** keeps the selected training type and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
+- Clicking **Build Lineup** again clears both overrides and returns to the current recommendations.

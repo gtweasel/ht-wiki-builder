@@ -274,7 +274,7 @@
 
 
       <!-- =================================================
-           02 FORMATION
+           02 TRAINING
            ================================================= -->
 
       <section class="builder-section">
@@ -289,111 +289,14 @@
 
             <div>
               <h2>
-                Formation
-              </h2>
-
-              <p>
-                The lowest available formation experience is used.
-                Ties favor more defenders, then more midfielders.
-              </p>
-            </div>
-
-          </div>
-
-
-          <div class="lineup-summary">
-
-            <div class="lineup-summary-item">
-              <span class="lineup-summary-label">
-                Selected Formation
-              </span>
-
-              <span
-                id="lineup-selected-formation"
-                class="lineup-summary-value"
-              >
-                -
-              </span>
-            </div>
-
-
-            <div class="lineup-summary-item">
-              <span class="lineup-summary-label">
-                Formation Experience
-              </span>
-
-              <span
-                id="lineup-selected-formation-experience"
-                class="lineup-summary-value"
-              >
-                -
-              </span>
-            </div>
-
-          </div>
-
-
-          <details class="lineup-details">
-
-            <summary>
-              Formation experience details
-            </summary>
-
-            <div class="lineup-table-wrap">
-
-              <table class="lineup-table">
-
-                <thead>
-                  <tr>
-                    <th>
-                      Formation
-                    </th>
-
-                    <th class="number">
-                      Experience
-                    </th>
-
-                    <th>
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody id="lineup-formation-table-body">
-                </tbody>
-
-              </table>
-
-            </div>
-
-          </details>
-
-        </div>
-      </section>
-
-
-      <!-- =================================================
-           03 TRAINING
-           ================================================= -->
-
-      <section class="builder-section">
-
-        <div class="builder-section-number">
-          03
-        </div>
-
-        <div class="builder-section-content">
-
-          <div class="builder-section-heading">
-
-            <div>
-              <h2>
                 Training
               </h2>
 
               <p>
-                Training strength uses the full ideal training
-                group. Formation waste is applied separately.
+                Every senior-team training type is considered except
+                combined Scoring and Set Pieces. The full ideal weekly
+                trainee group is used, and the lowest ideal skill average
+                is recommended before formation is considered.
               </p>
             </div>
 
@@ -407,11 +310,22 @@
                 Selected Training
               </span>
 
-              <span
+              <select
                 id="lineup-selected-training"
-                class="lineup-summary-value"
+                class="lineup-choice-select"
+                aria-label="Selected training type"
+                disabled
               >
-                -
+                <option value="">
+                  Build lineup first
+                </option>
+              </select>
+
+              <span
+                id="lineup-training-choice-note"
+                class="lineup-choice-note"
+              >
+                Recommended automatically
               </span>
             </div>
 
@@ -448,23 +362,11 @@
                   </th>
 
                   <th class="number">
-                    Players
+                    Ideal Weekly Trainees
                   </th>
 
                   <th class="number">
                     Ideal Average
-                  </th>
-
-                  <th class="number">
-                    Utilization
-                  </th>
-
-                  <th class="number">
-                    Waste
-                  </th>
-
-                  <th class="number">
-                    Final Score
                   </th>
 
                   <th>
@@ -483,9 +385,184 @@
 
 
           <p class="lineup-note">
-            The Ideal Average always uses the full ideal number
-            of weekly trainees. Final Score equals Ideal Average
-            divided by formation utilization. Lowest score wins.
+            Formation utilization does not affect the training recommendation.
+            Changing training rescans all six CHPP-tracked formations, selects
+            the newly recommended formation, and rebuilds everything below.
+          </p>
+
+        </div>
+      </section>
+
+
+      <!-- =================================================
+           03 FORMATION
+           ================================================= -->
+
+      <section class="builder-section">
+
+        <div class="builder-section-number">
+          03
+        </div>
+
+        <div class="builder-section-content">
+
+          <div class="builder-section-heading">
+
+            <div>
+              <h2>
+                Formation
+              </h2>
+
+              <p>
+                All six CHPP-tracked formations are scored every time.
+                Training waste normally favors better utilization, while
+                lower formation experience continuously lowers the score
+                and becomes more influential as experience falls.
+              </p>
+            </div>
+
+          </div>
+
+
+          <div class="lineup-summary">
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">
+                Selected Formation
+              </span>
+
+              <select
+                id="lineup-selected-formation"
+                class="lineup-choice-select"
+                aria-label="Selected formation"
+                disabled
+              >
+                <option value="">
+                  Build lineup first
+                </option>
+              </select>
+
+              <span
+                id="lineup-formation-choice-note"
+                class="lineup-choice-note"
+              >
+                Recommended automatically
+              </span>
+            </div>
+
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">
+                Formation Experience
+              </span>
+
+              <span
+                id="lineup-selected-formation-experience"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">
+                Training Utilization
+              </span>
+
+              <span
+                id="lineup-selected-formation-utilization"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">
+                Training Waste
+              </span>
+
+              <span
+                id="lineup-selected-formation-waste"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">
+                Formation Score
+              </span>
+
+              <span
+                id="lineup-selected-formation-score"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+          </div>
+
+
+          <div class="lineup-table-wrap">
+
+            <table class="lineup-table">
+
+              <thead>
+                <tr>
+                  <th>
+                    Formation
+                  </th>
+
+                  <th class="number">
+                    FrmExp
+                  </th>
+
+                  <th class="number">
+                    Utilization
+                  </th>
+
+                  <th class="number">
+                    Effective / Ideal
+                  </th>
+
+                  <th class="number">
+                    Waste Slots
+                  </th>
+
+                  <th class="number">
+                    FE Cost
+                  </th>
+
+                  <th class="number">
+                    Final Score
+                  </th>
+
+                  <th>
+                    Status
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody id="lineup-formation-table-body">
+              </tbody>
+
+            </table>
+
+          </div>
+
+
+          <p class="lineup-note">
+            Formation Score = training waste slots + log2(FrmExp + 1).
+            Lowest score wins. There is no utilization cutoff and no
+            formation-experience threshold: every formation stays in the
+            calculation. Changing formation keeps the selected training type
+            and immediately rebuilds everything below.
           </p>
 
         </div>

@@ -919,6 +919,40 @@ select {
   overflow-wrap: anywhere;
 }
 
+.lineup-choice-select {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 36px 9px 11px;
+  color: var(--blue-950);
+  background: #ffffff;
+  border: 1px solid var(--gray-300);
+  border-radius: 6px;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.15;
+}
+
+.lineup-choice-select:focus {
+  outline: 3px solid rgba(244, 190, 0, 0.28);
+  outline-offset: 1px;
+  border-color: var(--blue-700);
+}
+
+.lineup-choice-select:disabled {
+  color: var(--gray-500);
+  background: var(--gray-100);
+  cursor: not-allowed;
+}
+
+.lineup-choice-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--gray-600);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .lineup-role-detail {
   display: block;
   margin-top: 5px;

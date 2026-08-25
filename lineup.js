@@ -2,27 +2,23 @@
 
 /*
  * HT Wiki Builder
- * Lineup Builder - Version 1
+ * Lineup Builder
  *
- * Formation:
- * - Uses only formation experience exposed by CHPP
+ * Recommendation order:
+ * 1. Training need - lowest full ideal trainee-group skill average
+ * 2. Formation - all six CHPP-tracked formations are scored
+ *    with training waste + continuous formation-experience cost
+ * 3. Starting XI
+ * 4. Captain and set pieces
+ * 5. Substitute bench
  *
- * Training:
- * - Calculates the ideal full-training average
- * - Calculates utilization of that training in the selected formation
- * - Final score = ideal average / utilization
- * - Lowest final score wins
+ * User overrides:
+ * - Training and formation are dropdowns after the first build
+ * - Changing training rescans formation and everything downstream
+ * - Changing formation keeps training and rebuilds everything downstream
  *
- * Player selection:
- * - Full training positions first
- * - Partial training positions second
- * - Remaining starting positions back to front
- * - Substitute bench is filled after the starting XI
- * - Substitute calculation order: GK, DE, WB, IM, WG, FW, EX
- *
- * Match roles:
- * - Captain is selected from the starting XI by predicted team experience
- * - Set pieces taker is the highest-SP starting outfielder, with XP as tie-breaker
+ * Substitute calculation order: GK, DE, WB, IM, WG, FW, EX
+ * Display order follows Hattrick: GK, DE, WB, IM, FW, WG, EX
  */
 
 
@@ -55,9 +51,29 @@ const htwbLineupSelectedFormationElement =
     "lineup-selected-formation"
   );
 
+const htwbLineupFormationChoiceNoteElement =
+  document.getElementById(
+    "lineup-formation-choice-note"
+  );
+
 const htwbLineupSelectedFormationExperienceElement =
   document.getElementById(
     "lineup-selected-formation-experience"
+  );
+
+const htwbLineupSelectedFormationUtilizationElement =
+  document.getElementById(
+    "lineup-selected-formation-utilization"
+  );
+
+const htwbLineupSelectedFormationWasteElement =
+  document.getElementById(
+    "lineup-selected-formation-waste"
+  );
+
+const htwbLineupSelectedFormationScoreElement =
+  document.getElementById(
+    "lineup-selected-formation-score"
   );
 
 const htwbLineupFormationTableBody =
@@ -68,6 +84,11 @@ const htwbLineupFormationTableBody =
 const htwbLineupSelectedTrainingElement =
   document.getElementById(
     "lineup-selected-training"
+  );
+
+const htwbLineupTrainingChoiceNoteElement =
+  document.getElementById(
+    "lineup-training-choice-note"
   );
 
 const htwbLineupSelectedTrainingAverageElement =
@@ -386,206 +407,174 @@ const HTWB_LINEUP_SUBSTITUTE_ORDER = [
    ========================================================= */
 
 /*
- * IMPORTANT:
+ * All Hattrick senior-team training types are considered
+ * except the combined "Scoring and Set Pieces" type.
  *
- * requiredPlayers is ALWAYS the ideal weekly number.
+ * requiredPlayers is the full ideal WEEKLY trainee group
+ * across the two training matches.
  *
- * We do NOT reduce the Top-X average because the
- * selected formation wastes training slots.
- *
- * Formation waste is handled separately through
- * utilization.
+ * idealSlotsPerMatch is used only when comparing formations.
+ * Formation utilization never changes the ideal skill average.
  */
 
 const HTWB_LINEUP_TRAINING_TYPES = [
   {
     id: "keeper",
-
     name: "Keeper",
-
     skill: "keeper",
-
+    skillLabel: "Keeper",
     requiredPlayers: 2,
-
+    idealSlotsPerMatch: 1,
     tiePriority: 1,
-
     utilization() {
       return 1;
     },
-
-    fullRoles: [
-      "GK"
-    ],
-
+    fullRoles: ["GK"],
     partialRoles: []
   },
 
   {
     id: "defending",
-
     name: "Defending",
-
     skill: "defending",
-
+    skillLabel: "Defending",
     requiredPlayers: 10,
-
+    idealSlotsPerMatch: 5,
     tiePriority: 2,
-
     utilization(htwbLineupFormation) {
-      return (
-        htwbLineupFormation.defenders /
-        5
-      );
+      return htwbLineupFormation.defenders / 5;
     },
-
-    fullRoles: [
-      "DEFENDER"
-    ],
-
+    fullRoles: ["DEFENDER"],
     partialRoles: []
   },
 
   {
     id: "playmaking",
-
     name: "Playmaking",
-
     skill: "playmaking",
-
+    skillLabel: "Playmaking",
     requiredPlayers: 10,
-
+    idealSlotsPerMatch: 5,
     tiePriority: 3,
-
     utilization(htwbLineupFormation) {
-      return (
-        htwbLineupFormation.midfielders /
-        5
-      );
+      return htwbLineupFormation.midfielders / 5;
     },
-
-    fullRoles: [
-      "IM"
-    ],
-
-    partialRoles: [
-      "WG"
-    ]
+    fullRoles: ["IM"],
+    partialRoles: ["WG"]
   },
 
   {
     id: "winger",
-
     name: "Winger",
-
     skill: "winger",
-
+    skillLabel: "Winger",
     requiredPlayers: 8,
-
+    idealSlotsPerMatch: 4,
     tiePriority: 4,
-
-    /*
-     * We always use:
-     *
-     * LW
-     * RW
-     * LWB
-     * RWB
-     *
-     * Therefore Winger training is always
-     * fully utilized in our allowed formations.
-     */
     utilization() {
       return 1;
     },
-
-    fullRoles: [
-      "WG"
-    ],
-
-    partialRoles: [
-      "WB"
-    ]
+    fullRoles: ["WG"],
+    partialRoles: ["WB"]
   },
 
   {
-    id: "passingDM",
-
-    name:
-      "Passing (Defenders + Midfielders)",
-
+    id: "passing",
+    name: "Passing",
     skill: "passing",
-
-    requiredPlayers: 20,
-
-    /*
-     * Passing comes before Scoring and
-     * Set Pieces in Hattrick skill display order.
-     */
+    skillLabel: "Passing",
+    requiredPlayers: 16,
+    idealSlotsPerMatch: 8,
     tiePriority: 5,
-
     utilization(htwbLineupFormation) {
       return (
-        (
-          htwbLineupFormation.defenders +
-          htwbLineupFormation.midfielders
-        ) /
-        10
-      );
+        htwbLineupFormation.midfielders +
+        htwbLineupFormation.forwards
+      ) / 8;
     },
-
-    fullRoles: [
-      "DEFENDER",
-      "IM",
-      "WG"
-    ],
-
+    fullRoles: ["IM", "WG", "FW"],
     partialRoles: []
   },
 
   {
     id: "scoring",
-
     name: "Scoring",
-
     skill: "scoring",
-
+    skillLabel: "Scoring",
     requiredPlayers: 6,
-
+    idealSlotsPerMatch: 3,
     tiePriority: 6,
-
     utilization(htwbLineupFormation) {
-      return (
-        htwbLineupFormation.forwards /
-        3
-      );
+      return htwbLineupFormation.forwards / 3;
     },
-
-    fullRoles: [
-      "FW"
-    ],
-
+    fullRoles: ["FW"],
     partialRoles: []
   },
 
   {
     id: "setPieces",
-
     name: "Set Pieces",
-
     skill: "setPieces",
-
+    skillLabel: "Set Pieces",
     requiredPlayers: 22,
-
+    idealSlotsPerMatch: 11,
     tiePriority: 7,
-
     utilization() {
       return 1;
     },
+    fullRoles: ["ALL"],
+    partialRoles: []
+  },
 
-    fullRoles: [
-      "ALL"
-    ],
+  {
+    id: "defendingExtended",
+    name: "Defending (Defenders, Keepers + All Midfielders)",
+    skill: "defending",
+    skillLabel: "Defending",
+    requiredPlayers: 22,
+    idealSlotsPerMatch: 11,
+    tiePriority: 8,
+    utilization(htwbLineupFormation) {
+      return (
+        1 +
+        htwbLineupFormation.defenders +
+        htwbLineupFormation.midfielders
+      ) / 11;
+    },
+    fullRoles: ["GK", "DEFENDER", "IM", "WG"],
+    partialRoles: []
+  },
 
+  {
+    id: "wingerExtended",
+    name: "Winger (Winger + Attackers)",
+    skill: "winger",
+    skillLabel: "Winger",
+    requiredPlayers: 10,
+    idealSlotsPerMatch: 5,
+    tiePriority: 9,
+    utilization(htwbLineupFormation) {
+      return (2 + htwbLineupFormation.forwards) / 5;
+    },
+    fullRoles: ["WG", "FW"],
+    partialRoles: []
+  },
+
+  {
+    id: "passingExtended",
+    name: "Passing (Defenders + All Midfielders)",
+    skill: "passing",
+    skillLabel: "Passing",
+    requiredPlayers: 20,
+    idealSlotsPerMatch: 10,
+    tiePriority: 10,
+    utilization(htwbLineupFormation) {
+      return (
+        htwbLineupFormation.defenders +
+        htwbLineupFormation.midfielders
+      ) / 10;
+    },
+    fullRoles: ["DEFENDER", "IM", "WG"],
     partialRoles: []
   }
 ];
@@ -656,6 +645,10 @@ let htwbLineupSourceData = null;
 let htwbLineupCurrentCalculation = null;
 
 let htwbLineupLoadedTeamId = null;
+
+let htwbLineupFormationOverrideName = "";
+
+let htwbLineupTrainingOverrideId = "";
 
 
 /* =========================================================
@@ -1011,15 +1004,91 @@ function htwbLineupSlotMatchesTrainingRole(
    ========================================================= */
 
 /*
- * Rule:
+ * Every CHPP-tracked formation is scored every time.
+ * Nothing is pre-excluded for low utilization or high/low FE.
  *
- * 1. Lowest experience
- * 2. More defenders
- * 3. More midfielders
+ * Low score wins:
+ *
+ *   Formation Score = Training Waste Slots + FE Cost
+ *
+ * Training Waste Slots is the number of ideal trainee slots
+ * lost in THIS match for the selected training type.
+ *
+ * FE Cost = log2(Formation Experience + 1)
+ *
+ * The logarithm is continuous: there is no FE threshold.
+ * Lower FE always lowers the score, but the benefit becomes
+ * progressively more meaningful as FE gets very low.
  */
 
+function htwbLineupCalculateFormationMetrics(
+  htwbLineupFormation,
+  htwbLineupExperience,
+  htwbLineupTraining
+) {
+  const htwbLineupUtilization =
+    Math.max(
+      0,
+      Math.min(
+        1,
+        htwbLineupNumberValue(
+          htwbLineupTraining.utilization(
+            htwbLineupFormation
+          ),
+          0
+        )
+      )
+    );
+
+  const htwbLineupIdealSlots =
+    htwbLineupNumberValue(
+      htwbLineupTraining.idealSlotsPerMatch,
+      htwbLineupTraining.requiredPlayers / 2
+    );
+
+  const htwbLineupEffectiveSlots =
+    htwbLineupIdealSlots *
+    htwbLineupUtilization;
+
+  const htwbLineupWasteSlots =
+    Math.max(
+      0,
+      htwbLineupIdealSlots -
+      htwbLineupEffectiveSlots
+    );
+
+  const htwbLineupSafeExperience =
+    Math.max(
+      0,
+      htwbLineupNumberValue(
+        htwbLineupExperience,
+        0
+      )
+    );
+
+  const htwbLineupFormationExperienceCost =
+    Math.log2(
+      htwbLineupSafeExperience + 1
+    );
+
+  return {
+    utilization: htwbLineupUtilization,
+    idealSlots: htwbLineupIdealSlots,
+    effectiveSlots: htwbLineupEffectiveSlots,
+    wasteSlots: htwbLineupWasteSlots,
+    experienceCost:
+      htwbLineupFormationExperienceCost,
+    score:
+      htwbLineupWasteSlots +
+      htwbLineupFormationExperienceCost
+  };
+}
+
+
 function htwbLineupSelectFormation(
-  htwbLineupFormationExperience
+  htwbLineupFormationExperience,
+  htwbLineupTraining,
+  htwbLineupRequestedFormationName = ""
 ) {
   const htwbLineupCandidates =
     Object.entries(
@@ -1037,19 +1106,30 @@ function htwbLineupSelectFormation(
               ]
             );
 
+          if (
+            !Number.isFinite(
+              htwbLineupExperience
+            )
+          ) {
+            return null;
+          }
+
+          const htwbLineupMetrics =
+            htwbLineupCalculateFormationMetrics(
+              htwbLineupFormation,
+              htwbLineupExperience,
+              htwbLineupTraining
+            );
+
           return {
             name: htwbLineupName,
             formation: htwbLineupFormation,
-            experience: htwbLineupExperience
+            experience: htwbLineupExperience,
+            ...htwbLineupMetrics
           };
         }
       )
-      .filter(
-        htwbLineupCandidate =>
-          Number.isFinite(
-            htwbLineupCandidate.experience
-          )
-      );
+      .filter(Boolean);
 
   if (!htwbLineupCandidates.length) {
     throw new Error(
@@ -1059,6 +1139,26 @@ function htwbLineupSelectFormation(
 
   htwbLineupCandidates.sort(
     (htwbLineupA, htwbLineupB) => {
+      if (
+        htwbLineupA.score !==
+        htwbLineupB.score
+      ) {
+        return (
+          htwbLineupA.score -
+          htwbLineupB.score
+        );
+      }
+
+      if (
+        htwbLineupA.utilization !==
+        htwbLineupB.utilization
+      ) {
+        return (
+          htwbLineupB.utilization -
+          htwbLineupA.utilization
+        );
+      }
+
       if (
         htwbLineupA.experience !==
         htwbLineupB.experience
@@ -1097,10 +1197,28 @@ function htwbLineupSelectFormation(
     }
   );
 
+  const htwbLineupRecommendedFormation =
+    htwbLineupCandidates[0];
+
+  const htwbLineupRequestedFormation =
+    htwbLineupCandidates.find(
+      htwbLineupCandidate =>
+        htwbLineupCandidate.name ===
+        htwbLineupRequestedFormationName
+    );
+
+  const htwbLineupSelectedFormation =
+    htwbLineupRequestedFormation ||
+    htwbLineupRecommendedFormation;
+
   return {
     selected:
-      htwbLineupCandidates[0],
-
+      htwbLineupSelectedFormation,
+    recommended:
+      htwbLineupRecommendedFormation,
+    isOverride:
+      htwbLineupSelectedFormation.name !==
+      htwbLineupRecommendedFormation.name,
     candidates: htwbLineupCandidates
   };
 }
@@ -1170,23 +1288,16 @@ function htwbLineupCalculateTrainingAverage(
    ========================================================= */
 
 /*
- * Final score:
+ * Training is selected BEFORE formation.
  *
- * ideal average / formation utilization
- *
- * Lower score wins.
- *
- * Example:
- *
- * Ideal average = 9
- * Utilization = 90%
- *
- * 9 / .90 = 10
+ * The full ideal trainee group is used for every type and
+ * formation utilization is deliberately ignored here.
+ * Lowest ideal skill average wins.
  */
 
 function htwbLineupSelectTraining(
   htwbLineupPlayers,
-  htwbLineupFormation
+  htwbLineupRequestedTrainingId = ""
 ) {
   const htwbLineupResults =
     HTWB_LINEUP_TRAINING_TYPES.map(
@@ -1197,46 +1308,9 @@ function htwbLineupSelectTraining(
             htwbLineupTraining
           );
 
-        const htwbLineupUtilization =
-          Math.max(
-            0,
-            Math.min(
-              1,
-              htwbLineupNumberValue(
-                htwbLineupTraining.utilization(
-                  htwbLineupFormation
-                ),
-                0
-              )
-            )
-          );
-
-        const htwbLineupWaste =
-          1 -
-          htwbLineupUtilization;
-
-        let htwbLineupScore = null;
-
-        if (
-          htwbLineupIdealAverage !== null &&
-          htwbLineupUtilization > 0
-        ) {
-          htwbLineupScore =
-            htwbLineupIdealAverage /
-            htwbLineupUtilization;
-        }
-
         return {
           training: htwbLineupTraining,
-
           idealAverage: htwbLineupIdealAverage,
-
-          utilization: htwbLineupUtilization,
-
-          waste: htwbLineupWaste,
-
-          score: htwbLineupScore,
-
           hasEnoughPlayers:
             htwbLineupIdealAverage !== null
         };
@@ -1247,19 +1321,17 @@ function htwbLineupSelectTraining(
     htwbLineupResults
       .filter(
         htwbLineupResult =>
-          htwbLineupResult.hasEnoughPlayers &&
-          htwbLineupResult.utilization > 0 &&
-          htwbLineupResult.score !== null
+          htwbLineupResult.hasEnoughPlayers
       )
       .sort(
         (htwbLineupA, htwbLineupB) => {
           if (
-            htwbLineupA.score !==
-            htwbLineupB.score
+            htwbLineupA.idealAverage !==
+            htwbLineupB.idealAverage
           ) {
             return (
-              htwbLineupA.score -
-              htwbLineupB.score
+              htwbLineupA.idealAverage -
+              htwbLineupB.idealAverage
             );
           }
 
@@ -1276,11 +1348,30 @@ function htwbLineupSelectTraining(
     );
   }
 
+  const htwbLineupRecommendedTraining =
+    htwbLineupCandidates[0];
+
+  const htwbLineupRequestedTraining =
+    htwbLineupCandidates.find(
+      htwbLineupCandidate =>
+        htwbLineupCandidate.training.id ===
+        htwbLineupRequestedTrainingId
+    );
+
+  const htwbLineupSelectedTraining =
+    htwbLineupRequestedTraining ||
+    htwbLineupRecommendedTraining;
+
   return {
     selected:
-      htwbLineupCandidates[0],
-
-    results: htwbLineupResults
+      htwbLineupSelectedTraining,
+    recommended:
+      htwbLineupRecommendedTraining,
+    isOverride:
+      htwbLineupSelectedTraining.training.id !==
+      htwbLineupRecommendedTraining.training.id,
+    results: htwbLineupResults,
+    candidates: htwbLineupCandidates
   };
 }
 
@@ -2578,7 +2669,8 @@ function htwbLineupSelectSetPiecesTaker(
    ========================================================= */
 
 function htwbLineupCalculateLineup(
-  htwbLineupData
+  htwbLineupData,
+  htwbLineupChoices = {}
 ) {
   const htwbLineupPlayers =
     Array.isArray(
@@ -2587,42 +2679,58 @@ function htwbLineupCalculateLineup(
       ? htwbLineupData.players
       : [];
 
-  if (
-    !htwbLineupPlayers.length
-  ) {
+  if (!htwbLineupPlayers.length) {
     throw new Error(
       "No players were returned."
     );
   }
 
   /*
-   * 1. Formation
+   * The coach remains in CHPP roster data so he can be shown
+   * under Excluded Players, but he must never influence the
+   * squad's ideal training averages.
    */
 
-  const htwbLineupFormationResult =
-    htwbLineupSelectFormation(
-      htwbLineupData.formationExperience
+  const htwbLineupTrainingPool =
+    htwbLineupPlayers.filter(
+      htwbLineupPlayer =>
+        htwbLineupData.coachId === null ||
+        htwbLineupData.coachId === undefined ||
+        String(htwbLineupPlayer.playerId) !==
+          String(htwbLineupData.coachId)
     );
 
-  const htwbLineupSelectedFormation =
-    htwbLineupFormationResult.selected;
-
   /*
-   * 2. Training
-   *
-   * Uses FULL roster.
+   * 1. Training need
+   * Lowest ideal full-group skill average wins.
    */
 
   const htwbLineupTrainingResult =
     htwbLineupSelectTraining(
-      htwbLineupPlayers,
-      htwbLineupSelectedFormation.formation
+      htwbLineupTrainingPool,
+      htwbLineupChoices.trainingId || ""
     );
 
   const htwbLineupSelectedTraining =
     htwbLineupTrainingResult
       .selected
       .training;
+
+  /*
+   * 2. Formation
+   * All six CHPP-tracked formations are scored against the
+   * selected training type using utilization + FE math.
+   */
+
+  const htwbLineupFormationResult =
+    htwbLineupSelectFormation(
+      htwbLineupData.formationExperience,
+      htwbLineupSelectedTraining,
+      htwbLineupChoices.formationName || ""
+    );
+
+  const htwbLineupSelectedFormation =
+    htwbLineupFormationResult.selected;
 
   /*
    * 3. Player availability
@@ -2679,9 +2787,6 @@ function htwbLineupCalculateLineup(
 
   /*
    * 7. Build substitute bench
-   *
-   * Starts with only the players left after
-   * the starting XI has been selected.
    */
 
   const htwbLineupSubstituteResult =
@@ -2691,23 +2796,14 @@ function htwbLineupCalculateLineup(
 
   return {
     formationResult: htwbLineupFormationResult,
-
     selectedFormation: htwbLineupSelectedFormation,
-
     trainingResult: htwbLineupTrainingResult,
-
     selectedTraining: htwbLineupSelectedTraining,
-
     eligibilityResult: htwbLineupEligibilityResult,
-
     ratedEligiblePlayers: htwbLineupRatedEligiblePlayers,
-
     lineupResult: htwbLineupLineupResult,
-
     captainResult: htwbLineupCaptainResult,
-
     setPiecesResult: htwbLineupSetPiecesResult,
-
     substituteResult: htwbLineupSubstituteResult
   };
 }
@@ -2854,28 +2950,88 @@ function htwbLineupRenderFormation(
   htwbLineupResult
 ) {
   const htwbLineupSelected =
-    htwbLineupResult
-      .selectedFormation;
+    htwbLineupResult.selectedFormation;
 
-  if (
-    htwbLineupSelectedFormationElement
-  ) {
-    htwbLineupSelectedFormationElement.textContent =
+  const htwbLineupRecommended =
+    htwbLineupResult
+      .formationResult
+      .recommended;
+
+  if (htwbLineupSelectedFormationElement) {
+    htwbLineupSelectedFormationElement.innerHTML =
+      htwbLineupResult
+        .formationResult
+        .candidates
+        .map(
+          htwbLineupCandidate => {
+            const htwbLineupRecommendedSuffix =
+              htwbLineupCandidate.name ===
+              htwbLineupRecommended.name
+                ? " (recommended)"
+                : "";
+
+            return `
+              <option value="${htwbLineupEscapeHtml(
+                htwbLineupCandidate.name
+              )}">
+                ${htwbLineupEscapeHtml(
+                  htwbLineupCandidate.name +
+                  htwbLineupRecommendedSuffix
+                )}
+              </option>
+            `;
+          }
+        )
+        .join("");
+
+    htwbLineupSelectedFormationElement.value =
       htwbLineupSelected.name;
+
+    htwbLineupSelectedFormationElement.disabled =
+      false;
   }
 
-  if (
-    htwbLineupSelectedFormationExperienceElement
-  ) {
+  if (htwbLineupFormationChoiceNoteElement) {
+    htwbLineupFormationChoiceNoteElement.textContent =
+      htwbLineupResult
+        .formationResult
+        .isOverride
+        ? `Override selected - recommended: ${htwbLineupRecommended.name}`
+        : "Recommended automatically";
+  }
+
+  if (htwbLineupSelectedFormationExperienceElement) {
     htwbLineupSelectedFormationExperienceElement.textContent =
-      String(
-        htwbLineupSelected.experience
+      htwbLineupRound(
+        htwbLineupSelected.experience,
+        2
+      ).toFixed(2);
+  }
+
+  if (htwbLineupSelectedFormationUtilizationElement) {
+    htwbLineupSelectedFormationUtilizationElement.textContent =
+      htwbLineupPercent(
+        htwbLineupSelected.utilization
       );
   }
 
-  if (
-    !htwbLineupFormationTableBody
-  ) {
+  if (htwbLineupSelectedFormationWasteElement) {
+    htwbLineupSelectedFormationWasteElement.textContent =
+      `${htwbLineupRound(
+        htwbLineupSelected.wasteSlots,
+        2
+      ).toFixed(2)} slots`;
+  }
+
+  if (htwbLineupSelectedFormationScoreElement) {
+    htwbLineupSelectedFormationScoreElement.textContent =
+      htwbLineupRound(
+        htwbLineupSelected.score,
+        3
+      ).toFixed(3);
+  }
+
+  if (!htwbLineupFormationTableBody) {
     return;
   }
 
@@ -2884,30 +3040,95 @@ function htwbLineupRenderFormation(
       .formationResult
       .candidates
       .map(
-        htwbLineupCandidate => `
-          <tr>
-            <td>
-              ${htwbLineupEscapeHtml(
-                htwbLineupCandidate.name
-              )}
-            </td>
+        htwbLineupCandidate => {
+          const htwbLineupIsSelected =
+            htwbLineupCandidate.name ===
+            htwbLineupSelected.name;
 
-            <td class="number">
-              ${htwbLineupEscapeHtml(
-                htwbLineupCandidate.experience
-              )}
-            </td>
+          const htwbLineupIsRecommended =
+            htwbLineupCandidate.name ===
+            htwbLineupRecommended.name;
 
-            <td>
-              ${
-                htwbLineupCandidate.name ===
-                htwbLineupSelected.name
-                  ? "Selected"
-                  : ""
-              }
-            </td>
-          </tr>
-        `
+          let htwbLineupStatus = "";
+          let htwbLineupRowClass = "";
+
+          if (
+            htwbLineupIsSelected &&
+            htwbLineupIsRecommended
+          ) {
+            htwbLineupStatus =
+              "Selected / Recommended";
+            htwbLineupRowClass =
+              "selected-training";
+          } else if (htwbLineupIsSelected) {
+            htwbLineupStatus = "Selected";
+            htwbLineupRowClass =
+              "selected-training";
+          } else if (htwbLineupIsRecommended) {
+            htwbLineupStatus = "Recommended";
+          }
+
+          return `
+            <tr class="${htwbLineupRowClass}">
+              <td>
+                ${htwbLineupEscapeHtml(
+                  htwbLineupCandidate.name
+                )}
+              </td>
+
+              <td class="number">
+                ${htwbLineupRound(
+                  htwbLineupCandidate.experience,
+                  2
+                ).toFixed(2)}
+              </td>
+
+              <td class="number">
+                ${htwbLineupPercent(
+                  htwbLineupCandidate.utilization
+                )}
+              </td>
+
+              <td class="number">
+                ${htwbLineupRound(
+                  htwbLineupCandidate.effectiveSlots,
+                  2
+                ).toFixed(2)} /
+                ${htwbLineupRound(
+                  htwbLineupCandidate.idealSlots,
+                  2
+                ).toFixed(2)}
+              </td>
+
+              <td class="number">
+                ${htwbLineupRound(
+                  htwbLineupCandidate.wasteSlots,
+                  2
+                ).toFixed(2)}
+              </td>
+
+              <td class="number">
+                ${htwbLineupRound(
+                  htwbLineupCandidate.experienceCost,
+                  3
+                ).toFixed(3)}
+              </td>
+
+              <td class="number">
+                ${htwbLineupRound(
+                  htwbLineupCandidate.score,
+                  3
+                ).toFixed(3)}
+              </td>
+
+              <td>
+                ${htwbLineupEscapeHtml(
+                  htwbLineupStatus
+                )}
+              </td>
+            </tr>
+          `;
+        }
       )
       .join("");
 }
@@ -2925,23 +3146,58 @@ function htwbLineupRenderTraining(
       .trainingResult
       .selected;
 
-  if (
-    htwbLineupSelectedTrainingElement
-  ) {
-    htwbLineupSelectedTrainingElement.textContent =
-      htwbLineupSelected
-        .training
-        .name;
+  const htwbLineupRecommended =
+    htwbLineupResult
+      .trainingResult
+      .recommended;
+
+  if (htwbLineupSelectedTrainingElement) {
+    const htwbLineupSelectableTrainingResults =
+      htwbLineupResult
+        .trainingResult
+        .candidates;
+
+    htwbLineupSelectedTrainingElement.innerHTML =
+      htwbLineupSelectableTrainingResults
+        .map(
+          htwbLineupItem => {
+            const htwbLineupRecommendedSuffix =
+              htwbLineupItem.training.id ===
+              htwbLineupRecommended.training.id
+                ? " (recommended)"
+                : "";
+
+            return `
+              <option value="${htwbLineupEscapeHtml(
+                htwbLineupItem.training.id
+              )}">
+                ${htwbLineupEscapeHtml(
+                  htwbLineupItem.training.name +
+                  htwbLineupRecommendedSuffix
+                )}
+              </option>
+            `;
+          }
+        )
+        .join("");
+
+    htwbLineupSelectedTrainingElement.value =
+      htwbLineupSelected.training.id;
+
+    htwbLineupSelectedTrainingElement.disabled =
+      false;
   }
 
-  /*
-   * Keep this field showing the original
-   * ideal Top-X average.
-   */
+  if (htwbLineupTrainingChoiceNoteElement) {
+    htwbLineupTrainingChoiceNoteElement.textContent =
+      htwbLineupResult
+        .trainingResult
+        .isOverride
+        ? `Override selected - recommended: ${htwbLineupRecommended.training.name}`
+        : "Recommended automatically";
+  }
 
-  if (
-    htwbLineupSelectedTrainingAverageElement
-  ) {
+  if (htwbLineupSelectedTrainingAverageElement) {
     htwbLineupSelectedTrainingAverageElement.textContent =
       htwbLineupRound(
         htwbLineupSelected.idealAverage,
@@ -2949,9 +3205,7 @@ function htwbLineupRenderTraining(
       ).toFixed(2);
   }
 
-  if (
-    !htwbLineupTrainingTableBody
-  ) {
+  if (!htwbLineupTrainingTableBody) {
     return;
   }
 
@@ -2961,45 +3215,43 @@ function htwbLineupRenderTraining(
       .results
       .map(
         htwbLineupItem => {
-          let htwbLineupStatus =
-            "Eligible";
+          let htwbLineupStatus = "Eligible";
+          let htwbLineupRowClass = "";
 
-          let htwbLineupRowClass =
-            "";
+          const htwbLineupIsSelected =
+            htwbLineupItem.training.id ===
+            htwbLineupSelected.training.id;
 
-          if (
-            !htwbLineupItem.hasEnoughPlayers
-          ) {
+          const htwbLineupIsRecommended =
+            htwbLineupItem.training.id ===
+            htwbLineupRecommended.training.id;
+
+          if (!htwbLineupItem.hasEnoughPlayers) {
             htwbLineupStatus =
               "Not enough players";
-
             htwbLineupRowClass =
               "ineligible-training";
           } else if (
-            htwbLineupItem.training.id ===
-            htwbLineupSelected.training.id
+            htwbLineupIsSelected &&
+            htwbLineupIsRecommended
           ) {
             htwbLineupStatus =
-              "Selected";
-
+              "Selected / Recommended";
             htwbLineupRowClass =
               "selected-training";
+          } else if (htwbLineupIsSelected) {
+            htwbLineupStatus = "Selected";
+            htwbLineupRowClass =
+              "selected-training";
+          } else if (htwbLineupIsRecommended) {
+            htwbLineupStatus = "Recommended";
           }
 
           const htwbLineupAverageText =
-            htwbLineupItem.idealAverage ===
-            null
+            htwbLineupItem.idealAverage === null
               ? "-"
               : htwbLineupRound(
                   htwbLineupItem.idealAverage,
-                  2
-                ).toFixed(2);
-
-          const htwbLineupScoreText =
-            htwbLineupItem.score === null
-              ? "-"
-              : htwbLineupRound(
-                  htwbLineupItem.score,
                   2
                 ).toFixed(2);
 
@@ -3013,7 +3265,7 @@ function htwbLineupRenderTraining(
 
               <td>
                 ${htwbLineupEscapeHtml(
-                  htwbLineupItem.training.skill
+                  htwbLineupItem.training.skillLabel
                 )}
               </td>
 
@@ -3023,22 +3275,6 @@ function htwbLineupRenderTraining(
 
               <td class="number">
                 ${htwbLineupAverageText}
-              </td>
-
-              <td class="number">
-                ${htwbLineupPercent(
-                  htwbLineupItem.utilization
-                )}
-              </td>
-
-              <td class="number">
-                ${htwbLineupPercent(
-                  htwbLineupItem.waste
-                )}
-              </td>
-
-              <td class="number">
-                ${htwbLineupScoreText}
               </td>
 
               <td>
@@ -3780,11 +4016,11 @@ function htwbLineupRenderEverything(
     htwbLineupData
   );
 
-  htwbLineupRenderFormation(
+  htwbLineupRenderTraining(
     htwbLineupResult
   );
 
-  htwbLineupRenderTraining(
+  htwbLineupRenderFormation(
     htwbLineupResult
   );
 
@@ -3815,10 +4051,167 @@ function htwbLineupRenderEverything(
 
 
 /* =========================================================
-   BUILD
+   BUILD / RECALCULATE
    ========================================================= */
 
-function htwbLineupBuildLineup() {
+function htwbLineupResetChoiceControls() {
+  htwbLineupFormationOverrideName =
+    "";
+
+  htwbLineupTrainingOverrideId =
+    "";
+
+  if (
+    htwbLineupSelectedFormationElement
+  ) {
+    htwbLineupSelectedFormationElement.innerHTML =
+      '<option value="">Build lineup first</option>';
+
+    htwbLineupSelectedFormationElement.disabled =
+      true;
+  }
+
+  if (
+    htwbLineupSelectedTrainingElement
+  ) {
+    htwbLineupSelectedTrainingElement.innerHTML =
+      '<option value="">Build lineup first</option>';
+
+    htwbLineupSelectedTrainingElement.disabled =
+      true;
+  }
+
+  if (
+    htwbLineupFormationChoiceNoteElement
+  ) {
+    htwbLineupFormationChoiceNoteElement.textContent =
+      "Recommended automatically";
+  }
+
+  if (
+    htwbLineupTrainingChoiceNoteElement
+  ) {
+    htwbLineupTrainingChoiceNoteElement.textContent =
+      "Recommended automatically";
+  }
+
+  if (htwbLineupSelectedTrainingAverageElement) {
+    htwbLineupSelectedTrainingAverageElement.textContent =
+      "-";
+  }
+
+  if (htwbLineupSelectedFormationExperienceElement) {
+    htwbLineupSelectedFormationExperienceElement.textContent =
+      "-";
+  }
+
+  if (htwbLineupSelectedFormationUtilizationElement) {
+    htwbLineupSelectedFormationUtilizationElement.textContent =
+      "-";
+  }
+
+  if (htwbLineupSelectedFormationWasteElement) {
+    htwbLineupSelectedFormationWasteElement.textContent =
+      "-";
+  }
+
+  if (htwbLineupSelectedFormationScoreElement) {
+    htwbLineupSelectedFormationScoreElement.textContent =
+      "-";
+  }
+
+  if (htwbLineupTrainingTableBody) {
+    htwbLineupTrainingTableBody.innerHTML = "";
+  }
+
+  if (htwbLineupFormationTableBody) {
+    htwbLineupFormationTableBody.innerHTML = "";
+  }
+}
+
+
+function htwbLineupUpdateCalculationStatus() {
+  if (
+    !htwbLineupCurrentCalculation ||
+    !htwbLineupSourceData
+  ) {
+    return;
+  }
+
+  const htwbLineupFormation =
+    htwbLineupCurrentCalculation
+      .selectedFormation;
+
+  const htwbLineupSelectedTraining =
+    htwbLineupCurrentCalculation
+      .trainingResult
+      .selected;
+
+  const htwbLineupTrainingName =
+    htwbLineupSelectedTraining
+      .training
+      .name;
+
+  const htwbLineupUtilization =
+    htwbLineupPercent(
+      htwbLineupFormation.utilization
+    );
+
+  const htwbLineupFormationScore =
+    htwbLineupRound(
+      htwbLineupFormation.score,
+      3
+    ).toFixed(3);
+
+  const htwbLineupWarning =
+    htwbLineupGetPreviousMatchWarning(
+      htwbLineupSourceData
+    );
+
+  const htwbLineupStartingComplete =
+    htwbLineupCurrentCalculation
+      .lineupResult
+      .complete;
+
+  const htwbLineupSubstitutesComplete =
+    htwbLineupCurrentCalculation
+      .substituteResult
+      .complete;
+
+  const htwbLineupOverrideLabel =
+    htwbLineupCurrentCalculation
+      .formationResult
+      .isOverride ||
+    htwbLineupCurrentCalculation
+      .trainingResult
+      .isOverride
+      ? " Manual selection active."
+      : "";
+
+  if (
+    htwbLineupStartingComplete &&
+    htwbLineupSubstitutesComplete
+  ) {
+    htwbLineupSetStatus(
+      `Lineup and bench built: ${htwbLineupFormation.name} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - formation score ${htwbLineupFormationScore}.${htwbLineupOverrideLabel}${htwbLineupWarning}`,
+      htwbLineupWarning
+        ? "error"
+        : "success"
+    );
+  } else if (htwbLineupStartingComplete) {
+    htwbLineupSetStatus(
+      `Starting XI built, but fewer than 18 eligible players were available to complete the seven-player bench.${htwbLineupOverrideLabel}${htwbLineupWarning}`,
+      "error"
+    );
+  } else {
+    htwbLineupSetStatus(
+      `Lineup calculated, but fewer than 11 eligible players were available.${htwbLineupOverrideLabel}${htwbLineupWarning}`,
+      "error"
+    );
+  }
+}
+
+function htwbLineupRecalculateLineup() {
   if (
     !htwbLineupSourceData
   ) {
@@ -3833,7 +4226,14 @@ function htwbLineupBuildLineup() {
   try {
     htwbLineupCurrentCalculation =
       htwbLineupCalculateLineup(
-        htwbLineupSourceData
+        htwbLineupSourceData,
+        {
+          formationName:
+            htwbLineupFormationOverrideName,
+
+          trainingId:
+            htwbLineupTrainingOverrideId
+        }
       );
 
     htwbLineupRenderEverything(
@@ -3841,71 +4241,7 @@ function htwbLineupBuildLineup() {
       htwbLineupCurrentCalculation
     );
 
-    const htwbLineupFormation =
-      htwbLineupCurrentCalculation
-        .selectedFormation
-        .name;
-
-    const htwbLineupSelectedTraining =
-      htwbLineupCurrentCalculation
-        .trainingResult
-        .selected;
-
-    const htwbLineupTrainingName =
-      htwbLineupSelectedTraining
-        .training
-        .name;
-
-    const htwbLineupUtilization =
-      htwbLineupPercent(
-        htwbLineupSelectedTraining
-          .utilization
-      );
-
-    const htwbLineupFinalScore =
-      htwbLineupRound(
-        htwbLineupSelectedTraining.score,
-        2
-      ).toFixed(2);
-
-    const htwbLineupWarning =
-      htwbLineupGetPreviousMatchWarning(
-        htwbLineupSourceData
-      );
-
-    const htwbLineupStartingComplete =
-      htwbLineupCurrentCalculation
-        .lineupResult
-        .complete;
-
-    const htwbLineupSubstitutesComplete =
-      htwbLineupCurrentCalculation
-        .substituteResult
-        .complete;
-
-    if (
-      htwbLineupStartingComplete &&
-      htwbLineupSubstitutesComplete
-    ) {
-      htwbLineupSetStatus(
-        `Lineup and bench built: ${htwbLineupFormation} - ${htwbLineupTrainingName} - ${htwbLineupUtilization} utilization - score ${htwbLineupFinalScore}.${htwbLineupWarning}`,
-        htwbLineupWarning
-          ? "error"
-          : "success"
-      );
-    } else if (
-      htwbLineupStartingComplete
-    ) {
-      htwbLineupSetStatus(
-        `Starting XI built, but fewer than 18 eligible players were available to complete the seven-player bench.${htwbLineupWarning}`,
-        "error"
-      );
-    } else {
-      htwbLineupSetStatus(
-        `Lineup calculated, but fewer than 11 eligible players were available.${htwbLineupWarning}`,
-        "error"
-      );
-    }
+    htwbLineupUpdateCalculationStatus();
   } catch (htwbLineupError) {
     console.error(
       "Lineup calculation error:",
@@ -3920,6 +4256,86 @@ function htwbLineupBuildLineup() {
   }
 }
 
+
+function htwbLineupBuildLineup() {
+  htwbLineupFormationOverrideName =
+    "";
+
+  htwbLineupTrainingOverrideId =
+    "";
+
+  htwbLineupRecalculateLineup();
+}
+
+
+function htwbLineupHandleFormationChange() {
+  if (
+    !htwbLineupCurrentCalculation ||
+    !htwbLineupSelectedFormationElement
+  ) {
+    return;
+  }
+
+  const htwbLineupSelectedFormationName =
+    htwbLineupSelectedFormationElement.value;
+
+  const htwbLineupRecommendedFormationName =
+    htwbLineupCurrentCalculation
+      .formationResult
+      .recommended
+      .name;
+
+  htwbLineupFormationOverrideName =
+    htwbLineupSelectedFormationName ===
+    htwbLineupRecommendedFormationName
+      ? ""
+      : htwbLineupSelectedFormationName;
+
+  /*
+   * Formation is downstream of training.
+   * Keep the selected training type and rebuild everything
+   * after the formation choice immediately.
+   */
+
+  htwbLineupRecalculateLineup();
+}
+
+
+function htwbLineupHandleTrainingChange() {
+  if (
+    !htwbLineupCurrentCalculation ||
+    !htwbLineupSelectedTrainingElement
+  ) {
+    return;
+  }
+
+  const htwbLineupSelectedTrainingId =
+    htwbLineupSelectedTrainingElement.value;
+
+  const htwbLineupRecommendedTrainingId =
+    htwbLineupCurrentCalculation
+      .trainingResult
+      .recommended
+      .training
+      .id;
+
+  htwbLineupTrainingOverrideId =
+    htwbLineupSelectedTrainingId ===
+    htwbLineupRecommendedTrainingId
+      ? ""
+      : htwbLineupSelectedTrainingId;
+
+  /*
+   * Training is upstream of formation. A training change
+   * deliberately clears any formation override so all six
+   * formations are rescored and the new recommendation is
+   * selected. The user can then override formation again.
+   */
+
+  htwbLineupFormationOverrideName = "";
+
+  htwbLineupRecalculateLineup();
+}
 
 /* =========================================================
    LOAD TEAM DATA
@@ -3958,6 +4374,8 @@ async function htwbLineupLoadTeam(
 
   htwbLineupCurrentCalculation =
     null;
+
+  htwbLineupResetChoiceControls();
 
   if (
     htwbLineupBuildLineupButton
@@ -4093,6 +4511,24 @@ function htwbLineupInitializeLineupBuilder() {
     htwbLineupBuildLineupButton.addEventListener(
       "click",
       htwbLineupBuildLineup
+    );
+  }
+
+  if (
+    htwbLineupSelectedFormationElement
+  ) {
+    htwbLineupSelectedFormationElement.addEventListener(
+      "change",
+      htwbLineupHandleFormationChange
+    );
+  }
+
+  if (
+    htwbLineupSelectedTrainingElement
+  ) {
+    htwbLineupSelectedTrainingElement.addEventListener(
+      "change",
+      htwbLineupHandleTrainingChange
     );
   }
 
