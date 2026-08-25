@@ -18,7 +18,7 @@ const wikiOutput = document.getElementById("wiki-output");
 const copyButton = document.getElementById("copy-wiki-output");
 const copyStatus = document.getElementById("copy-status");
 
-const TEAM_STORAGE_KEY = "htwb_selected_team_id";
+const TEAM_PAGE_STORAGE_KEY = "htwb_selected_team_id";
 
 const infoboxFields = [
   ["teamname", "field-teamname", "include-teamname"],
@@ -502,46 +502,36 @@ copyButton.addEventListener("click", async () => {
   }
 });
 
+function setDefaultTeamId(teamId) {
+  if (
+    teamId &&
+    /^\d+$/.test(String(teamId))
+  ) {
+    teamIdInput.value = String(teamId);
+  }
+}
+
 function loadDefaultTeamId() {
   const savedTeamId =
     localStorage.getItem(TEAM_PAGE_STORAGE_KEY);
 
-  if (savedTeamId) {
-    teamIdInput.value = savedTeamId;
+  setDefaultTeamId(savedTeamId);
+
+  if (
+    window.HTWikiBuilder &&
+    window.HTWikiBuilder.getSelectedTeamId
+  ) {
+    setDefaultTeamId(
+      window.HTWikiBuilder.getSelectedTeamId()
+    );
   }
 
-  let attempts = 0;
-
-  const timer = setInterval(() => {
-    attempts += 1;
-
-    if (
-      window.HTWikiBuilder &&
-      window.HTWikiBuilder.getSelectedTeamId
-    ) {
-      const selectedId =
-        window.HTWikiBuilder.getSelectedTeamId();
-
-      if (selectedId) {
-        teamIdInput.value = selectedId;
-      }
+  window.addEventListener(
+    "htwb:team-selected",
+    event => {
+      setDefaultTeamId(event.detail.teamId);
     }
-
-    const selector =
-      document.getElementById("team-selector");
-
-    if (selector && !selector.dataset.teamPageBound) {
-      selector.dataset.teamPageBound = "true";
-
-      selector.addEventListener("change", event => {
-        teamIdInput.value = event.target.value;
-      });
-    }
-
-    if (attempts >= 20) {
-      clearInterval(timer);
-    }
-  }, 250);
+  );
 }
 
 setupAutomaticCheckboxes();
