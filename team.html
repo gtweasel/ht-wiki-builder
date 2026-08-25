@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Team Page Intro and Infobox - HT Wiki Builder</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="/styles.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark">
+          <span class="brand-ht">HT</span>
+        </span>
+
+        <span class="brand-name">
+          <span class="brand-wiki">Wiki</span>
+          <span class="brand-builder">Builder</span>
+        </span>
+      </a>
+
+      <div class="header-status">
+        <div id="user-status" class="user-status">
+          Not connected
+        </div>
+
+        <a
+          id="header-login"
+          class="button button-small button-gold"
+          href="/auth/login"
+        >
+          Log in
+        </a>
+
+        <a
+          id="header-logout"
+          class="button button-small button-outline"
+          href="/auth/logout"
+          hidden
+        >
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-page-inner">
+      <div class="builder-heading">
+        <div>
+          <div class="eyebrow">HT Wiki Builder</div>
+          <h1>Team Page Intro and Infobox</h1>
+        </div>
+
+        <a class="button button-outline-dark" href="/">
+          Back to tools
+        </a>
+      </div>
+
+      <div id="login-panel" class="builder-login">
+        <h2>Connect to Hattrick</h2>
+
+        <p>
+          Log in before loading team data.
+        </p>
+
+        <a class="button button-primary" href="/auth/login">
+          Log in with Hattrick
+        </a>
+      </div>
+
+      <div id="connected-panel" class="builder-account" hidden>
+        <div>
+          <span class="builder-account-label">
+            Connected to Hattrick
+          </span>
+
+          <strong id="team-name">
+            Loading team...
+          </strong>
+
+          <div class="builder-account-details">
+            <span id="manager-name"></span>
+            <span id="team-id"></span>
+          </div>
+        </div>
+      </div>
+
+      <section
+        id="team-selection-section"
+        class="builder-section"
+      >
+        <div class="builder-section-number">
+          01
+        </div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Select Team</h2>
+
+              <p>
+                Your active team is used by default. You may enter
+                another Hattrick TeamID.
+              </p>
+            </div>
+          </div>
+
+          <form id="team-load-form">
+            <div class="team-load-row">
+              <div class="form-control">
+                <label for="team-id-input">
+                  TeamID
+                </label>
+
+                <input
+                  id="team-id-input"
+                  name="teamId"
+                  type="text"
+                  inputmode="numeric"
+                  autocomplete="off"
+                  placeholder="Enter TeamID"
+                >
+              </div>
+
+              <button
+                class="button button-primary"
+                type="submit"
+              >
+                Load XML Data
+              </button>
+            </div>
+          </form>
+
+          <div class="builder-notice">
+            Before creating a new HT Wiki team page, check whether
+            useful information is available for the team. Avoid
+            creating unnecessary or incomplete team page stubs.
+          </div>
+
+          <div
+            id="team-load-status"
+            class="builder-status"
+            hidden
+          ></div>
+        </div>
+      </section>
+
+      <section
+        id="wiki-fields-section"
+        class="builder-section"
+        hidden
+      >
+        <div class="builder-section-number">
+          02
+        </div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Review Wiki Fields</h2>
+
+              <p>
+                Edit any value before export. Only checked fields
+                will be included in the generated wiki markup.
+              </p>
+            </div>
+          </div>
+
+          <form id="wiki-fields-form">
+            <div class="wiki-fields">
+              <div class="wiki-field wiki-field-large">
+                <input
+                  id="include-intro"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-intro">
+                    Intro paragraph
+                  </label>
+
+                  <textarea
+                    id="field-intro"
+                    rows="5"
+                    data-export="intro"
+                  ></textarea>
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-teamname"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-teamname">
+                    Team name
+                  </label>
+
+                  <input
+                    id="field-teamname"
+                    type="text"
+                    data-export="teamname"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-teamid"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-teamid">
+                    TeamID
+                  </label>
+
+                  <input
+                    id="field-teamid"
+                    type="text"
+                    data-export="teamid"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-logouri"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-logouri">
+                    Logo filename or URL
+                  </label>
+
+                  <input
+                    id="field-logouri"
+                    type="text"
+                    data-export="logouri"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-logo-width"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-logo-width">
+                    Logo width
+                  </label>
+
+                  <input
+                    id="field-logo-width"
+                    type="text"
+                    placeholder="210px"
+                    data-export="logo-width"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-htuser"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-htuser">
+                    HT Wiki user
+                  </label>
+
+                  <input
+                    id="field-htuser"
+                    type="text"
+                    data-export="htuser"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-manager"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-manager">
+                    Manager
+                  </label>
+
+                  <input
+                    id="field-manager"
+                    type="text"
+                    data-export="manager"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-fullname"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-fullname">
+                    Full name
+                  </label>
+
+                  <input
+                    id="field-fullname"
+                    type="text"
+                    data-export="fullname"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-shortname"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-shortname">
+                    Short name
+                  </label>
+
+                  <input
+                    id="field-shortname"
+                    type="text"
+                    data-export="shortname"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-nickname"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-nickname">
+                    Nickname
+                  </label>
+
+                  <input
+                    id="field-nickname"
+                    type="text"
+                    data-export="nickname"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-region"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-region">
+                    Region
+                  </label>
+
+                  <input
+                    id="field-region"
+                    type="text"
+                    data-export="region"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-country"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-country">
+                    Country
+                  </label>
+
+                  <input
+                    id="field-country"
+                    type="text"
+                    data-export="country"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-league"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-league">
+                    League
+                  </label>
+
+                  <input
+                    id="field-league"
+                    type="text"
+                    data-export="league"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-league-pos"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-league-pos">
+                    Current league position
+                  </label>
+
+                  <input
+                    id="field-league-pos"
+                    type="text"
+                    data-export="league-pos"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-league-pos-last"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-league-pos-last">
+                    Previous season position
+                  </label>
+
+                  <input
+                    id="field-league-pos-last"
+                    type="text"
+                    data-export="league-pos-last"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-arena"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-arena">
+                    Arena
+                  </label>
+
+                  <input
+                    id="field-arena"
+                    type="text"
+                    data-export="arena"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-capacity"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-capacity">
+                    Arena capacity
+                  </label>
+
+                  <input
+                    id="field-capacity"
+                    type="text"
+                    data-export="capacity"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-coach"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-coach">
+                    Coach
+                  </label>
+
+                  <input
+                    id="field-coach"
+                    type="text"
+                    data-export="coach"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-coach-nat"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-coach-nat">
+                    Coach nationality
+                  </label>
+
+                  <input
+                    id="field-coach-nat"
+                    type="text"
+                    data-export="coach-nat"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-fanclub"
+                  class="wiki-field-check"
+                  type="checkbox"
+                  checked
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-fanclub">
+                    Fan club
+                  </label>
+
+                  <input
+                    id="field-fanclub"
+                    type="text"
+                    data-export="fanclub"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-fanclub-size"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-fanclub-size">
+                    Fan club size
+                  </label>
+
+                  <input
+                    id="field-fanclub-size"
+                    type="text"
+                    data-export="fanclub-size"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-founded"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-founded">
+                    Founded
+                  </label>
+
+                  <input
+                    id="field-founded"
+                    type="text"
+                    data-export="founded"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-homekit"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-homekit">
+                    Home kit wiki markup
+                  </label>
+
+                  <input
+                    id="field-homekit"
+                    type="text"
+                    data-export="homekit"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-awaykit"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-awaykit">
+                    Away kit wiki markup
+                  </label>
+
+                  <input
+                    id="field-awaykit"
+                    type="text"
+                    data-export="awaykit"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-thirdkit"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-thirdkit">
+                    Third kit wiki markup
+                  </label>
+
+                  <input
+                    id="field-thirdkit"
+                    type="text"
+                    data-export="thirdkit"
+                  >
+                </div>
+              </div>
+
+              <div class="wiki-field">
+                <input
+                  id="include-current-season"
+                  class="wiki-field-check"
+                  type="checkbox"
+                >
+
+                <div class="wiki-field-input">
+                  <label for="field-current-season">
+                    Current season wiki link
+                  </label>
+
+                  <input
+                    id="field-current-season"
+                    type="text"
+                    data-export="current-season"
+                  >
+                </div>
+              </div>
+            </div>
+
+            <div class="builder-actions">
+              <button
+                class="button button-primary"
+                type="submit"
+              >
+                Create Wiki Markup
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section
+        id="wiki-output-section"
+        class="builder-section"
+        hidden
+      >
+        <div class="builder-section-number">
+          03
+        </div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Wiki Markup</h2>
+
+              <p>
+                Review the generated markup, then copy and paste it
+                into the HT Wiki article.
+              </p>
+            </div>
+          </div>
+
+          <textarea
+            id="wiki-output"
+            class="wiki-output"
+            rows="28"
+            spellcheck="false"
+          ></textarea>
+
+          <div class="builder-actions">
+            <button
+              id="copy-wiki-output"
+              class="button button-primary"
+              type="button"
+            >
+              Copy Wiki Markup
+            </button>
+
+            <span
+              id="copy-status"
+              class="copy-status"
+            ></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>HT Wiki Builder</strong>
+        <span>
+          Free. Read-only. Built for the Hattrick community.
+        </span>
+      </div>
+
+      <div class="footer-links">
+        <a
+          href="https://www.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hattrick
+        </a>
+
+        <a
+          href="https://wiki.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          HT Wiki
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      HT Wiki Builder is an independent CHPP application.
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
+  <script src="/team.js"></script>
+</body>
+</html>
