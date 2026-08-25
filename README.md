@@ -110,3 +110,7 @@ The overall winning combination supplies both initial dropdown selections, but *
 - Changing **Formation** keeps the selected training type fixed and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
 - Clicking **Build Lineup** again clears both overrides and returns to the current overall lowest-scoring training/formation combination.
 
+
+### Static asset versioning
+
+The HTML pages append a deployment version query to shared CSS/JavaScript files. This prevents a browser or CDN cache from pairing a newly deployed HTML page with an older `app.js`, `team.js`, or `lineup.js`. The Lineup Builder also initializes immediately when the DOM is already ready and surfaces initialization errors in the page status area instead of remaining silently on `Waiting for team data.`
