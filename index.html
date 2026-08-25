@@ -1,10 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>HT Wiki Builder</title>
 </head>
 <body>
   <h1>HT Wiki Builder</h1>
-  <p>It works.</p>
+
+  <div id="login-area">
+    <p>Connect your Hattrick account to begin.</p>
+    <a href="/auth/login">Log in with Hattrick</a>
+  </div>
+
+  <div id="success-area" style="display:none;">
+    <p>Connected to Hattrick.</p>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+
+    if (params.get("login") === "success") {
+      document.getElementById("login-area").style.display = "none";
+      document.getElementById("success-area").style.display = "block";
+    }
+  </script>
 </body>
 </html>
