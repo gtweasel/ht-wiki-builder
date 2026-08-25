@@ -504,7 +504,7 @@ copyButton.addEventListener("click", async () => {
 
 function loadDefaultTeamId() {
   const savedTeamId =
-    localStorage.getItem(TEAM_STORAGE_KEY);
+    localStorage.getItem(TEAM_PAGE_STORAGE_KEY);
 
   if (savedTeamId) {
     teamIdInput.value = savedTeamId;
