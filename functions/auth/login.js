@@ -51,7 +51,7 @@ export async function onRequestGet(context) {
     .join("&");
 
   const signatureBase =
-    `POST&${enc(requestTokenUrl)}&${enc(parameterString)}`;
+    `GET&${enc(requestTokenUrl)}&${enc(parameterString)}`;
 
   const signingKey =
     `${enc(context.env.CHPP_CONSUMER_SECRET)}&`;
@@ -67,7 +67,7 @@ export async function onRequestGet(context) {
       .join(", ");
 
   const response = await fetch(requestTokenUrl, {
-    method: "POST",
+    method: "GET",
     headers: {
       Authorization: authorization,
       "User-Agent": "HT Wiki Builder/0.1"
