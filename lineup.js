@@ -3,17 +3,6 @@
 /*
  * HT Wiki Builder
  * Lineup Builder - Version 1
- *
- * This file contains:
- * - Formation selection
- * - Training selection
- * - Player eligibility filtering
- * - Position rating calculations
- * - Training-position priority
- * - Greedy lineup construction
- * - Display / diagnostics
- *
- * CHPP data loading is intentionally isolated in loadSourceData().
  */
 
 
@@ -119,13 +108,6 @@ const FORMATIONS = {
 };
 
 
-/*
- * Formation tie-break:
- *
- * 1. Lowest experience
- * 2. More defenders
- * 3. More midfielders
- */
 const FORMATION_PRIORITY = [
   "5-5-0",
   "5-4-1",
@@ -138,9 +120,6 @@ const FORMATION_PRIORITY = [
 ];
 
 
-/*
- * Fixed position-filling order.
- */
 const POSITION_ORDER = [
   "GK",
   "CD",
@@ -159,19 +138,13 @@ const POSITION_ORDER = [
 ];
 
 
-/*
- * Training tie-break follows Hattrick's display order.
- *
- * Regular Passing and the other extended/combined training
- * types are deliberately not included.
- */
 const TRAINING_TYPES = [
   {
     id: "keeper",
     name: "Keeper",
     skill: "keeper",
     requiredPlayers: 2,
-    compatible: formation => true,
+    compatible: () => true,
     fullRoles: ["GK"],
     partialRoles: []
   },
@@ -201,7 +174,7 @@ const TRAINING_TYPES = [
     name: "Winger",
     skill: "winger",
     requiredPlayers: 8,
-    compatible: formation => true,
+    compatible: () => true,
     fullRoles: ["WG"],
     partialRoles: ["WB"]
   },
@@ -221,7 +194,7 @@ const TRAINING_TYPES = [
     name: "Set Pieces",
     skill: "setPieces",
     requiredPlayers: 22,
-    compatible: formation => true,
+    compatible: () => true,
     fullRoles: ["ALL"],
     partialRoles: []
   },
@@ -240,26 +213,23 @@ const TRAINING_TYPES = [
 ];
 
 
-/*
- * Match types that receive the normal high-form preference.
- *
- * 1 = League
- * 2 = Qualification
- * 3 = Cup
- * 7 = Hattrick Masters
- *
- * Friendlies 4, 5, 8 and 9 receive the low-form preference.
- */
-const HIGH_FORM_MATCH_TYPES = new Set([1, 2, 3, 7]);
+const HIGH_FORM_MATCH_TYPES = new Set([
+  1, // League
+  2, // Qualification
+  3, // Cup
+  7  // Masters
+]);
 
-/*
- * Cards/suspensions matter for these club competitive matches.
- */
-const SUSPENSION_MATCH_TYPES = new Set([1, 2, 3]);
+
+const SUSPENSION_MATCH_TYPES = new Set([
+  1,
+  2,
+  3
+]);
 
 
 /* =========================================================
-   APPLICATION STATE
+   STATE
    ========================================================= */
 
 let sourceData = null;
@@ -267,99 +237,660 @@ let calculation = null;
 
 
 /* =========================================================
-   DATA LOADING
+   CHPP REQUEST HELPERS
    ========================================================= */
 
 /*
- * We will wire this function to the existing CHPP server
- * function next.
+ * IMPORTANT:
  *
- * For now, lineup.js expects normalized data shaped like:
+ * This is the one URL we may need to adjust to match
+ * whatever team.js currently uses.
  *
- * {
- *   teamName: "Example FC",
- *
- *   upcomingMatch: {
- *     matchId: 123456,
- *     homeTeamName: "Example FC",
- *     awayTeamName: "Opponent",
- *     matchType: 1,
- *
- *     // "first" = first training match of week
- *     // "second" = second training match of week
- *     trainingWeekPosition: "first"
- *   },
- *
- *   formationExperience: {
- *     "5-5-0": 7,
- *     "5-4-1": 6,
- *     "4-5-1": 8,
- *     "5-3-2": 9,
- *     "4-4-2": 10,
- *     "3-5-2": 10,
- *     "4-3-3": 8,
- *     "3-4-3": 7
- *   },
- *
- *   players: [
- *     {
- *       playerId: 123,
- *       name: "Player Name",
- *
- *       age: 25,
- *       ageDays: 34,
- *
- *       form: 7,
- *       stamina: 8,
- *
- *       keeper: 3,
- *       defending: 12,
- *       playmaking: 8,
- *       winger: 6,
- *       passing: 7,
- *       scoring: 4,
- *       setPieces: 5,
- *
- *       injuryLevel: -1,
- *       cards: 0
- *     }
- *   ],
- *
- *   previousTrainingMatch: {
- *     appearances: [
- *       {
- *         playerId: 123,
- *
- *         // One of:
- *         // GK, CD, WB, IM, WG, FW
- *         role: "IM"
- *       }
- *     ]
- *   }
- * }
+ * Do NOT change the server function yet.
  */
-async function loadSourceData() {
+const CHPP_API_URL = "/api/chpp";
+
+
+async function fetchChpp(file, params = {}) {
+  const url = new URL(
+    CHPP_API_URL,
+    window.location.origin
+  );
+
+  url.searchParams.set("file", file);
+
+  for (const [key, value] of Object.entries(params)) {
+    if (
+      value !== undefined &&
+      value !== null &&
+      value !== ""
+    ) {
+      url.searchParams.set(key, value);
+    }
+  }
+
+  const response = await fetch(
+    url.toString(),
+    {
+      credentials: "include"
+    }
+  );
+
+  if (!response.ok) {
+    const text = await response.text();
+
+    throw new Error(
+      `CHPP request failed for ${file}: ${response.status} ${text}`
+    );
+  }
+
+  const contentType =
+    response.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    return response.json();
+  }
+
+  return response.text();
+}
+
+
+/* =========================================================
+   XML HELPERS
+   ========================================================= */
+
+function parseXml(value) {
+  if (value instanceof Document) {
+    return value;
+  }
+
+  if (
+    value &&
+    typeof value === "object" &&
+    typeof value.xml === "string"
+  ) {
+    value = value.xml;
+  }
+
+  if (typeof value !== "string") {
+    throw new Error(
+      "CHPP response was not XML."
+    );
+  }
+
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(
+    value,
+    "application/xml"
+  );
+
+  const error =
+    xml.querySelector("parsererror");
+
+  if (error) {
+    throw new Error(
+      "Unable to parse CHPP XML."
+    );
+  }
+
+  return xml;
+}
+
+
+function xmlText(parent, selector, fallback = "") {
+  const element =
+    parent.querySelector(selector);
+
+  if (!element) {
+    return fallback;
+  }
+
+  return element.textContent.trim();
+}
+
+
+function xmlNumber(parent, selector, fallback = 0) {
+  const value =
+    Number(xmlText(parent, selector, ""));
+
+  return Number.isFinite(value)
+    ? value
+    : fallback;
+}
+
+
+/* =========================================================
+   LOAD PLAYERS
+   ========================================================= */
+
+async function loadPlayers() {
+  const raw =
+    await fetchChpp("players");
+
+  const xml =
+    parseXml(raw);
+
+  const playerNodes =
+    [...xml.querySelectorAll("Player")];
+
+  return playerNodes.map(player => ({
+    playerId:
+      xmlNumber(player, "PlayerID"),
+
+    name:
+      xmlText(player, "PlayerName"),
+
+    age:
+      xmlNumber(player, "Age"),
+
+    ageDays:
+      xmlNumber(player, "AgeDays"),
+
+    form:
+      xmlNumber(player, "PlayerForm"),
+
+    stamina:
+      xmlNumber(player, "StaminaSkill"),
+
+    keeper:
+      xmlNumber(player, "KeeperSkill"),
+
+    defending:
+      xmlNumber(player, "DefenderSkill"),
+
+    playmaking:
+      xmlNumber(player, "PlaymakerSkill"),
+
+    winger:
+      xmlNumber(player, "WingerSkill"),
+
+    passing:
+      xmlNumber(player, "PassingSkill"),
+
+    scoring:
+      xmlNumber(player, "ScorerSkill"),
+
+    setPieces:
+      xmlNumber(player, "SetPiecesSkill"),
+
+    injuryLevel:
+      xmlNumber(
+        player,
+        "InjuryLevel",
+        -1
+      ),
+
+    cards:
+      xmlNumber(
+        player,
+        "Cards",
+        0
+      )
+  }));
+}
+
+
+/* =========================================================
+   LOAD TEAM DETAILS
+   ========================================================= */
+
+async function loadTeamDetails() {
+  const raw =
+    await fetchChpp("teamdetails");
+
+  const xml =
+    parseXml(raw);
+
+  return {
+    teamId:
+      xmlNumber(xml, "Team TeamID"),
+
+    teamName:
+      xmlText(xml, "Team TeamName")
+  };
+}
+
+
+/* =========================================================
+   LOAD FORMATION EXPERIENCE
+   ========================================================= */
+
+async function loadFormationExperience() {
+  const raw =
+    await fetchChpp("training");
+
+  const xml =
+    parseXml(raw);
+
+  const result = {};
+
+  for (
+    const formationName
+    of Object.keys(FORMATIONS)
+  ) {
+    const digits =
+      formationName.replaceAll("-", "");
+
+    /*
+     * CHPP commonly names these:
+     *
+     * Experience352
+     * Experience442
+     * etc.
+     */
+    const selectors = [
+      `Experience${digits}`,
+      `FormationExperience${digits}`
+    ];
+
+    let found = null;
+
+    for (const selector of selectors) {
+      const node =
+        xml.querySelector(selector);
+
+      if (node) {
+        const value =
+          Number(node.textContent);
+
+        if (Number.isFinite(value)) {
+          found = value;
+          break;
+        }
+      }
+    }
+
+    if (found !== null) {
+      result[formationName] = found;
+    }
+  }
+
+  return result;
+}
+
+
+/* =========================================================
+   MATCH HELPERS
+   ========================================================= */
+
+function parseHattrickDate(value) {
+  if (!value) {
+    return null;
+  }
+
+  const normalized =
+    String(value)
+      .trim()
+      .replace(" ", "T");
+
+  const date =
+    new Date(normalized);
+
+  return Number.isNaN(date.getTime())
+    ? null
+    : date;
+}
+
+
+function normalizeMatchNode(matchNode) {
+  return {
+    matchId:
+      xmlNumber(
+        matchNode,
+        "MatchID"
+      ),
+
+    matchType:
+      xmlNumber(
+        matchNode,
+        "MatchType"
+      ),
+
+    matchDate:
+      xmlText(
+        matchNode,
+        "MatchDate"
+      ),
+
+    homeTeamId:
+      xmlNumber(
+        matchNode,
+        "HomeTeam HomeTeamID"
+      ),
+
+    homeTeamName:
+      xmlText(
+        matchNode,
+        "HomeTeam HomeTeamName"
+      ),
+
+    awayTeamId:
+      xmlNumber(
+        matchNode,
+        "AwayTeam AwayTeamID"
+      ),
+
+    awayTeamName:
+      xmlText(
+        matchNode,
+        "AwayTeam AwayTeamName"
+      )
+  };
+}
+
+
+/* =========================================================
+   LOAD UPCOMING MATCH
+   ========================================================= */
+
+async function loadUpcomingMatch() {
+  const raw =
+    await fetchChpp(
+      "matches",
+      {
+        isYouth: "false"
+      }
+    );
+
+  const xml =
+    parseXml(raw);
+
+  const now =
+    new Date();
+
+  const matches =
+    [...xml.querySelectorAll("Match")]
+      .map(normalizeMatchNode)
+      .map(match => ({
+        ...match,
+        date:
+          parseHattrickDate(
+            match.matchDate
+          )
+      }))
+      .filter(match =>
+        match.date &&
+        match.date >= now
+      )
+      .sort(
+        (a, b) =>
+          a.date - b.date
+      );
+
+  if (!matches.length) {
+    throw new Error(
+      "No upcoming match was found."
+    );
+  }
+
+  return matches[0];
+}
+
+
+/* =========================================================
+   TRAINING WEEK POSITION
+   ========================================================= */
+
+/*
+ * Hattrick's training week begins with the weekend
+ * match and ends after the midweek match.
+ *
+ * V1:
+ *
+ * We determine first/second from the upcoming match's
+ * location in the current Hattrick match week.
+ *
+ * This can be refined after we see actual returned dates.
+ */
+function determineTrainingWeekPosition(match) {
+  if (!match?.date) {
+    return "first";
+  }
+
+  const day =
+    match.date.getDay();
 
   /*
-   * Temporary development option:
+   * Saturday / Sunday / Monday:
+   * treat as first training match.
    *
-   * If a page or test harness defines:
+   * Tuesday-Friday:
+   * treat as second.
    *
-   * window.LINEUP_BUILDER_DATA = {...}
-   *
-   * use it.
+   * We can replace this with exact Hattrick week
+   * boundaries once we inspect live XML.
    */
-  if (window.LINEUP_BUILDER_DATA) {
-    return window.LINEUP_BUILDER_DATA;
+  if (
+    day === 6 ||
+    day === 0 ||
+    day === 1
+  ) {
+    return "first";
+  }
+
+  return "second";
+}
+
+
+/* =========================================================
+   LOAD PREVIOUS MATCH
+   ========================================================= */
+
+async function loadRecentMatches() {
+  const raw =
+    await fetchChpp(
+      "matches",
+      {
+        isYouth: "false"
+      }
+    );
+
+  const xml =
+    parseXml(raw);
+
+  const now =
+    new Date();
+
+  return [...xml.querySelectorAll("Match")]
+    .map(normalizeMatchNode)
+    .map(match => ({
+      ...match,
+      date:
+        parseHattrickDate(
+          match.matchDate
+        )
+    }))
+    .filter(match =>
+      match.date &&
+      match.date < now
+    )
+    .sort(
+      (a, b) =>
+        b.date - a.date
+    );
+}
+
+
+/* =========================================================
+   MATCH LINEUP POSITION NORMALIZATION
+   ========================================================= */
+
+function normalizePositionCode(positionCode) {
+  const code =
+    Number(positionCode);
+
+  /*
+   * We will validate the exact PositionCode mapping
+   * against live matchLineup XML.
+   *
+   * These labels are the internal roles the
+   * training calculator needs:
+   *
+   * GK
+   * CD
+   * WB
+   * IM
+   * WG
+   * FW
+   */
+
+  const map = {
+    100: "GK",
+
+    101: "WB",
+    102: "CD",
+    103: "CD",
+    104: "CD",
+    105: "WB",
+
+    106: "WG",
+    107: "IM",
+    108: "IM",
+    109: "IM",
+    110: "WG",
+
+    111: "FW",
+    112: "FW",
+    113: "FW"
+  };
+
+  return map[code] || null;
+}
+
+
+/* =========================================================
+   LOAD PREVIOUS MATCH APPEARANCES
+   ========================================================= */
+
+async function loadPreviousTrainingMatch(
+  upcomingMatch
+) {
+  if (
+    upcomingMatch.trainingWeekPosition !==
+    "second"
+  ) {
+    return {
+      appearances: []
+    };
+  }
+
+  const recentMatches =
+    await loadRecentMatches();
+
+  if (!recentMatches.length) {
+    return {
+      appearances: []
+    };
   }
 
   /*
-   * The actual CHPP connector will replace this section
-   * in the next edit.
+   * The most recent completed match is the first
+   * training match for V1.
    */
-  throw new Error(
-    "Lineup CHPP data connector has not been wired yet."
-  );
+  const previous =
+    recentMatches[0];
+
+  const raw =
+    await fetchChpp(
+      "matchlineup",
+      {
+        matchID:
+          previous.matchId
+      }
+    );
+
+  const xml =
+    parseXml(raw);
+
+  const appearances = [];
+
+  /*
+   * Starting players / lineup players.
+   */
+  const playerNodes =
+    [...xml.querySelectorAll("Player")];
+
+  for (const player of playerNodes) {
+    const playerId =
+      xmlNumber(
+        player,
+        "PlayerID"
+      );
+
+    const positionCode =
+      xmlNumber(
+        player,
+        "PositionCode",
+        NaN
+      );
+
+    const role =
+      normalizePositionCode(
+        positionCode
+      );
+
+    if (
+      playerId &&
+      role
+    ) {
+      appearances.push({
+        playerId,
+        role
+      });
+    }
+  }
+
+  return {
+    matchId:
+      previous.matchId,
+
+    appearances
+  };
+}
+
+
+/* =========================================================
+   MASTER DATA LOADER
+   ========================================================= */
+
+async function loadSourceData() {
+  const [
+    team,
+    players,
+    formationExperience,
+    upcomingMatch
+  ] = await Promise.all([
+    loadTeamDetails(),
+    loadPlayers(),
+    loadFormationExperience(),
+    loadUpcomingMatch()
+  ]);
+
+  upcomingMatch.trainingWeekPosition =
+    determineTrainingWeekPosition(
+      upcomingMatch
+    );
+
+  const previousTrainingMatch =
+    await loadPreviousTrainingMatch(
+      upcomingMatch
+    );
+
+  return {
+    teamId:
+      team.teamId,
+
+    teamName:
+      team.teamName,
+
+    upcomingMatch,
+
+    formationExperience,
+
+    players,
+
+    previousTrainingMatch
+  };
 }
 
 
@@ -368,7 +899,8 @@ async function loadSourceData() {
    ========================================================= */
 
 function numberValue(value, fallback = 0) {
-  const n = Number(value);
+  const n =
+    Number(value);
 
   return Number.isFinite(n)
     ? n
@@ -377,29 +909,35 @@ function numberValue(value, fallback = 0) {
 
 
 function round(value, decimals = 2) {
-  const factor = 10 ** decimals;
+  const factor =
+    10 ** decimals;
 
-  return Math.round(
-    (value + Number.EPSILON) * factor
-  ) / factor;
+  return (
+    Math.round(
+      (value + Number.EPSILON) *
+      factor
+    ) / factor
+  );
 }
 
 
 function average(values) {
-
   if (!values.length) {
     return null;
   }
 
-  return values.reduce(
-    (sum, value) => sum + value,
-    0
-  ) / values.length;
+  return (
+    values.reduce(
+      (sum, value) =>
+        sum + value,
+      0
+    ) /
+    values.length
+  );
 }
 
 
 function escapeHtml(value) {
-
   return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -410,11 +948,10 @@ function escapeHtml(value) {
 
 
 /* =========================================================
-   POSITION / ROLE HELPERS
+   POSITION HELPERS
    ========================================================= */
 
 function getSlotRole(slot) {
-
   if (slot === "GK") {
     return "GK";
   }
@@ -461,9 +998,12 @@ function getSlotRole(slot) {
 }
 
 
-function slotMatchesTrainingRole(slot, trainingRole) {
-
-  const slotRole = getSlotRole(slot);
+function slotMatchesTrainingRole(
+  slot,
+  trainingRole
+) {
+  const role =
+    getSlotRole(slot);
 
   if (trainingRole === "ALL") {
     return true;
@@ -471,32 +1011,31 @@ function slotMatchesTrainingRole(slot, trainingRole) {
 
   if (trainingRole === "DEFENDER") {
     return (
-      slotRole === "CD" ||
-      slotRole === "WB"
+      role === "CD" ||
+      role === "WB"
     );
   }
 
-  return slotRole === trainingRole;
+  return role === trainingRole;
 }
 
 
 function appearanceMatchesTrainingRole(
-  appearanceRole,
+  role,
   trainingRole
 ) {
-
   if (trainingRole === "ALL") {
     return true;
   }
 
   if (trainingRole === "DEFENDER") {
     return (
-      appearanceRole === "CD" ||
-      appearanceRole === "WB"
+      role === "CD" ||
+      role === "WB"
     );
   }
 
-  return appearanceRole === trainingRole;
+  return role === trainingRole;
 }
 
 
@@ -505,50 +1044,61 @@ function getTrainingSlots(
   training,
   type
 ) {
+  const roles =
+    type === "full"
+      ? training.fullRoles
+      : training.partialRoles;
 
-  const roles = type === "full"
-    ? training.fullRoles
-    : training.partialRoles;
+  return POSITION_ORDER.filter(
+    slot => {
+      if (
+        !formation.slots.includes(slot)
+      ) {
+        return false;
+      }
 
-  return POSITION_ORDER.filter(slot => {
-
-    if (!formation.slots.includes(slot)) {
-      return false;
+      return roles.some(
+        role =>
+          slotMatchesTrainingRole(
+            slot,
+            role
+          )
+      );
     }
-
-    return roles.some(role =>
-      slotMatchesTrainingRole(slot, role)
-    );
-  });
+  );
 }
 
 
 /* =========================================================
-   STEP 1 - FORMATION SELECTION
+   FORMATION SELECTION
    ========================================================= */
 
-function selectFormation(formationExperience) {
-
-  const candidates = Object.entries(FORMATIONS)
-    .map(([name, formation]) => {
-
-      const experience =
-        numberValue(
-          formationExperience?.[name],
-          NaN
-        );
-
-      return {
-        name,
-        experience,
-        defenders: formation.defenders,
-        midfielders: formation.midfielders,
-        formation
-      };
-    })
-    .filter(item =>
-      Number.isFinite(item.experience)
-    );
+function selectFormation(
+  formationExperience
+) {
+  const candidates =
+    Object.entries(FORMATIONS)
+      .map(
+        ([name, formation]) => ({
+          name,
+          formation,
+          experience:
+            numberValue(
+              formationExperience?.[name],
+              NaN
+            ),
+          defenders:
+            formation.defenders,
+          midfielders:
+            formation.midfielders
+        })
+      )
+      .filter(
+        item =>
+          Number.isFinite(
+            item.experience
+          )
+      );
 
   if (!candidates.length) {
     throw new Error(
@@ -557,85 +1107,91 @@ function selectFormation(formationExperience) {
   }
 
   candidates.sort((a, b) => {
-
-    /*
-     * Lowest experience wins.
-     */
-    if (a.experience !== b.experience) {
-      return a.experience - b.experience;
+    if (
+      a.experience !== b.experience
+    ) {
+      return (
+        a.experience -
+        b.experience
+      );
     }
 
-    /*
-     * Tie #1:
-     * more defenders.
-     */
-    if (a.defenders !== b.defenders) {
-      return b.defenders - a.defenders;
+    if (
+      a.defenders !== b.defenders
+    ) {
+      return (
+        b.defenders -
+        a.defenders
+      );
     }
 
-    /*
-     * Tie #2:
-     * more midfielders.
-     */
-    if (a.midfielders !== b.midfielders) {
-      return b.midfielders - a.midfielders;
+    if (
+      a.midfielders !==
+      b.midfielders
+    ) {
+      return (
+        b.midfielders -
+        a.midfielders
+      );
     }
 
-    /*
-     * Final deterministic fallback.
-     */
     return (
-      FORMATION_PRIORITY.indexOf(a.name) -
-      FORMATION_PRIORITY.indexOf(b.name)
+      FORMATION_PRIORITY.indexOf(
+        a.name
+      ) -
+      FORMATION_PRIORITY.indexOf(
+        b.name
+      )
     );
   });
 
   return {
-    selected: candidates[0],
+    selected:
+      candidates[0],
+
     candidates
   };
 }
 
 
 /* =========================================================
-   STEP 2 + 3 - TRAINING SELECTION
+   TRAINING SELECTION
    ========================================================= */
 
 function calculateTrainingAverage(
   players,
   training
 ) {
-
-  const skillValues = players
-    .map(player =>
-      numberValue(
-        player[training.skill],
-        NaN
+  const values =
+    players
+      .map(
+        player =>
+          numberValue(
+            player[training.skill],
+            NaN
+          )
       )
-    )
-    .filter(Number.isFinite)
-    .sort((a, b) => b - a);
+      .filter(
+        Number.isFinite
+      )
+      .sort(
+        (a, b) =>
+          b - a
+      );
 
-  /*
-   * Do not calculate a smaller average.
-   *
-   * If the full roster does not contain enough players
-   * for this training type, remove it from consideration.
-   */
   if (
-    skillValues.length <
+    values.length <
     training.requiredPlayers
   ) {
     return null;
   }
 
-  const selectedValues =
-    skillValues.slice(
+  return average(
+    values.slice(
       0,
       training.requiredPlayers
-    );
-
-  return average(selectedValues);
+    )
+  );
 }
 
 
@@ -643,58 +1199,58 @@ function selectTraining(
   players,
   formation
 ) {
-
-  const results = TRAINING_TYPES.map(
-    (training, priority) => {
-
-      const compatible =
-        training.compatible(formation);
-
-      let trainingAverage = null;
-      let hasEnoughPlayers = false;
-
-      if (compatible) {
-
-        trainingAverage =
-          calculateTrainingAverage(
-            players,
-            training
+  const results =
+    TRAINING_TYPES.map(
+      (training, priority) => {
+        const compatible =
+          training.compatible(
+            formation
           );
 
-        hasEnoughPlayers =
-          trainingAverage !== null;
+        const trainingAverage =
+          compatible
+            ? calculateTrainingAverage(
+                players,
+                training
+              )
+            : null;
+
+        return {
+          training,
+          priority,
+          compatible,
+          hasEnoughPlayers:
+            trainingAverage !== null,
+          average:
+            trainingAverage
+        };
       }
+    );
 
-      return {
-        training,
-        priority,
-        compatible,
-        hasEnoughPlayers,
-        average: trainingAverage
-      };
-    }
-  );
+  const candidates =
+    results
+      .filter(
+        result =>
+          result.compatible &&
+          result.hasEnoughPlayers
+      )
+      .sort(
+        (a, b) => {
+          if (
+            a.average !== b.average
+          ) {
+            return (
+              a.average -
+              b.average
+            );
+          }
 
-  const candidates = results
-    .filter(result =>
-      result.compatible &&
-      result.hasEnoughPlayers
-    )
-    .sort((a, b) => {
-
-      /*
-       * Lowest top-X average wins.
-       */
-      if (a.average !== b.average) {
-        return a.average - b.average;
-      }
-
-      /*
-       * Exact tie:
-       * Hattrick display order.
-       */
-      return a.priority - b.priority;
-    });
+          return (
+            a.priority -
+            b.priority
+          );
+        }
+      );
 
   if (!candidates.length) {
     throw new Error(
@@ -703,58 +1259,54 @@ function selectTraining(
   }
 
   return {
-    selected: candidates[0],
+    selected:
+      candidates[0],
+
     results
   };
 }
 
 
 /* =========================================================
-   STEP 4 - PLAYER ELIGIBILITY
+   PLAYER ELIGIBILITY
    ========================================================= */
-
-function isSecondTrainingMatch(match) {
-  return (
-    match?.trainingWeekPosition === "second"
-  );
-}
-
 
 function playerWasPreviouslyTrained(
   player,
   training,
   previousTrainingMatch
 ) {
-
   const appearances =
-    previousTrainingMatch?.appearances || [];
+    previousTrainingMatch
+      ?.appearances || [];
 
-  return appearances.some(appearance => {
+  const trainingRoles = [
+    ...training.fullRoles,
+    ...training.partialRoles
+  ];
 
-    if (
-      String(appearance.playerId) !==
-      String(player.playerId)
-    ) {
-      return false;
+  return appearances.some(
+    appearance => {
+      if (
+        String(
+          appearance.playerId
+        ) !==
+        String(
+          player.playerId
+        )
+      ) {
+        return false;
+      }
+
+      return trainingRoles.some(
+        trainingRole =>
+          appearanceMatchesTrainingRole(
+            appearance.role,
+            trainingRole
+          )
+      );
     }
-
-    const role =
-      String(
-        appearance.role || ""
-      ).toUpperCase();
-
-    const trainingRoles = [
-      ...training.fullRoles,
-      ...training.partialRoles
-    ];
-
-    return trainingRoles.some(trainingRole =>
-      appearanceMatchesTrainingRole(
-        role,
-        trainingRole
-      )
-    );
-  });
+  );
 }
 
 
@@ -764,59 +1316,45 @@ function filterEligiblePlayers(
   training,
   previousTrainingMatch
 ) {
-
   const eligible = [];
   const excluded = [];
 
   for (const player of players) {
-
     const reasons = [];
 
-    /*
-     * InjuryLevel:
-     *
-     * -1 = healthy
-     *  0 = bruised but playing
-     * >0 = injured
-     */
     if (
       numberValue(
         player.injuryLevel,
         -1
       ) > 0
     ) {
-      reasons.push("Injured");
+      reasons.push(
+        "Injured"
+      );
     }
 
-    /*
-     * Cards == 3 means suspended.
-     *
-     * Only remove for league,
-     * qualification and cup.
-     */
     const matchType =
       numberValue(
-        match?.matchType,
-        0
+        match?.matchType
       );
 
     if (
-      SUSPENSION_MATCH_TYPES.has(matchType) &&
-      numberValue(player.cards, 0) === 3
+      SUSPENSION_MATCH_TYPES.has(
+        matchType
+      ) &&
+      numberValue(
+        player.cards
+      ) === 3
     ) {
-      reasons.push("Suspended");
+      reasons.push(
+        "Suspended"
+      );
     }
 
-    /*
-     * First training match:
-     * previous training positions do not matter.
-     *
-     * Second training match:
-     * any appearance in a training position
-     * during the first match excludes the player.
-     */
     if (
-      isSecondTrainingMatch(match) &&
+      match
+        ?.trainingWeekPosition ===
+        "second" &&
       playerWasPreviouslyTrained(
         player,
         training,
@@ -829,15 +1367,14 @@ function filterEligiblePlayers(
     }
 
     if (reasons.length) {
-
       excluded.push({
         player,
         reasons
       });
-
     } else {
-
-      eligible.push(player);
+      eligible.push(
+        player
+      );
     }
   }
 
@@ -849,140 +1386,134 @@ function filterEligiblePlayers(
 
 
 /* =========================================================
-   STEP 5 - POSITION RATINGS
+   POSITION RATINGS
    ========================================================= */
 
 function getFormFactor(
   player,
   match
 ) {
-
   const form =
     numberValue(
-      player.form,
-      0
+      player.form
     );
 
   const matchType =
     numberValue(
-      match?.matchType,
-      0
+      match?.matchType
     );
 
-  /*
-   * League / Qualification / Cup / Masters:
-   * favor high form.
-   */
   if (
-    HIGH_FORM_MATCH_TYPES.has(matchType)
+    HIGH_FORM_MATCH_TYPES.has(
+      matchType
+    )
   ) {
     return form / 10;
   }
 
-  /*
-   * Friendlies:
-   * favor low form.
-   */
-  return (10 - form) / 10;
+  return (
+    (10 - form) / 10
+  );
 }
 
 
 function getStaminaFactor(player) {
-
   return (
     numberValue(
-      player.stamina,
-      0
+      player.stamina
     ) / 10
   );
 }
 
 
-function getPotentialTieBreaker(player) {
-
-  /*
-   * One Hattrick year = 112 days.
-   *
-   * 30th birthday:
-   * 30 * 112 = 3360
-   */
-  const ageYears =
+function getPotentialTieBreaker(
+  player
+) {
+  const ageInDays =
+    (
+      numberValue(
+        player.age
+      ) * 112
+    ) +
     numberValue(
-      player.age,
-      0
+      player.ageDays
     );
-
-  const ageDays =
-    numberValue(
-      player.ageDays,
-      0
-    );
-
-  const totalAgeDays =
-    (ageYears * 112) +
-    ageDays;
 
   const potential =
-    (3360 - totalAgeDays) * 7;
+    (
+      3360 -
+      ageInDays
+    ) * 7;
 
-  return potential / 100000;
+  return (
+    potential /
+    100000
+  );
 }
 
 
-function calculateRawPositionSkills(player) {
-
+function calculateRawPositionSkills(
+  player
+) {
   const keeper =
-    numberValue(player.keeper);
+    numberValue(
+      player.keeper
+    );
 
   const defending =
-    numberValue(player.defending);
+    numberValue(
+      player.defending
+    );
 
   const playmaking =
-    numberValue(player.playmaking);
+    numberValue(
+      player.playmaking
+    );
 
   const winger =
-    numberValue(player.winger);
+    numberValue(
+      player.winger
+    );
 
   const passing =
-    numberValue(player.passing);
+    numberValue(
+      player.passing
+    );
 
   const scoring =
-    numberValue(player.scoring);
-
+    numberValue(
+      player.scoring
+    );
 
   return {
-
-    /*
-     * Corrected GK parentheses.
-     */
     GK:
-      (keeper * 0.75) +
-      (defending * 0.25),
+      keeper * 0.75 +
+      defending * 0.25,
 
     CD:
-      (defending * 0.75) +
-      (playmaking * 0.25),
+      defending * 0.75 +
+      playmaking * 0.25,
 
     WB:
-      (defending * (6 / 9)) +
-      (playmaking * (1 / 9)) +
-      (winger * (2 / 9)),
+      defending * (6 / 9) +
+      playmaking * (1 / 9) +
+      winger * (2 / 9),
 
     IM:
-      (playmaking * (6 / 9)) +
-      (defending * (2 / 9)) +
-      (passing * (1 / 9)),
+      playmaking * (6 / 9) +
+      defending * (2 / 9) +
+      passing * (1 / 9),
 
     WG:
-      (defending * 0.10) +
-      (playmaking * 0.20) +
-      (winger * 0.60) +
-      (passing * 0.10),
+      defending * 0.10 +
+      playmaking * 0.20 +
+      winger * 0.60 +
+      passing * 0.10,
 
     FW:
-      (scoring * (6 / 9)) +
-      (passing * (2 / 9)) +
-      (winger * (1 / 9))
+      scoring * (6 / 9) +
+      passing * (2 / 9) +
+      winger * (1 / 9)
   };
 }
 
@@ -991,9 +1522,10 @@ function calculatePlayerRatings(
   player,
   match
 ) {
-
   const raw =
-    calculateRawPositionSkills(player);
+    calculateRawPositionSkills(
+      player
+    );
 
   const formFactor =
     getFormFactor(
@@ -1002,46 +1534,43 @@ function calculatePlayerRatings(
     );
 
   const staminaFactor =
-    getStaminaFactor(player);
+    getStaminaFactor(
+      player
+    );
 
   const tieBreaker =
-    getPotentialTieBreaker(player);
+    getPotentialTieBreaker(
+      player
+    );
 
   const ratings = {};
 
   for (
-    const [position, rawRating]
+    const [role, value]
     of Object.entries(raw)
   ) {
-
-    ratings[position] =
-      (
-        rawRating *
-        formFactor *
-        staminaFactor
-      ) +
+    ratings[role] =
+      value *
+      formFactor *
+      staminaFactor +
       tieBreaker;
   }
 
   return {
     ...player,
-    ratings,
-    formFactor,
-    staminaFactor,
-    tieBreaker
+    ratings
   };
 }
 
 
 /* =========================================================
-   STEP 6 + 7 - LINEUP CONSTRUCTION
+   LINEUP BUILDING
    ========================================================= */
 
 function getPositionRating(
   player,
   slot
 ) {
-
   const role =
     getSlotRole(slot);
 
@@ -1056,36 +1585,33 @@ function chooseBestPlayerForSlot(
   players,
   slot
 ) {
+  return [...players]
+    .sort(
+      (a, b) => {
+        const difference =
+          getPositionRating(
+            b,
+            slot
+          ) -
+          getPositionRating(
+            a,
+            slot
+          );
 
-  if (!players.length) {
-    return null;
-  }
+        if (difference !== 0) {
+          return difference;
+        }
 
-  const sorted = [...players]
-    .sort((a, b) => {
-
-      const difference =
-        getPositionRating(b, slot) -
-        getPositionRating(a, slot);
-
-      if (difference !== 0) {
-        return difference;
+        return (
+          numberValue(
+            a.playerId
+          ) -
+          numberValue(
+            b.playerId
+          )
+        );
       }
-
-      /*
-       * Final stable fallback.
-       * Potential is already included in rating,
-       * but PlayerID ensures deterministic output
-       * in the extraordinarily rare event everything
-       * is exactly equal.
-       */
-      return (
-        numberValue(a.playerId) -
-        numberValue(b.playerId)
-      );
-    });
-
-  return sorted[0] || null;
+    )[0] || null;
 }
 
 
@@ -1093,47 +1619,80 @@ function buildSelectionOrder(
   formation,
   training
 ) {
-
-  const fullTrainingSlots =
+  const full =
     getTrainingSlots(
       formation,
       training,
       "full"
     );
 
-  const partialTrainingSlots =
+  const partial =
     getTrainingSlots(
       formation,
       training,
       "partial"
-    )
-    .filter(slot =>
-      !fullTrainingSlots.includes(slot)
+    ).filter(
+      slot =>
+        !full.includes(slot)
     );
 
-  const remainingSlots =
+  const remaining =
     POSITION_ORDER
-      .filter(slot =>
-        formation.slots.includes(slot)
+      .filter(
+        slot =>
+          formation.slots.includes(
+            slot
+          )
       )
-      .filter(slot =>
-        !fullTrainingSlots.includes(slot)
+      .filter(
+        slot =>
+          !full.includes(slot)
       )
-      .filter(slot =>
-        !partialTrainingSlots.includes(slot)
+      .filter(
+        slot =>
+          !partial.includes(slot)
       );
 
   return {
-    fullTrainingSlots,
-    partialTrainingSlots,
-    remainingSlots,
+    fullTrainingSlots:
+      full,
+
+    partialTrainingSlots:
+      partial,
+
+    remainingSlots:
+      remaining,
 
     all: [
-      ...fullTrainingSlots,
-      ...partialTrainingSlots,
-      ...remainingSlots
+      ...full,
+      ...partial,
+      ...remaining
     ]
   };
+}
+
+
+function getSelectionCategory(
+  slot,
+  order
+) {
+  if (
+    order
+      .fullTrainingSlots
+      .includes(slot)
+  ) {
+    return "full";
+  }
+
+  if (
+    order
+      .partialTrainingSlots
+      .includes(slot)
+  ) {
+    return "partial";
+  }
+
+  return "other";
 }
 
 
@@ -1142,12 +1701,10 @@ function constructLineup(
   formation,
   training
 ) {
-
-  const playersRemaining =
+  const remaining =
     [...eligiblePlayers];
 
   const lineup = {};
-
   const selections = [];
 
   const order =
@@ -1157,33 +1714,15 @@ function constructLineup(
     );
 
   for (const slot of order.all) {
-
-    const selected =
+    const player =
       chooseBestPlayerForSlot(
-        playersRemaining,
+        remaining,
         slot
       );
 
-    if (!selected) {
-
-      selections.push({
-        slot,
-        player: null,
-        category:
-          getSelectionCategory(
-            slot,
-            order
-          )
-      });
-
-      continue;
-    }
-
-    lineup[slot] = selected;
-
     selections.push({
       slot,
-      player: selected,
+      player,
       category:
         getSelectionCategory(
           slot,
@@ -1191,15 +1730,26 @@ function constructLineup(
         )
     });
 
+    if (!player) {
+      continue;
+    }
+
+    lineup[slot] =
+      player;
+
     const index =
-      playersRemaining.findIndex(
-        player =>
-          String(player.playerId) ===
-          String(selected.playerId)
+      remaining.findIndex(
+        candidate =>
+          String(
+            candidate.playerId
+          ) ===
+          String(
+            player.playerId
+          )
       );
 
     if (index >= 0) {
-      playersRemaining.splice(
+      remaining.splice(
         index,
         1
       );
@@ -1211,29 +1761,10 @@ function constructLineup(
     selections,
     order,
     complete:
-      Object.keys(lineup).length === 11
+      Object.keys(
+        lineup
+      ).length === 11
   };
-}
-
-
-function getSelectionCategory(
-  slot,
-  order
-) {
-
-  if (
-    order.fullTrainingSlots.includes(slot)
-  ) {
-    return "full";
-  }
-
-  if (
-    order.partialTrainingSlots.includes(slot)
-  ) {
-    return "partial";
-  }
-
-  return "other";
 }
 
 
@@ -1242,9 +1773,10 @@ function getSelectionCategory(
    ========================================================= */
 
 function calculateLineup(data) {
-
   const players =
-    Array.isArray(data.players)
+    Array.isArray(
+      data.players
+    )
       ? data.players
       : [];
 
@@ -1254,10 +1786,6 @@ function calculateLineup(data) {
     );
   }
 
-  /*
-   * STEP 1
-   * Formation.
-   */
   const formationResult =
     selectFormation(
       data.formationExperience
@@ -1266,13 +1794,8 @@ function calculateLineup(data) {
   const selectedFormation =
     formationResult.selected;
 
-
   /*
-   * STEP 2 + 3
-   * Training uses FULL ROSTER.
-   *
-   * Do not remove injured/suspended/
-   * previously-trained players yet.
+   * Training uses the FULL roster.
    */
   const trainingResult =
     selectTraining(
@@ -1281,12 +1804,12 @@ function calculateLineup(data) {
     );
 
   const selectedTraining =
-    trainingResult.selected.training;
-
+    trainingResult
+      .selected
+      .training;
 
   /*
-   * STEP 4
-   * Match-specific eligibility.
+   * Only now remove unavailable players.
    */
   const eligibilityResult =
     filterEligiblePlayers(
@@ -1296,25 +1819,17 @@ function calculateLineup(data) {
       data.previousTrainingMatch
     );
 
-
-  /*
-   * STEP 5
-   * Position ratings.
-   */
   const ratedEligiblePlayers =
-    eligibilityResult.eligible.map(
-      player =>
-        calculatePlayerRatings(
-          player,
-          data.upcomingMatch
-        )
-    );
+    eligibilityResult
+      .eligible
+      .map(
+        player =>
+          calculatePlayerRatings(
+            player,
+            data.upcomingMatch
+          )
+      );
 
-
-  /*
-   * STEP 6 + 7
-   * Greedy lineup.
-   */
   const lineupResult =
     constructLineup(
       ratedEligiblePlayers,
@@ -1322,46 +1837,46 @@ function calculateLineup(data) {
       selectedTraining
     );
 
-
   return {
     formationResult,
     selectedFormation,
-
     trainingResult,
     selectedTraining,
-
     eligibilityResult,
     ratedEligiblePlayers,
-
     lineupResult
   };
 }
 
 
 /* =========================================================
-   DISPLAY HELPERS
+   DISPLAY
    ========================================================= */
 
 function setStatus(
   message,
   type = ""
 ) {
-
   const element =
-    document.getElementById("status");
+    document.getElementById(
+      "status"
+    );
 
-  element.textContent = message;
+  element.textContent =
+    message;
 
-  element.className = "status";
+  element.className =
+    "status";
 
   if (type) {
-    element.classList.add(type);
+    element.classList.add(
+      type
+    );
   }
 }
 
 
-function getMatchTypeLabel(matchType) {
-
+function getMatchTypeLabel(type) {
   const labels = {
     1: "League",
     2: "Qualification",
@@ -1374,28 +1889,15 @@ function getMatchTypeLabel(matchType) {
   };
 
   return (
-    labels[numberValue(matchType)] ||
-    `Match Type ${matchType ?? "-"}`
+    labels[
+      numberValue(type)
+    ] ||
+    `Match Type ${type}`
   );
 }
 
 
-function getTrainingWeekLabel(value) {
-
-  if (value === "first") {
-    return "First training match";
-  }
-
-  if (value === "second") {
-    return "Second training match";
-  }
-
-  return value || "-";
-}
-
-
 function renderMatchSummary(data) {
-
   const match =
     data.upcomingMatch || {};
 
@@ -1404,17 +1906,14 @@ function renderMatchSummary(data) {
   ).textContent =
     data.teamName || "-";
 
-  const home =
-    match.homeTeamName || "";
-
-  const away =
-    match.awayTeamName || "";
-
   document.getElementById(
     "matchName"
   ).textContent =
-    home && away
-      ? `${home} vs ${away}`
+    (
+      match.homeTeamName &&
+      match.awayTeamName
+    )
+      ? `${match.homeTeamName} vs ${match.awayTeamName}`
       : "-";
 
   document.getElementById(
@@ -1427,14 +1926,14 @@ function renderMatchSummary(data) {
   document.getElementById(
     "trainingWeekPosition"
   ).textContent =
-    getTrainingWeekLabel(
-      match.trainingWeekPosition
-    );
+    match.trainingWeekPosition ===
+    "second"
+      ? "Second training match"
+      : "First training match";
 }
 
 
 function renderFormation(result) {
-
   const selected =
     result.selectedFormation;
 
@@ -1448,45 +1947,30 @@ function renderFormation(result) {
   ).textContent =
     selected.experience;
 
-  const body =
-    document.getElementById(
-      "formationTableBody"
-    );
-
-  body.innerHTML =
-    result.formationResult.candidates
-      .map(candidate => {
-
-        const selectedRow =
-          candidate.name ===
-          selected.name;
-
-        return `
+  document.getElementById(
+    "formationTableBody"
+  ).innerHTML =
+    result
+      .formationResult
+      .candidates
+      .map(
+        candidate => `
           <tr>
-            <td>
-              ${escapeHtml(candidate.name)}
-            </td>
-
-            <td class="number">
-              ${escapeHtml(candidate.experience)}
-            </td>
-
-            <td>
-              ${selectedRow
-                ? "Selected"
-                : ""}
-            </td>
+            <td>${escapeHtml(candidate.name)}</td>
+            <td class="number">${candidate.experience}</td>
+            <td>${candidate.name === selected.name ? "Selected" : ""}</td>
           </tr>
-        `;
-      })
+        `
+      )
       .join("");
 }
 
 
 function renderTraining(result) {
-
   const selected =
-    result.trainingResult.selected;
+    result
+      .trainingResult
+      .selected;
 
   document.getElementById(
     "selectedTraining"
@@ -1501,140 +1985,97 @@ function renderTraining(result) {
       2
     ).toFixed(2);
 
-  const body =
-    document.getElementById(
-      "trainingTableBody"
-    );
+  document.getElementById(
+    "trainingTableBody"
+  ).innerHTML =
+    result
+      .trainingResult
+      .results
+      .map(
+        item => {
+          let status =
+            "Eligible";
 
-  body.innerHTML =
-    result.trainingResult.results
-      .map(item => {
+          let className =
+            "";
 
-        let status = "";
-        let className = "";
+          if (!item.compatible) {
+            status =
+              "Not compatible";
+            className =
+              "ineligible-training";
+          } else if (
+            !item.hasEnoughPlayers
+          ) {
+            status =
+              "Not enough players";
+            className =
+              "ineligible-training";
+          } else if (
+            item.training.id ===
+            selected.training.id
+          ) {
+            status =
+              "Selected";
+            className =
+              "selected-training";
+          }
 
-        if (!item.compatible) {
-
-          status =
-            "Not compatible with formation";
-
-          className =
-            "ineligible-training";
-
-        } else if (
-          !item.hasEnoughPlayers
-        ) {
-
-          status =
-            "Not enough rostered players";
-
-          className =
-            "ineligible-training";
-
-        } else if (
-          item.training.id ===
-          selected.training.id
-        ) {
-
-          status = "Selected";
-
-          className =
-            "selected-training";
-
-        } else {
-
-          status = "Eligible";
+          return `
+            <tr class="${className}">
+              <td>${escapeHtml(item.training.name)}</td>
+              <td>${escapeHtml(item.training.skill)}</td>
+              <td class="number">${item.training.requiredPlayers}</td>
+              <td class="number">${
+                item.average === null
+                  ? "-"
+                  : round(
+                      item.average,
+                      2
+                    ).toFixed(2)
+              }</td>
+              <td>${status}</td>
+            </tr>
+          `;
         }
-
-        const averageText =
-          item.average === null
-            ? "-"
-            : round(
-                item.average,
-                2
-              ).toFixed(2);
-
-        return `
-          <tr class="${className}">
-            <td>
-              ${escapeHtml(
-                item.training.name
-              )}
-            </td>
-
-            <td>
-              ${escapeHtml(
-                item.training.skill
-              )}
-            </td>
-
-            <td class="number">
-              ${item.training.requiredPlayers}
-            </td>
-
-            <td class="number">
-              ${averageText}
-            </td>
-
-            <td>
-              ${escapeHtml(status)}
-            </td>
-          </tr>
-        `;
-      })
+      )
       .join("");
 }
 
 
 function resetPitch() {
-
-  for (const slot of POSITION_ORDER) {
-
-    const slotElement =
+  for (
+    const slot
+    of POSITION_ORDER
+  ) {
+    const box =
       document.getElementById(
         `slot-${slot}`
       );
 
-    if (!slotElement) {
+    if (!box) {
       continue;
     }
 
-    slotElement.classList.add(
+    box.classList.add(
       "hidden"
     );
 
-    slotElement.classList.remove(
+    box.classList.remove(
       "training-slot",
       "partial-training-slot"
     );
-
-    const playerElement =
-      document.getElementById(
-        `player-${slot}`
-      );
-
-    const ratingElement =
-      document.getElementById(
-        `rating-${slot}`
-      );
-
-    if (playerElement) {
-      playerElement.textContent = "-";
-    }
-
-    if (ratingElement) {
-      ratingElement.textContent = "";
-    }
   }
 }
 
 
 function renderLineup(result) {
-
   resetPitch();
 
   const formation =
-    result.selectedFormation.formation;
+    result
+      .selectedFormation
+      .formation;
 
   const lineupResult =
     result.lineupResult;
@@ -1643,17 +2084,16 @@ function renderLineup(result) {
     const slot
     of formation.slots
   ) {
-
-    const slotElement =
+    const box =
       document.getElementById(
         `slot-${slot}`
       );
 
-    if (!slotElement) {
+    if (!box) {
       continue;
     }
 
-    slotElement.classList.remove(
+    box.classList.remove(
       "hidden"
     );
 
@@ -1664,22 +2104,22 @@ function renderLineup(result) {
       );
 
     if (category === "full") {
-
-      slotElement.classList.add(
+      box.classList.add(
         "training-slot"
       );
+    }
 
-    } else if (
+    if (
       category === "partial"
     ) {
-
-      slotElement.classList.add(
+      box.classList.add(
         "partial-training-slot"
       );
     }
 
     const player =
-      lineupResult.lineup[slot];
+      lineupResult
+        .lineup[slot];
 
     const playerElement =
       document.getElementById(
@@ -1692,7 +2132,6 @@ function renderLineup(result) {
       );
 
     if (!player) {
-
       playerElement.textContent =
         "OPEN";
 
@@ -1706,41 +2145,38 @@ function renderLineup(result) {
       player.name;
 
     ratingElement.textContent =
-      `Rating: ${
-        round(
-          getPositionRating(
-            player,
-            slot
-          ),
-          4
-        ).toFixed(4)
-      }`;
+      `Rating: ${round(
+        getPositionRating(
+          player,
+          slot
+        ),
+        4
+      ).toFixed(4)}`;
   }
 
-  const warning =
-    document.getElementById(
-      "lineupWarning"
-    );
-
-  warning.style.display =
+  document.getElementById(
+    "lineupWarning"
+  ).style.display =
     lineupResult.complete
       ? "none"
       : "block";
 }
 
 
-function renderExcludedPlayers(result) {
-
+function renderExcludedPlayers(
+  result
+) {
   const body =
     document.getElementById(
       "excludedPlayersTableBody"
     );
 
   const excluded =
-    result.eligibilityResult.excluded;
+    result
+      .eligibilityResult
+      .excluded;
 
   if (!excluded.length) {
-
     body.innerHTML = `
       <tr>
         <td colspan="2"
@@ -1754,146 +2190,79 @@ function renderExcludedPlayers(result) {
   }
 
   body.innerHTML =
-    excluded.map(item => `
-      <tr>
-        <td>
-          ${escapeHtml(
-            item.player.name
-          )}
-        </td>
-
-        <td>
-          ${escapeHtml(
-            item.reasons.join(", ")
-          )}
-        </td>
-      </tr>
-    `).join("");
+    excluded
+      .map(
+        item => `
+          <tr>
+            <td>${escapeHtml(item.player.name)}</td>
+            <td>${escapeHtml(item.reasons.join(", "))}</td>
+          </tr>
+        `
+      )
+      .join("");
 }
 
 
-function renderEligiblePlayers(result) {
-
+function renderEligiblePlayers(
+  result
+) {
   const body =
     document.getElementById(
       "eligiblePlayersTableBody"
     );
 
-  const players =
-    [...result.ratedEligiblePlayers]
-      .sort((a, b) =>
-        String(a.name)
-          .localeCompare(
-            String(b.name)
-          )
-      );
-
-  if (!players.length) {
-
-    body.innerHTML = `
-      <tr>
-        <td colspan="7"
-            class="empty-message">
-          No eligible players.
-        </td>
-      </tr>
-    `;
-
-    return;
-  }
-
   body.innerHTML =
-    players.map(player => `
-      <tr>
-        <td>
-          ${escapeHtml(player.name)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.GK,
-            4
-          ).toFixed(4)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.CD,
-            4
-          ).toFixed(4)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.WB,
-            4
-          ).toFixed(4)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.IM,
-            4
-          ).toFixed(4)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.WG,
-            4
-          ).toFixed(4)}
-        </td>
-
-        <td class="number">
-          ${round(
-            player.ratings.FW,
-            4
-          ).toFixed(4)}
-        </td>
-      </tr>
-    `).join("");
+    result
+      .ratedEligiblePlayers
+      .map(
+        player => `
+          <tr>
+            <td>${escapeHtml(player.name)}</td>
+            <td class="number">${player.ratings.GK.toFixed(4)}</td>
+            <td class="number">${player.ratings.CD.toFixed(4)}</td>
+            <td class="number">${player.ratings.WB.toFixed(4)}</td>
+            <td class="number">${player.ratings.IM.toFixed(4)}</td>
+            <td class="number">${player.ratings.WG.toFixed(4)}</td>
+            <td class="number">${player.ratings.FW.toFixed(4)}</td>
+          </tr>
+        `
+      )
+      .join("");
 }
 
 
-function renderSelectionOrder(result) {
+function renderSelectionOrder(
+  result
+) {
+  const labels = {
+    full:
+      "Full training",
+    partial:
+      "Partial training",
+    other:
+      "Other"
+  };
 
-  const list =
-    document.getElementById(
-      "selectionOrderList"
-    );
-
-  list.innerHTML =
-    result.lineupResult.selections
-      .map(selection => {
-
-        const categoryLabels = {
-          full: "Full training",
-          partial: "Partial training",
-          other: "Other"
-        };
-
-        const playerText =
-          selection.player
-            ? selection.player.name
-            : "OPEN";
-
-        return `
+  document.getElementById(
+    "selectionOrderList"
+  ).innerHTML =
+    result
+      .lineupResult
+      .selections
+      .map(
+        selection => `
           <li>
-            <strong>
-              ${escapeHtml(
-                selection.slot
-              )}
-            </strong>
+            <strong>${selection.slot}</strong>
             -
-            ${escapeHtml(playerText)}
-            (${escapeHtml(
-              categoryLabels[
-                selection.category
-              ]
-            )})
+            ${escapeHtml(
+              selection.player
+                ?.name ||
+              "OPEN"
+            )}
+            (${labels[selection.category]})
           </li>
-        `;
-      })
+        `
+      )
       .join("");
 }
 
@@ -1902,41 +2271,46 @@ function renderEverything(
   data,
   result
 ) {
+  renderMatchSummary(
+    data
+  );
 
-  renderMatchSummary(data);
+  renderFormation(
+    result
+  );
 
-  renderFormation(result);
+  renderTraining(
+    result
+  );
 
-  renderTraining(result);
+  renderLineup(
+    result
+  );
 
-  renderLineup(result);
+  renderExcludedPlayers(
+    result
+  );
 
-  renderExcludedPlayers(result);
+  renderEligiblePlayers(
+    result
+  );
 
-  renderEligiblePlayers(result);
-
-  renderSelectionOrder(result);
+  renderSelectionOrder(
+    result
+  );
 }
 
 
 /* =========================================================
-   MAIN ACTION
+   BUILD
    ========================================================= */
 
 function buildLineup() {
-
   if (!sourceData) {
-
-    setStatus(
-      "No lineup source data has been loaded.",
-      "error"
-    );
-
     return;
   }
 
   try {
-
     calculation =
       calculateLineup(
         sourceData
@@ -1947,36 +2321,28 @@ function buildLineup() {
       calculation
     );
 
-    const formation =
-      calculation.selectedFormation.name;
-
-    const training =
-      calculation.selectedTraining.name;
-
     if (
-      calculation.lineupResult.complete
+      calculation
+        .lineupResult
+        .complete
     ) {
-
       setStatus(
-        `Lineup built: ${formation} - ${training}`,
+        `Lineup built: ${calculation.selectedFormation.name} - ${calculation.selectedTraining.name}`,
         "success"
       );
-
     } else {
-
       setStatus(
-        `Lineup calculated, but fewer than 11 eligible players were available.`,
+        "Lineup calculated, but fewer than 11 eligible players were available.",
         "error"
       );
     }
-
   } catch (error) {
-
-    console.error(error);
+    console.error(
+      error
+    );
 
     setStatus(
-      error.message ||
-      "Unable to build lineup.",
+      error.message,
       "error"
     );
   }
@@ -1984,24 +2350,23 @@ function buildLineup() {
 
 
 /* =========================================================
-   INITIALIZATION
+   INITIALIZE
    ========================================================= */
 
 async function initializeLineupBuilder() {
-
-  const buildButton =
+  const button =
     document.getElementById(
       "buildLineupButton"
     );
 
-  buildButton.disabled = true;
+  button.disabled =
+    true;
 
   setStatus(
     "Loading lineup data..."
   );
 
   try {
-
     sourceData =
       await loadSourceData();
 
@@ -2009,23 +2374,21 @@ async function initializeLineupBuilder() {
       sourceData
     );
 
-    buildButton.disabled = false;
+    button.disabled =
+      false;
 
     setStatus(
       "Lineup data loaded. Ready to build.",
       "success"
     );
-
   } catch (error) {
+    console.error(
+      error
+    );
 
-    console.error(error);
-
-    /*
-     * This is expected until we perform
-     * the next server/API edit.
-     */
     setStatus(
-      error.message,
+      error.message ||
+      "Unable to load lineup data.",
       "error"
     );
   }
@@ -2035,7 +2398,6 @@ async function initializeLineupBuilder() {
 document.addEventListener(
   "DOMContentLoaded",
   () => {
-
     document
       .getElementById(
         "buildLineupButton"
