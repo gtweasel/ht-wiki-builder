@@ -155,19 +155,51 @@ function formatDate(value) {
   return `${day} ${months[month - 1]} ${year}`;
 }
 
-function makeKitFilename(teamName, type) {
-  const safeName = String(teamName || "")
+function makeSafeFilename(teamName) {
+  return String(teamName || "")
     .trim()
     .toLowerCase()
     .replace(/&/g, "and")
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "");
+}
+
+function makeKitMarkup(teamName, type) {
+  const safeName = makeSafeFilename(teamName);
 
   if (!safeName) {
     return "";
   }
 
   return `[[File:${safeName}_${type}.png|125px]]`;
+}
+
+function makeSeasonLink(teamName, season) {
+  if (!teamName || !season) {
+    return "";
+  }
+
+  return `[[${teamName}/Season ${season}|Season ${season}]]`;
+}
+
+function makePreviousSeasonResult(data) {
+  if (data.previousSeasonResult) {
+    return data.previousSeasonResult;
+  }
+
+  if (
+    data.previousLeaguePosition &&
+    data.previousLeague &&
+    data.previousSeason
+  ) {
+    return (
+      `${ordinal(data.previousLeaguePosition)}, ` +
+      `${data.previousLeague} ` +
+      `(Season ${data.previousSeason})`
+    );
+  }
+
+  return "";
 }
 
 function getField(id) {
@@ -201,7 +233,12 @@ function clearWikiFields() {
     setField(inputId, checkboxId, "", false);
   }
 
-  setField("field-intro", "include-intro", "", false);
+  setField(
+    "field-intro",
+    "include-intro",
+    "",
+    false
+  );
 }
 
 function createIntro(data) {
@@ -288,6 +325,12 @@ function populateWikiFields(data) {
   );
 
   setField(
+    "field-league-pos-last",
+    "include-league-pos-last",
+    makePreviousSeasonResult(data)
+  );
+
+  setField(
     "field-arena",
     "include-arena",
     data.arenaName
@@ -319,7 +362,18 @@ function populateWikiFields(data) {
     data.fanclubName
   );
 
-  if (data.isManagedTeam && data.activationDate) {
+  setField(
+    "field-fanclub-size",
+    "include-fanclub-size",
+    data.fanclubSize
+      ? formatNumber(data.fanclubSize)
+      : ""
+  );
+
+  if (
+    data.isManagedTeam &&
+    data.activationDate
+  ) {
     setField(
       "field-founded",
       "include-founded",
@@ -330,22 +384,31 @@ function populateWikiFields(data) {
   setField(
     "field-homekit",
     "include-homekit",
-    makeKitFilename(data.teamName, "home"),
+    makeKitMarkup(data.teamName, "home"),
     true
   );
 
   setField(
     "field-awaykit",
     "include-awaykit",
-    makeKitFilename(data.teamName, "away"),
+    makeKitMarkup(data.teamName, "away"),
     true
   );
 
   setField(
     "field-thirdkit",
     "include-thirdkit",
-    makeKitFilename(data.teamName, "third"),
+    makeKitMarkup(data.teamName, "third"),
     true
+  );
+
+  setField(
+    "field-current-season",
+    "include-current-season",
+    makeSeasonLink(
+      data.teamName,
+      data.currentSeason
+    )
   );
 
   setField(
@@ -379,40 +442,60 @@ function setupAutomaticCheckboxes() {
         return;
       }
 
-      checkbox.checked = input.value.trim() !== "";
+      checkbox.checked =
+        input.value.trim() !== "";
     });
   }
 }
 
 function setupManagerChoice() {
-  const managerCheck = getField("include-manager");
-  const htuserCheck = getField("include-htuser");
+  const managerCheck =
+    getField("include-manager");
+
+  const htuserCheck =
+    getField("include-htuser");
 
   if (!managerCheck || !htuserCheck) {
     return;
   }
 
-  managerCheck.addEventListener("change", () => {
-    if (managerCheck.checked) {
-      htuserCheck.checked = false;
+  managerCheck.addEventListener(
+    "change",
+    () => {
+      if (managerCheck.checked) {
+        htuserCheck.checked = false;
+      }
     }
-  });
+  );
 
-  htuserCheck.addEventListener("change", () => {
-    if (htuserCheck.checked) {
-      managerCheck.checked = false;
+  htuserCheck.addEventListener(
+    "change",
+    () => {
+      if (htuserCheck.checked) {
+        managerCheck.checked = false;
+      }
     }
-  });
+  );
 }
 
 function buildInfobox() {
   const lines = ["{{Infobox club"];
 
-  for (const [parameter, inputId, checkboxId] of infoboxFields) {
+  for (
+    const [
+      parameter,
+      inputId,
+      checkboxId
+    ] of infoboxFields
+  ) {
     const input = getField(inputId);
     const checkbox = getField(checkboxId);
 
-    if (!input || !checkbox || !checkbox.checked) {
+    if (
+      !input ||
+      !checkbox ||
+      !checkbox.checked
+    ) {
       continue;
     }
 
@@ -422,7 +505,9 @@ function buildInfobox() {
       continue;
     }
 
-    lines.push(`| ${parameter} = ${value}`);
+    lines.push(
+      `| ${parameter} = ${value}`
+    );
   }
 
   lines.push("}}");
@@ -435,10 +520,18 @@ function buildWikiMarkup() {
 
   parts.push(buildInfobox());
 
-  const introCheck = getField("include-intro");
-  const intro = getField("field-intro").value.trim();
+  const introCheck =
+    getField("include-intro");
 
-  if (introCheck.checked && intro) {
+  const intro =
+    getField("field-intro")
+      .value
+      .trim();
+
+  if (
+    introCheck.checked &&
+    intro
+  ) {
     parts.push(intro);
   }
 
@@ -448,7 +541,9 @@ function buildWikiMarkup() {
 async function loadTeam(teamId) {
   clearStatus();
 
-  setStatus("Loading team data from Hattrick...");
+  setStatus(
+    "Loading team data from Hattrick..."
+  );
 
   try {
     const response = await fetch(
@@ -461,7 +556,8 @@ async function loadTeam(teamId) {
       }
     );
 
-    const data = await response.json();
+    const data =
+      await response.json();
 
     if (response.status === 401) {
       throw new Error(
@@ -471,7 +567,8 @@ async function loadTeam(teamId) {
 
     if (!response.ok) {
       throw new Error(
-        data.error || `Server returned ${response.status}`
+        data.error ||
+        `Server returned ${response.status}`
       );
     }
 
@@ -488,70 +585,90 @@ async function loadTeam(teamId) {
     });
   } catch (error) {
     setStatus(
-      error.message || "Could not load team data.",
+      error.message ||
+      "Could not load team data.",
       "error"
     );
   }
 }
 
-teamLoadForm.addEventListener("submit", event => {
-  event.preventDefault();
+teamLoadForm.addEventListener(
+  "submit",
+  event => {
+    event.preventDefault();
 
-  const teamId = teamIdInput.value.trim();
+    const teamId =
+      teamIdInput.value.trim();
 
-  if (!/^\d+$/.test(teamId)) {
-    setStatus(
-      "Enter a valid numeric Hattrick TeamID.",
-      "error"
-    );
-    return;
+    if (!/^\d+$/.test(teamId)) {
+      setStatus(
+        "Enter a valid numeric Hattrick TeamID.",
+        "error"
+      );
+
+      return;
+    }
+
+    loadTeam(teamId);
   }
+);
 
-  loadTeam(teamId);
-});
+wikiFieldsForm.addEventListener(
+  "submit",
+  event => {
+    event.preventDefault();
 
-wikiFieldsForm.addEventListener("submit", event => {
-  event.preventDefault();
+    wikiOutput.value =
+      buildWikiMarkup();
 
-  wikiOutput.value = buildWikiMarkup();
-  wikiOutputSection.hidden = false;
+    wikiOutputSection.hidden = false;
 
-  wikiOutputSection.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-});
-
-copyButton.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(
-      wikiOutput.value
-    );
-
-    copyStatus.textContent = "Copied.";
-  } catch (error) {
-    wikiOutput.focus();
-    wikiOutput.select();
-
-    copyStatus.textContent =
-      "Select the text and copy it manually.";
+    wikiOutputSection.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
   }
-});
+);
+
+copyButton.addEventListener(
+  "click",
+  async () => {
+    try {
+      await navigator.clipboard.writeText(
+        wikiOutput.value
+      );
+
+      copyStatus.textContent =
+        "Copied.";
+    } catch (error) {
+      wikiOutput.focus();
+      wikiOutput.select();
+
+      copyStatus.textContent =
+        "Select the text and copy it manually.";
+    }
+  }
+);
 
 function setDefaultTeamId(teamId) {
   if (
     teamId &&
     /^\d+$/.test(String(teamId))
   ) {
-    teamIdInput.value = String(teamId);
+    teamIdInput.value =
+      String(teamId);
   }
 }
 
 function loadDefaultTeamId() {
   const savedTeamId =
-    localStorage.getItem(TEAM_PAGE_STORAGE_KEY);
+    localStorage.getItem(
+      TEAM_PAGE_STORAGE_KEY
+    );
 
-  setDefaultTeamId(savedTeamId);
+  setDefaultTeamId(
+    savedTeamId
+  );
 
   if (
     window.HTWikiBuilder &&
@@ -565,7 +682,9 @@ function loadDefaultTeamId() {
   window.addEventListener(
     "htwb:team-selected",
     event => {
-      setDefaultTeamId(event.detail.teamId);
+      setDefaultTeamId(
+        event.detail.teamId
+      );
     }
   );
 }
