@@ -1,28 +1,236 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>HT Wiki Builder</title>
+
+  <meta
+    name="description"
+    content="A free CHPP-powered assistant for building and maintaining HT Wiki content."
+  >
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
-  <h1>HT Wiki Builder</h1>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark">
+          <span class="brand-ht">HT</span>
+        </span>
 
-  <div id="login-area">
-    <p>Connect your Hattrick account to begin.</p>
-    <a href="/auth/login">Log in with Hattrick</a>
-  </div>
+        <span class="brand-name">
+          <span class="brand-wiki">Wiki</span>
+          <span class="brand-builder">Builder</span>
+        </span>
+      </a>
 
-  <div id="success-area" style="display:none;">
-    <p>Connected to Hattrick.</p>
-  </div>
+      <div class="header-status">
+        <div id="user-status" class="user-status">
+          Not connected
+        </div>
 
-  <script>
-    const params = new URLSearchParams(window.location.search);
+        <a
+          id="header-login"
+          class="button button-small button-gold"
+          href="/auth/login"
+        >
+          Log in
+        </a>
 
-    if (params.get("login") === "success") {
-      document.getElementById("login-area").style.display = "none";
-      document.getElementById("success-area").style.display = "block";
-    }
-  </script>
+        <a
+          id="header-logout"
+          class="button button-small button-outline"
+          href="/auth/logout"
+          hidden
+        >
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="eyebrow">CHPP Manager Assistant</div>
+
+          <h1>
+            Build better
+            <span>HT Wiki</span>
+            pages.
+          </h1>
+
+          <p class="hero-text">
+            Turn authorized Hattrick data into useful analysis,
+            structured information, and copy-ready HT Wiki markup.
+          </p>
+
+          <div id="login-panel" class="login-panel">
+            <a class="button button-primary" href="/auth/login">
+              Log in with Hattrick
+            </a>
+
+            <p class="login-note">
+              HT Wiki Builder requests read-only access to your
+              Hattrick data.
+            </p>
+          </div>
+
+          <div id="connected-panel" class="connected-panel" hidden>
+            <div class="connected-label">
+              Connected to Hattrick
+            </div>
+
+            <div class="connected-team">
+              <div class="connected-team-name" id="team-name">
+                Loading team...
+              </div>
+
+              <div class="connected-team-details">
+                <span id="manager-name"></span>
+                <span id="team-id"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <span class="hero-card-title">HT Wiki Builder</span>
+            <span class="status-dot"></span>
+          </div>
+
+          <div class="hero-card-body">
+            <div class="feature-row">
+              <div class="feature-number">01</div>
+              <div>
+                <strong>Connect</strong>
+                <span>Authorize read-only CHPP access.</span>
+              </div>
+            </div>
+
+            <div class="feature-row">
+              <div class="feature-number">02</div>
+              <div>
+                <strong>Build</strong>
+                <span>Load and edit the information you need.</span>
+              </div>
+            </div>
+
+            <div class="feature-row">
+              <div class="feature-number">03</div>
+              <div>
+                <strong>Copy</strong>
+                <span>Generate markup ready for HT Wiki.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="section-heading">
+        <div>
+          <div class="eyebrow">Tools</div>
+          <h2>Wiki Builders</h2>
+        </div>
+
+        <p>
+          Choose a function to begin.
+        </p>
+      </div>
+
+      <div class="tool-grid">
+        <article class="tool-card">
+          <div class="tool-card-number">01</div>
+
+          <div class="tool-card-content">
+            <h3>Team Page Intro and Infobox</h3>
+
+            <p>
+              Load team information into editable fields and create
+              copy-ready markup for an HT Wiki team page.
+            </p>
+          </div>
+
+          <a
+            class="tool-card-action disabled"
+            href="#"
+            aria-disabled="true"
+          >
+            Coming soon
+          </a>
+        </article>
+
+        <article class="tool-card">
+          <div class="tool-card-number">02</div>
+
+          <div class="tool-card-content">
+            <h3>Lineup Planner</h3>
+
+            <p>
+              Analyze players, training priorities, formation
+              experience, eligibility, and lineup options.
+            </p>
+          </div>
+
+          <a
+            class="tool-card-action disabled"
+            href="#"
+            aria-disabled="true"
+          >
+            Coming soon
+          </a>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>HT Wiki Builder</strong>
+        <span>Free. Read-only. Built for the Hattrick community.</span>
+      </div>
+
+      <div class="footer-links">
+        <a
+          href="https://www.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hattrick
+        </a>
+
+        <a
+          href="https://wiki.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          HT Wiki
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      HT Wiki Builder is an independent CHPP application.
+    </div>
+  </footer>
+
+  <script src="/app.js"></script>
 </body>
 </html>
