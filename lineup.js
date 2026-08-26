@@ -421,6 +421,12 @@ const HTWB_LINEUP_SUBSTITUTE_ORDER = [
  *
  * Very-small / osmosis effects are not counted as normal trainee
  * slots in the formation calculation.
+ *
+ * trainingEfficiency adjusts the global training-type comparison for
+ * estimated training speed. Focused training is the 1.00 baseline.
+ * Because the optimizer uses a LOWEST-SCORE-WINS model, the normal
+ * combination score is DIVIDED by this value. Slower extended training
+ * therefore receives a larger (worse) comparison score.
  */
 
 const HTWB_LINEUP_TRAINING_TYPES = [
@@ -432,6 +438,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 2,
     idealEffectPerMatch: 1,
     tiePriority: 1,
+    trainingEfficiency: 1.00,
     fullRoles: ["GK"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -445,6 +452,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 10,
     idealEffectPerMatch: 5,
     tiePriority: 2,
+    trainingEfficiency: 1.00,
     fullRoles: ["DEFENDER"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -458,6 +466,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 10,
     idealEffectPerMatch: 4,
     tiePriority: 3,
+    trainingEfficiency: 1.00,
     fullRoles: ["IM"],
     partialRoles: ["WG"],
     partialRoleWeights: {
@@ -473,6 +482,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 8,
     idealEffectPerMatch: 3,
     tiePriority: 4,
+    trainingEfficiency: 1.00,
     fullRoles: ["WG"],
     partialRoles: ["WB"],
     partialRoleWeights: {
@@ -488,6 +498,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 16,
     idealEffectPerMatch: 8,
     tiePriority: 5,
+    trainingEfficiency: 1.00,
     fullRoles: ["IM", "WG", "FW"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -501,6 +512,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 6,
     idealEffectPerMatch: 3,
     tiePriority: 6,
+    trainingEfficiency: 1.00,
     fullRoles: ["FW"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -514,6 +526,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 22,
     idealEffectPerMatch: 11,
     tiePriority: 7,
+    trainingEfficiency: 1.00,
     fullRoles: ["ALL"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -527,6 +540,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 22,
     idealEffectPerMatch: 11,
     tiePriority: 8,
+    trainingEfficiency: 0.50,
     fullRoles: ["GK", "DEFENDER", "IM", "WG"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -540,6 +554,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 10,
     idealEffectPerMatch: 5,
     tiePriority: 9,
+    trainingEfficiency: 0.60,
     fullRoles: ["WG", "FW"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -553,6 +568,7 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     requiredPlayers: 20,
     idealEffectPerMatch: 10,
     tiePriority: 10,
+    trainingEfficiency: 0.80,
     fullRoles: ["DEFENDER", "IM", "WG"],
     partialRoles: [],
     partialRoleWeights: {}
@@ -1250,7 +1266,13 @@ function htwbLineupGetFormationExperienceFactor(
  *   Formation Score = Experience Priority Factor
  *                     x (Ideal Training Effect / Effective Training Effect)
  *
- *   Combination Score = Training Ideal Average x Formation Score
+ *   Base Combination Score = Training Ideal Average x Formation Score
+ *
+ *   Adjusted Combination Score = Base Combination Score / Training Efficiency
+ *
+ * Focused training uses 1.00. Estimated extended-training efficiencies are
+ * Defending 0.50, Winger 0.60, and Passing 0.80. Since low score wins,
+ * dividing by an efficiency below 1.00 correctly penalizes slower training.
  *
  * A formation with zero effective training effect receives an
  * infinite formation score naturally because Ideal / 0 is undefined.
@@ -1424,13 +1446,34 @@ function htwbLineupBuildCombinationMatrix(
                 htwbLineupUpcomingMatch
               );
 
-            const htwbLineupCombinationScore =
+            const htwbLineupTrainingEfficiency =
+              Math.max(
+                0.01,
+                Math.min(
+                  1,
+                  htwbLineupNumberValue(
+                    htwbLineupTrainingResult.training
+                      .trainingEfficiency,
+                    1
+                  )
+                )
+              );
+
+            const htwbLineupBaseCombinationScore =
               htwbLineupTrainingResult.hasEnoughPlayers &&
               Number.isFinite(
                 htwbLineupMetrics.score
               )
                 ? htwbLineupTrainingResult.idealAverage *
                   htwbLineupMetrics.score
+                : Number.POSITIVE_INFINITY;
+
+            const htwbLineupCombinationScore =
+              Number.isFinite(
+                htwbLineupBaseCombinationScore
+              )
+                ? htwbLineupBaseCombinationScore /
+                  htwbLineupTrainingEfficiency
                 : Number.POSITIVE_INFINITY;
 
             return {
@@ -1453,6 +1496,10 @@ function htwbLineupBuildCombinationMatrix(
                 htwbLineupMetrics.effectiveSlots,
               formationScore:
                 htwbLineupMetrics.score,
+              trainingEfficiency:
+                htwbLineupTrainingEfficiency,
+              baseCombinationScore:
+                htwbLineupBaseCombinationScore,
               combinationScore:
                 htwbLineupCombinationScore
             };
@@ -3835,6 +3882,12 @@ function htwbLineupRenderTraining(
 
               <td class="number">
                 ${htwbLineupAverageText}
+              </td>
+
+              <td class="number">
+                ${htwbLineupPercent(
+                  htwbLineupItem.training.trainingEfficiency ?? 1
+                )}
               </td>
 
               <td>

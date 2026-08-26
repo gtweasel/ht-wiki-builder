@@ -372,6 +372,10 @@
                     Ideal Average
                   </th>
 
+                  <th class="number">
+                    Training Speed
+                  </th>
+
                   <th>
                     Status
                   </th>
@@ -390,9 +394,10 @@
           <p class="lineup-note">
             All 10 supported training types are compared against all ten
             CHPP-tracked formations behind the scenes: 100 possible combinations
-            when every training average is available. This section shows only
-            the training-side inputs. Changing Training selects that training
-            type's best formation and rebuilds everything below.
+            when every training average is available. Focused training uses a
+            100% speed baseline; estimated extended-training speeds are 50% for
+            Defending, 60% for Winger, and 80% for Passing. Changing Training
+            selects that training type's best formation and rebuilds everything below.
           </p>
 
         </div>
@@ -563,9 +568,9 @@
             Formation Score = Experience Priority Factor x
             (Ideal Training Effect / Effective Training Effect).
             Experience Priority Factor = (13 - FrmExp) / 10 for competitive
-            matches and FrmExp / 10 for friendlies. Combination Score =
-            Training Ideal Average x Formation Score.
-            Lowest score wins. There is no utilization cutoff and no
+            matches and FrmExp / 10 for friendlies. Base Combination Score =
+            Training Ideal Average x Formation Score. Final Combination Score =
+            Base Combination Score / Training Speed. Lowest score wins. There is no utilization cutoff and no
             formation-experience threshold: all ten formations stay in the
             calculation. Changing Formation keeps the selected training type
             and immediately rebuilds everything below.
@@ -1406,7 +1411,7 @@
 
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260826-1"></script>
+  <script src="/lineup.js?v=20260826-2"></script>
 
 </body>
 </html>

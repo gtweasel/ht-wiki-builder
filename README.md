@@ -91,7 +91,11 @@ For each training/formation pair:
 
 `Formation Score = Formation Experience x (Ideal Training Slots / Effective Training Slots)`
 
-`Combination Score = Training Ideal Average x Formation Score`
+`Base Combination Score = Training Ideal Average x Formation Score`
+
+`Combination Score = Base Combination Score / Training Speed Efficiency`
+
+Focused training uses a `1.00` efficiency baseline. Estimated extended-training efficiencies are `0.50` for Defending, `0.60` for Winger, and `0.80` for Passing. Because the optimizer is lowest-score-wins, dividing by a value below `1.00` makes slower training appropriately less attractive while still allowing the extra trainee coverage to overcome the penalty when the roster supports it.
 
 The **lowest Combination Score wins**. A formation with zero effective training slots naturally receives an infinite score because the ideal/effective ratio cannot be calculated.
 
