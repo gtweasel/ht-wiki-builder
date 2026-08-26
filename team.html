@@ -3,64 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>Team Page Builder - HT Wiki Builder</title>
-
-  <meta
-    name="description"
-    content="Create a full HT Wiki team article from authorized Hattrick data."
-  >
-
+  <meta name="description" content="Create or update an HT Wiki team article from authorized Hattrick data.">
   <link rel="icon" href="/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-
-  <link
-    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
-    rel="stylesheet"
-  >
-
-  <link rel="stylesheet" href="/styles.css?v=20260825-4">
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css?v=20260826-1">
 </head>
-
 <body>
   <header class="site-header">
     <div class="header-inner">
       <a class="brand" href="/" aria-label="HT Wiki Builder home">
-        <span class="brand-mark">
-          <img class="brand-logo" src="/ht-wiki-builder-logo.png" alt="">
-        </span>
-
-        <span class="brand-name">
-          <span class="brand-wiki">Wiki</span>
-          <span class="brand-builder">Builder</span>
-        </span>
+        <span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span>
+        <span class="brand-name"><span class="brand-wiki">Wiki</span><span class="brand-builder">Builder</span></span>
       </a>
-
       <div class="header-status">
-        <div id="user-status" class="user-status">
-          Not connected
-        </div>
-
-        <a
-          id="header-login"
-          class="button button-small button-gold"
-          href="/auth/login"
-        >
-          Log in
-        </a>
-
-        <a
-          id="header-logout"
-          class="button button-small button-outline"
-          href="/auth/logout"
-          hidden
-        >
-          Log out
-        </a>
+        <div id="user-status" class="user-status">Not connected</div>
+        <a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a>
+        <a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a>
       </div>
     </div>
   </header>
@@ -68,153 +31,99 @@
   <main class="builder-page">
     <div class="builder-page-inner">
       <div class="builder-heading">
-        <div>
-          <div class="eyebrow">Wiki Builders</div>
-          <h1>Team Page Builder</h1>
-        </div>
-
-        <a class="button button-outline-dark" href="/">
-          Back to tools
-        </a>
+        <div><div class="eyebrow">Wiki Builders</div><h1>Team Page Builder</h1></div>
+        <a class="button button-outline-dark" href="/">Back to tools</a>
       </div>
 
       <div id="login-panel" class="builder-login">
         <h2>Connect to Hattrick</h2>
-
-        <p>
-          Log in to build an HT Wiki article for one of your managed teams.
-        </p>
-
-        <a class="button button-primary" href="/auth/login">
-          Log in with Hattrick
-        </a>
+        <p>Log in to build an HT Wiki article for one of your managed teams.</p>
+        <a class="button button-primary" href="/auth/login">Log in with Hattrick</a>
       </div>
 
       <div id="connected-panel" class="builder-account" hidden>
         <div>
-          <span class="builder-account-label">
-            Connected to Hattrick
-          </span>
-
-          <strong id="team-name">
-            Loading team...
-          </strong>
-
-          <div class="builder-account-details">
-            <span id="manager-name"></span>
-            <span id="team-id"></span>
-          </div>
+          <span class="builder-account-label">Connected to Hattrick</span>
+          <strong id="team-name">Loading team...</strong>
+          <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
         </div>
       </div>
 
       <section class="builder-section">
-        <div class="builder-section-number">
-          01
-        </div>
-
+        <div class="builder-section-number">01</div>
         <div class="builder-section-content">
           <div class="builder-section-heading">
             <div>
-              <h2>Build Team Article</h2>
-
-              <p>
-                The builder will request every supported data source for your
-                selected managed team and automatically leave out anything that
-                Hattrick does not return.
-              </p>
+              <h2>Load Team Data</h2>
+              <p>Choose one of your managed teams, then load the available club data from Hattrick. Data is held only for this page session and reused while you generate wiki markup.</p>
             </div>
           </div>
-
           <div class="builder-callout-grid">
-            <div class="builder-callout-item">
-              <strong>No field checklist</strong>
-              <span>Available information is included automatically.</span>
-            </div>
-
-            <div class="builder-callout-item">
-              <strong>No empty sections</strong>
-              <span>Missing fields, columns, and article sections are omitted.</span>
-            </div>
-
-            <div class="builder-callout-item">
-              <strong>Your teams only</strong>
-              <span>The API rejects requests for teams you do not manage.</span>
-            </div>
+            <div class="builder-callout-item"><strong>Fresh on request</strong><span>Data is loaded when you press the button, not on a background schedule.</span></div>
+            <div class="builder-callout-item"><strong>No empty output</strong><span>Sections without usable data are omitted from a full page and disabled below.</span></div>
+            <div class="builder-callout-item"><strong>Your teams only</strong><span>The API rejects requests for teams you do not manage.</span></div>
           </div>
-
           <div class="builder-actions">
-            <button
-              id="build-team-article"
-              class="button button-primary"
-              type="button"
-              disabled
-            >
-              Build Team Page
-            </button>
+            <button id="load-team-data" class="button button-primary" type="button" disabled>Load Team Data</button>
           </div>
-
-          <div
-            id="team-load-status"
-            class="builder-status"
-            aria-live="polite"
-            hidden
-          ></div>
+          <div id="team-load-status" class="builder-status" aria-live="polite" hidden></div>
         </div>
       </section>
 
-      <section
-        id="wiki-output-section"
-        class="builder-section"
-        hidden
-      >
-        <div class="builder-section-number">
-          02
-        </div>
-
+      <section id="wiki-options-section" class="builder-section" hidden>
+        <div class="builder-section-number">02</div>
         <div class="builder-section-content">
           <div class="builder-section-heading">
             <div>
-              <h2>Review Team Article</h2>
-
-              <p>
-                The markup below is generated only from data returned for this
-                team. You can edit anything before copying it to HT Wiki.
-              </p>
+              <h2>Wiki Options &amp; Content</h2>
+              <p>Set the few options HT Wiki cannot determine from CHPP, then choose a full article or one complete replacement section.</p>
             </div>
           </div>
 
-          <div class="article-build-summary">
-            <div>
-              <span class="article-build-summary-label">Included</span>
-              <div id="included-sections" class="article-chip-list"></div>
-            </div>
+          <div class="team-wiki-options">
+            <label class="team-wiki-user-label" for="htwiki-username">
+              <span>HT-Wiki username <small>(optional)</small></span>
+              <input id="htwiki-username" class="team-wiki-input" type="text" autocomplete="off" placeholder="Dalepopp">
+              <small>If supplied, the Hattrick manager name links to your HT-Wiki user page. Enter only the username; <code>User:</code> is accepted if included.</small>
+            </label>
 
-            <div id="unavailable-summary-wrap">
-              <span class="article-build-summary-label">Not available</span>
-              <div id="unavailable-sections" class="article-chip-list"></div>
-            </div>
+            <fieldset class="team-wiki-checkboxes">
+              <legend>Markup options</legend>
+              <label><input id="include-images" type="checkbox" checked> <span>Include images in markup</span></label>
+              <label><input id="include-season-links" type="checkbox"> <span>Link seasons to individual season pages</span></label>
+            </fieldset>
           </div>
 
-          <textarea
-            id="wiki-output"
-            class="wiki-output wiki-output-team-page"
-            rows="36"
-            spellcheck="false"
-          ></textarea>
-
-          <div class="builder-actions">
-            <button
-              id="copy-wiki-output"
-              class="button button-primary"
-              type="button"
-            >
-              Copy Wiki Markup
+          <div class="team-generation-group">
+            <button id="generate-full-page" class="team-full-page-card" type="button">
+              <span class="team-full-page-title">Full Team Page</span>
+              <span class="team-full-page-note">Use for an initial article build or a complete page reset. Existing user-written material will not be preserved when the generated page is pasted over it.</span>
             </button>
+          </div>
 
-            <span
-              id="copy-status"
-              class="copy-status"
-            ></span>
+          <div class="team-section-picker">
+            <div class="team-section-picker-heading">
+              <h3>Replace a Section</h3>
+              <p>Each button returns the complete section, including its <code>== Section heading ==</code>, so you can open Edit section, select all, and paste.</p>
+            </div>
+            <div id="team-section-buttons" class="team-section-button-grid"></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="wiki-output-section" class="builder-section" hidden>
+        <div class="builder-section-number">03</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2 id="wiki-output-title">Generated Wiki Markup</h2>
+              <p id="wiki-output-note">Review the generated markup, then copy it to HT Wiki.</p>
+            </div>
+          </div>
+          <textarea id="wiki-output" class="wiki-output wiki-output-team-page" rows="36" spellcheck="false"></textarea>
+          <div class="builder-actions">
+            <button id="copy-wiki-output" class="button button-primary" type="button">Copy Wiki Markup</button>
+            <span id="copy-status" class="copy-status"></span>
           </div>
         </div>
       </section>
@@ -223,47 +132,17 @@
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <div>
-        <strong>HT Wiki Builder</strong>
-        <span>
-          Free. Read-only. Built for the Hattrick community.
-        </span>
-      </div>
-
+      <div><strong>HT Wiki Builder</strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
       <div class="footer-links">
-        <a
-          href="https://www.hattrick.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Hattrick
-        </a>
-
-        <a
-          href="https://www.hattrick.org/?inviteRef=TS7E2C"
-          target="_blank"
-          rel="noopener noreferrer"
-          title="New to Hattrick? Create a team using the HT Wiki Builder recruitment link."
-        >
-          Join Hattrick
-        </a>
-
-        <a
-          href="https://wiki.hattrick.org/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          HT Wiki
-        </a>
+        <a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a>
+        <a href="https://www.hattrick.org/?inviteRef=TS7E2C" target="_blank" rel="noopener noreferrer" title="New to Hattrick? Create a team using the HT Wiki Builder recruitment link.">Join Hattrick</a>
+        <a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a>
       </div>
     </div>
-
-    <div class="footer-legal">
-      HT Wiki Builder is an independent CHPP application. The Join Hattrick link is a recruitment link that may earn the site creator Hattrick reward points.
-    </div>
+    <div class="footer-legal">HT Wiki Builder is an independent CHPP application. The Join Hattrick link is a recruitment link that may earn the site creator Hattrick reward points.</div>
   </footer>
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/team.js?v=20260825-4"></script>
+  <script src="/team.js?v=20260826-1"></script>
 </body>
 </html>

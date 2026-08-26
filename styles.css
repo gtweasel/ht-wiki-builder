@@ -1398,3 +1398,184 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* Team Page Builder generation flow */
+.team-wiki-options {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(260px, .85fr);
+  gap: 18px;
+  margin-bottom: 28px;
+}
+
+.team-wiki-user-label,
+.team-wiki-checkboxes {
+  padding: 18px;
+  border: 1px solid var(--gray-200);
+  border-radius: 7px;
+  background: var(--gray-50);
+}
+
+.team-wiki-user-label > span,
+.team-wiki-checkboxes legend {
+  display: block;
+  margin-bottom: 9px;
+  color: var(--blue-950);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.team-wiki-user-label small {
+  display: block;
+  margin-top: 8px;
+  color: var(--gray-600);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.team-wiki-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 12px;
+  border: 1px solid var(--gray-300);
+  border-radius: 5px;
+  background: white;
+  color: var(--blue-950);
+  font: inherit;
+}
+
+.team-wiki-input:focus {
+  outline: 2px solid rgba(38, 89, 140, .18);
+  border-color: var(--blue-700);
+}
+
+.team-wiki-checkboxes {
+  margin: 0;
+}
+
+.team-wiki-checkboxes label {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 10px;
+  color: var(--gray-600);
+  font-size: 13px;
+}
+
+.team-wiki-checkboxes input {
+  margin-top: 2px;
+}
+
+.team-generation-group {
+  margin: 4px 0 30px;
+}
+
+.team-full-page-card {
+  width: 100%;
+  padding: 22px 24px;
+  text-align: left;
+  border: 2px solid var(--blue-800);
+  border-radius: 8px;
+  background: var(--blue-950);
+  color: white;
+  cursor: pointer;
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+
+.team-full-page-card:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 20px rgba(15, 37, 62, .16);
+}
+
+.team-full-page-title {
+  display: block;
+  margin-bottom: 5px;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.team-full-page-note {
+  display: block;
+  max-width: 820px;
+  color: rgba(255,255,255,.82);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.team-section-picker {
+  padding-top: 24px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.team-section-picker-heading {
+  margin-bottom: 16px;
+}
+
+.team-section-picker-heading h3 {
+  margin: 0 0 5px;
+  color: var(--blue-950);
+  font-size: 18px;
+}
+
+.team-section-picker-heading p {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.team-section-button-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.team-section-button {
+  min-height: 92px;
+  padding: 15px 16px;
+  text-align: left;
+  border: 1px solid var(--gray-300);
+  border-radius: 7px;
+  background: white;
+  color: var(--blue-950);
+  cursor: pointer;
+}
+
+.team-section-button strong,
+.team-section-button span {
+  display: block;
+}
+
+.team-section-button strong {
+  margin-bottom: 5px;
+  font-size: 14px;
+}
+
+.team-section-button span {
+  color: var(--gray-600);
+  font-size: 11px;
+}
+
+.team-section-button:hover:not(:disabled) {
+  border-color: var(--blue-700);
+  background: var(--gray-50);
+}
+
+.team-section-button:disabled {
+  opacity: 1;
+  border-color: var(--gray-200);
+  background: var(--gray-100);
+  color: var(--gray-500);
+  cursor: not-allowed;
+}
+
+.team-section-button:disabled span {
+  color: var(--gray-500);
+}
+
+@media (max-width: 800px) {
+  .team-wiki-options,
+  .team-section-button-grid {
+    grid-template-columns: 1fr;
+  }
+}

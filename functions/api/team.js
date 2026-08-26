@@ -821,10 +821,8 @@ export async function onRequestGet(htwbApiTeamContext) {
       worldDetails: "unavailable",
       arenaDetails: "unavailable",
       leagueDetails: "unavailable",
-      coachDetails: "unavailable",
-      economy: "unavailable",
-      players: "unavailable",
-      matchArchive: "unavailable"
+      club: "unavailable",
+      economy: "unavailable"
     };
 
     const htwbApiTeamTeamDetailsXml = await htwbApiTeamChppFetch(
@@ -951,19 +949,16 @@ export async function onRequestGet(htwbApiTeamContext) {
         )
       : "";
 
-    const htwbApiTeamCoachDetailsXml = htwbApiTeamCoachId
-      ? await htwbApiTeamOptionalChppFetch(
-          htwbApiTeamContext,
-          {
-            file: "playerdetails",
-            version: "1.1",
-            actionType: "view",
-            playerID: htwbApiTeamCoachId
-          },
-          "coachDetails",
-          htwbApiTeamSources
-        )
-      : "";
+    const htwbApiTeamClubXml = await htwbApiTeamOptionalChppFetch(
+      htwbApiTeamContext,
+      {
+        file: "club",
+        version: "1.0",
+        actionType: "view"
+      },
+      "club",
+      htwbApiTeamSources
+    );
 
     const htwbApiTeamEconomyXml = await htwbApiTeamOptionalChppFetch(
       htwbApiTeamContext,
@@ -976,19 +971,6 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamSources
     );
 
-    const htwbApiTeamPlayersXml = await htwbApiTeamOptionalChppFetch(
-      htwbApiTeamContext,
-      {
-        file: "players",
-        version: "1.3",
-        actionType: "view",
-        teamID: htwbApiTeamTeamId,
-        orderBy: "PlayerNumber"
-      },
-      "players",
-      htwbApiTeamSources
-    );
-
     const htwbApiTeamCurrentCapacityXml =
       htwbApiTeamXmlContainer(htwbApiTeamArenaDetailsXml, "CurrentCapacity");
     const htwbApiTeamExpandedCapacityXml =
@@ -998,16 +980,33 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamTeamId
     );
 
-    const htwbApiTeamCoachPlayerXml =
-      htwbApiTeamXmlContainer(htwbApiTeamCoachDetailsXml, "Player");
-    const htwbApiTeamCoachTrainerXml =
-      htwbApiTeamXmlContainer(htwbApiTeamCoachPlayerXml, "TrainerData");
-    const htwbApiTeamCoachNativeLeagueId =
-      htwbApiTeamXmlValue(htwbApiTeamCoachPlayerXml, "NativeLeagueID");
-    const htwbApiTeamCoachWorldLeague =
-      htwbApiTeamWorldLookup.byLeagueId.get(
-        String(htwbApiTeamCoachNativeLeagueId)
+    const htwbApiTeamClubTeamXml =
+      htwbApiTeamXmlContainer(htwbApiTeamClubXml, "Team");
+    const htwbApiTeamSpecialistsXml =
+      htwbApiTeamXmlContainer(htwbApiTeamClubTeamXml, "Specialists");
+    const htwbApiTeamStaff = [];
+    const htwbApiTeamStaffFields = [
+      ["Keeper trainer", "KeeperTrainers"],
+      ["Assistant trainer", "AssistantTrainers"],
+      ["Psychologist", "Psychologists"],
+      ["Press spokesman", "PressSpokesmen"],
+      ["Economist", "Economists"],
+      ["Physiotherapist", "Physiotherapists"],
+      ["Doctor", "Doctors"]
+    ];
+
+    for (const [htwbApiTeamRole, htwbApiTeamTag] of htwbApiTeamStaffFields) {
+      const htwbApiTeamCount = Number(
+        htwbApiTeamXmlValue(htwbApiTeamSpecialistsXml, htwbApiTeamTag)
       );
+
+      if (Number.isFinite(htwbApiTeamCount) && htwbApiTeamCount > 0) {
+        htwbApiTeamStaff.push({
+          role: htwbApiTeamRole,
+          count: htwbApiTeamCount
+        });
+      }
+    }
 
     const htwbApiTeamEconomyTeamXml =
       htwbApiTeamXmlContainer(htwbApiTeamEconomyXml, "Team");
@@ -1026,27 +1025,6 @@ export async function onRequestGet(htwbApiTeamContext) {
       // private economy response to the selected team.
       htwbApiTeamSources.economy = "unavailable";
     }
-
-    const htwbApiTeamSquad = htwbApiTeamParsePlayers(
-      htwbApiTeamPlayersXml,
-      htwbApiTeamTeamId,
-      htwbApiTeamWorldLookup
-    );
-
-    if (htwbApiTeamPlayersXml && !htwbApiTeamSquad.length) {
-      htwbApiTeamSources.players = "unavailable";
-    }
-
-    const htwbApiTeamArchive = await htwbApiTeamLoadArchive(
-      htwbApiTeamContext,
-      htwbApiTeamTeamId,
-      htwbApiTeamActivationDate,
-      htwbApiTeamSources
-    );
-    const htwbApiTeamRecords = htwbApiTeamBuildRecords(
-      htwbApiTeamArchive,
-      htwbApiTeamTeamId
-    );
 
     const htwbApiTeamCupAvailableAttribute = htwbApiTeamXmlTagAttribute(
       htwbApiTeamTeamXml,
@@ -1069,6 +1047,7 @@ export async function onRequestGet(htwbApiTeamContext) {
         country:
           htwbApiTeamWorldDisplayName(htwbApiTeamTeamWorldLeague) ||
           htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueName"),
+        leagueName: htwbApiTeamXmlValue(htwbApiTeamLeagueXml, "LeagueName"),
         league: htwbApiTeamXmlValue(
           htwbApiTeamLeagueLevelUnitXml,
           "LeagueLevelUnitName"
@@ -1103,11 +1082,9 @@ export async function onRequestGet(htwbApiTeamContext) {
         coach: {
           id: htwbApiTeamCoachId,
           name: htwbApiTeamXmlValue(htwbApiTeamTrainerXml, "PlayerName"),
-          nationality:
-            htwbApiTeamWorldDisplayName(htwbApiTeamCoachWorldLeague) ||
-            htwbApiTeamXmlValue(htwbApiTeamCoachPlayerXml, "NativeLeagueName"),
-          type: htwbApiTeamXmlValue(htwbApiTeamCoachTrainerXml, "TrainerType"),
-          skill: htwbApiTeamXmlValue(htwbApiTeamCoachTrainerXml, "TrainerSkill")
+          nationality: "",
+          type: "",
+          skill: ""
         },
         fanclub: {
           name: htwbApiTeamXmlValue(htwbApiTeamFanclubXml, "FanclubName"),
@@ -1139,8 +1116,12 @@ export async function onRequestGet(htwbApiTeamContext) {
           htwbApiTeamXmlValue(htwbApiTeamTeamXml, "NumberOfUndefeated")
         ),
         currentSeason: htwbApiTeamTeamWorldLeague?.season || "",
-        squad: htwbApiTeamSquad,
-        records: htwbApiTeamRecords,
+        squad: [],
+        staff: htwbApiTeamStaff,
+        honours: [],
+        seasonResults: [],
+        hallOfFame: [],
+        flagCollection: [],
         sources: htwbApiTeamSources
       },
       { headers: htwbApiTeamNoStoreHeaders }

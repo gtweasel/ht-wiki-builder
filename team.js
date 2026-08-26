@@ -1,1047 +1,365 @@
 "use strict";
 
-const htwbTeamBuildButton =
-  document.getElementById("build-team-article");
-const htwbTeamLoadStatus =
-  document.getElementById("team-load-status");
-const htwbTeamOutputSection =
-  document.getElementById("wiki-output-section");
-const htwbTeamOutput =
-  document.getElementById("wiki-output");
-const htwbTeamCopyButton =
-  document.getElementById("copy-wiki-output");
-const htwbTeamCopyStatus =
-  document.getElementById("copy-status");
-const htwbTeamIncludedSections =
-  document.getElementById("included-sections");
-const htwbTeamUnavailableSections =
-  document.getElementById("unavailable-sections");
-const htwbTeamUnavailableWrap =
-  document.getElementById("unavailable-summary-wrap");
+const htwbLoadButton = document.getElementById("load-team-data");
+const htwbStatus = document.getElementById("team-load-status");
+const htwbOptionsSection = document.getElementById("wiki-options-section");
+const htwbUsername = document.getElementById("htwiki-username");
+const htwbIncludeImages = document.getElementById("include-images");
+const htwbIncludeSeasonLinks = document.getElementById("include-season-links");
+const htwbFullPageButton = document.getElementById("generate-full-page");
+const htwbSectionButtons = document.getElementById("team-section-buttons");
+const htwbOutputSection = document.getElementById("wiki-output-section");
+const htwbOutputTitle = document.getElementById("wiki-output-title");
+const htwbOutputNote = document.getElementById("wiki-output-note");
+const htwbOutput = document.getElementById("wiki-output");
+const htwbCopyButton = document.getElementById("copy-wiki-output");
+const htwbCopyStatus = document.getElementById("copy-status");
 
-let htwbTeamSelectedTeamId = "";
-let htwbTeamLoading = false;
+let htwbSelectedTeamId = "";
+let htwbLoadedData = null;
+let htwbLoading = false;
 
-function htwbTeamGetSelectedTeamId() {
-  if (
-    window.HTWikiBuilder &&
-    typeof window.HTWikiBuilder.getSelectedTeamId === "function"
-  ) {
-    return String(
-      window.HTWikiBuilder.getSelectedTeamId() || ""
-    );
+const HTWB_BUILDER_URL = "https://ht-wiki-builder.pages.dev/";
+
+function htwbGetSelectedTeamId() {
+  if (window.HTWikiBuilder && typeof window.HTWikiBuilder.getSelectedTeamId === "function") {
+    return String(window.HTWikiBuilder.getSelectedTeamId() || "");
   }
-
-  return htwbTeamSelectedTeamId;
+  return htwbSelectedTeamId;
 }
 
-function htwbTeamSetSelectedTeamId(htwbTeamId) {
-  htwbTeamSelectedTeamId = String(htwbTeamId || "");
+function htwbSetSelectedTeamId(value) {
+  htwbSelectedTeamId = String(value || "");
+  htwbLoadedData = null;
+  if (htwbOptionsSection) htwbOptionsSection.hidden = true;
+  if (htwbOutputSection) htwbOutputSection.hidden = true;
+  if (htwbLoadButton) htwbLoadButton.disabled = !htwbSelectedTeamId || htwbLoading;
+}
 
-  if (htwbTeamBuildButton) {
-    htwbTeamBuildButton.disabled =
-      !htwbTeamSelectedTeamId || htwbTeamLoading;
+function htwbSetStatus(message, type = "") {
+  htwbStatus.hidden = !message;
+  htwbStatus.textContent = message || "";
+  htwbStatus.className = "builder-status";
+  if (type === "success") htwbStatus.classList.add("builder-status-success");
+  if (type === "error") htwbStatus.classList.add("builder-status-error");
+}
+
+function hasValue(value) {
+  return !(value === null || value === undefined || String(value).trim() === "" || String(value).toUpperCase() === "NOT AVAILABLE");
+}
+
+function wikiText(value) {
+  return String(value || "").replace(/[\r\n]+/g, " ").replace(/\|/g, "{{!}}").trim();
+}
+
+function formatNumber(value) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n.toLocaleString("en-US") : String(value || "");
+}
+
+function formatDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return String(value || "");
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const y = Number(match[1]), m = Number(match[2]), d = Number(match[3]);
+  if (!y || m < 1 || m > 12 || d < 1 || d > 31) return String(value || "");
+  return `${d} ${months[m - 1]} ${y}`;
+}
+
+function ordinal(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return String(value || "");
+  const mod100 = n % 100;
+  if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
+  if (n % 10 === 1) return `${n}st`;
+  if (n % 10 === 2) return `${n}nd`;
+  if (n % 10 === 3) return `${n}rd`;
+  return `${n}th`;
+}
+
+function isUSA(data) {
+  return String(data?.leagueName || data?.country || "").trim() === "USA";
+}
+
+function honoursLabel(data) {
+  return isUSA(data) ? "Honors" : "Honours";
+}
+
+function normalizedWikiUsername() {
+  return String(htwbUsername?.value || "").trim().replace(/^User\s*:/i, "").trim();
+}
+
+function managerMarkup(data) {
+  const display = wikiText(data.managerName);
+  if (!display) return "";
+  const username = normalizedWikiUsername();
+  return username ? `[[User:${wikiText(username)}|${display}]]` : display;
+}
+
+function buildInfobox(data) {
+  if (!data?.teamName) return "";
+  const lines = ["{{Infobox club"];
+  const add = (key, value) => { if (hasValue(value)) lines.push(`| ${key.padEnd(15, " ")} = ${value}`); };
+  add("teamname", wikiText(data.teamName));
+  add("teamid", wikiText(data.teamId));
+  add("manager", managerMarkup(data));
+  add("shortname", wikiText(data.shortTeamName));
+  add("region", wikiText(data.region));
+  add("country", wikiText(data.country));
+  add("league", wikiText(data.league));
+  add("league-pos", data.leaguePosition ? ordinal(data.leaguePosition) : "");
+  add("arena", wikiText(data.arena?.name));
+  add("capacity", data.arena?.currentCapacity?.total ? formatNumber(data.arena.currentCapacity.total) : "");
+  add("coach", wikiText(data.coach?.name));
+  add("fanclub", wikiText(data.fanclub?.name));
+  add("fanclub-size", data.fanclub?.size ? formatNumber(data.fanclub.size) : "");
+  add("founded", data.activationDate ? formatDate(data.activationDate) : "");
+  if (htwbIncludeImages.checked && data.teamId) {
+    if (data.logoUrl) add("logouri", `${data.teamId}.png`);
+    if (data.kits?.home) add("homekit", `[[File:${data.teamId}_home.png|125px]]`);
+    if (data.kits?.away) add("awaykit", `[[File:${data.teamId}_away.png|125px]]`);
+  }
+  lines.push("}}");
+  return lines.join("\n");
+}
+
+function buildIntro(data) {
+  if (!data?.teamName) return "";
+  let text = `'''${wikiText(data.teamName)}''' is a Hattrick club`;
+  if (data.region && data.country) text += ` based in [[${wikiText(data.region)}]], [[${wikiText(data.country)}]]`;
+  else if (data.country) text += ` based in [[${wikiText(data.country)}]]`;
+  if (data.managerName) text += ` and managed by ${managerMarkup(data)}`;
+  text += ".";
+  if (data.league) {
+    text += ` The club currently competes in ${wikiText(data.league)}`;
+    if (data.leaguePosition) text += `, where it is ${ordinal(data.leaguePosition)}`;
+    text += ".";
+  }
+  return text;
+}
+
+function buildTeamInformation(data) {
+  return ["== Team information ==", "", buildInfobox(data), "", buildIntro(data)].filter(Boolean).join("\n");
+}
+
+function buildHistory(data) {
+  const paragraphs = [];
+  if (Array.isArray(data.historyNarrative) && data.historyNarrative.length) {
+    paragraphs.push(...data.historyNarrative.filter(hasValue).map(wikiText));
+  } else if (hasValue(data.historyNarrative)) {
+    paragraphs.push(wikiText(data.historyNarrative));
+  }
+  if (!paragraphs.length && data.activationDate) {
+    paragraphs.push(`${wikiText(data.teamName || "The club")} came under its current manager's control on ${formatDate(data.activationDate)}.`);
+  }
+  return paragraphs.length ? `== History ==\n\n${paragraphs.join("\n\n")}` : "";
+}
+
+function buildArena(data) {
+  const arena = data.arena || {};
+  if (!arena.name) return "";
+  const parts = ["== Arena ==", ""];
+  let intro = `${wikiText(data.teamName)} plays its home matches at '''${wikiText(arena.name)}'''`;
+  if (arena.currentCapacity?.total) intro += `, which has a current capacity of ${formatNumber(arena.currentCapacity.total)}`;
+  parts.push(`${intro}.`);
+  const rows = [
+    ["Terraces", arena.currentCapacity?.terraces],
+    ["Basic seating", arena.currentCapacity?.basic],
+    ["Seats under roof", arena.currentCapacity?.roof],
+    ["VIP seats", arena.currentCapacity?.vip],
+    ["Total capacity", arena.currentCapacity?.total]
+  ].filter(([,v]) => hasValue(v));
+  if (rows.length >= 2) {
+    parts.push("", '{| class="wikitable"', "! Seating type !! Capacity");
+    for (const [label, value] of rows) parts.push("|-", `| ${label} || ${formatNumber(value)}`);
+    parts.push("|}");
+  }
+  return parts.join("\n");
+}
+
+function buildSupporters(data) {
+  const fan = data.fanclub || {};
+  if (!fan.name && !fan.size) return "";
+  const season = data.currentSeason ? `as of Season ${wikiText(data.currentSeason)}` : "currently";
+  if (fan.name && fan.size) return `== Supporters ==\n\nThe club's supporters are known as '''${wikiText(fan.name)}''', and ${season} have ${formatNumber(fan.size)} members.`;
+  if (fan.name) return `== Supporters ==\n\nThe club's supporters are known as '''${wikiText(fan.name)}'''.`;
+  return `== Supporters ==\n\nThe club's supporters ${season} number ${formatNumber(fan.size)} members.`;
+}
+
+function buildSquad(data) {
+  const squad = Array.isArray(data.squad) ? data.squad : [];
+  if (!squad.length) return "";
+  const lines = ["== Players ==", "", "=== Current squad ===", "", '{| class="wikitable sortable"', "! No. !! Player !! Age !! League goals !! Cup goals"];
+  for (const p of squad) {
+    const player = p.playerId ? `{{Playerid|${p.playerId}|${wikiText(p.name)}}}` : wikiText(p.name);
+    lines.push("|-", `| ${p.number || "—"} || ${player} || ${p.age || "—"} || ${hasValue(p.leagueGoals) ? p.leagueGoals : "—"} || ${hasValue(p.cupGoals) ? p.cupGoals : "—"}`);
+  }
+  lines.push("|}");
+  return lines.join("\n");
+}
+
+function buildStaff(data) {
+  const staff = Array.isArray(data.staff) ? data.staff : [];
+  if (!data.coach?.name && !staff.length) return "";
+  const lines = ["== Team staff ==", "", '{| class="wikitable"', "! Role !! Name / Count"];
+  if (data.coach?.name) lines.push("|-", `| Head coach || ${wikiText(data.coach.name)}`);
+  for (const person of staff) {
+    if (!person?.role || !hasValue(person.count)) continue;
+    lines.push("|-", `| ${wikiText(person.role)} || ${formatNumber(person.count)}`);
+  }
+  lines.push("|}");
+  return lines.join("\n");
+}
+
+function buildHonours(data) {
+  const items = Array.isArray(data.honours) ? data.honours : Array.isArray(data.honors) ? data.honors : [];
+  if (!items.length) return "";
+  const lines = [`== ${honoursLabel(data)} ==`, ""];
+  for (const item of items) {
+    if (typeof item === "string") lines.push(`* ${wikiText(item)}`);
+    else if (item?.name) lines.push(`* '''${wikiText(item.name)}'''${item.result ? ` - ${wikiText(item.result)}` : ""}`);
+  }
+  return lines.length > 2 ? lines.join("\n") : "";
+}
+
+function seasonCell(value) { return hasValue(value) ? wikiText(value) : "—"; }
+
+function buildSeasonResults(data) {
+  const rows = Array.isArray(data.seasonResults) ? data.seasonResults : [];
+  if (!rows.length) return "";
+  const leagueName = wikiText(data.leagueName || data.country || "");
+  const lines = ["== Season-by-season results ==", "", '{| class="prettytable" style="width:100%; text-align:center;"', `{{Club season results header|${leagueName}}}`];
+  for (const row of rows) {
+    const season = seasonCell(row.season);
+    const seasonDisplay = htwbIncludeSeasonLinks.checked && row.season && data.teamName
+      ? `[[${wikiText(data.teamName)}/Season ${season}|${season}]]`
+      : season;
+    const series = row.seriesLink
+      ? `[[${wikiText(row.seriesLink)}|${seasonCell(row.series)}]]`
+      : seasonCell(row.series);
+    lines.push("|-", `| ${seasonDisplay}`, `| ${series}`, `| ${seasonCell(row.finish)}`, `| ${seasonCell(row.national)}`, `| ${seasonCell(row.emerald)}`, `| ${seasonCell(row.ruby)}`, `| ${seasonCell(row.sapphire)}`, `| ${seasonCell(row.consolation)}`, `| ${hasValue(row.notes) ? wikiText(row.notes) : ""}`);
+  }
+  lines.push("|}");
+  return lines.join("\n");
+}
+
+function buildHallOfFame(data) {
+  const rows = Array.isArray(data.hallOfFame) ? data.hallOfFame : [];
+  if (!rows.length) return "";
+  const lines = ["== Hall of Fame ==", ""];
+  for (const entry of rows) lines.push(`* ${typeof entry === "string" ? wikiText(entry) : wikiText(entry.name || "")}`);
+  return lines.join("\n");
+}
+
+function buildFlags(data) {
+  const flags = Array.isArray(data.flagCollection) ? data.flagCollection : [];
+  if (!flags.length) return "";
+  const lines = ["== Flag collection ==", ""];
+  for (const flag of flags) lines.push(`* ${typeof flag === "string" ? wikiText(flag) : wikiText(flag.name || "")}`);
+  return lines.join("\n");
+}
+
+function buildExternalLinks(data) {
+  const lines = ["== External links ==", "", `* [${HTWB_BUILDER_URL} This article was generated using HT Wiki Builder]`];
+  if (data.homePage) lines.push(`* [${String(data.homePage).replace(/\]/g, "%5D")} Official team website]`);
+  return lines.join("\n");
+}
+
+const sectionDefinitions = [
+  { key: "team-information", label: "Team Information", build: buildTeamInformation },
+  { key: "history", label: "History", build: buildHistory },
+  { key: "arena", label: "Arena", build: buildArena },
+  { key: "supporters", label: "Supporters", build: buildSupporters },
+  { key: "squad", label: "Current Squad", build: buildSquad },
+  { key: "staff", label: "Team Staff", build: buildStaff },
+  { key: "honours", label: data => honoursLabel(data), build: buildHonours },
+  { key: "season-results", label: "Season-by-Season Results", build: buildSeasonResults },
+  { key: "hall-of-fame", label: "Hall of Fame", build: buildHallOfFame },
+  { key: "flag-collection", label: "Flag Collection", build: buildFlags }
+];
+
+function sectionLabel(def, data) { return typeof def.label === "function" ? def.label(data) : def.label; }
+
+function renderSectionButtons() {
+  htwbSectionButtons.innerHTML = "";
+  for (const def of sectionDefinitions) {
+    const markup = def.build(htwbLoadedData);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "team-section-button";
+    button.disabled = !markup;
+    button.innerHTML = `<strong>${sectionLabel(def, htwbLoadedData)}</strong><span>${markup ? "Generate replacement section" : "No data available"}</span>`;
+    button.addEventListener("click", () => renderOutput(sectionLabel(def, htwbLoadedData), markup, true));
+    htwbSectionButtons.appendChild(button);
   }
 }
 
-function htwbTeamSetStatus(htwbTeamMessage, htwbTeamType = "") {
-  if (!htwbTeamLoadStatus) {
-    return;
+function buildFullPage(data) {
+  const parts = [];
+  const info = [buildInfobox(data), buildIntro(data)].filter(Boolean).join("\n\n");
+  if (info) parts.push(info);
+  for (const def of sectionDefinitions) {
+    if (def.key === "team-information") continue;
+    const markup = def.build(data);
+    if (markup) parts.push(markup);
   }
-
-  htwbTeamLoadStatus.hidden = !htwbTeamMessage;
-  htwbTeamLoadStatus.textContent = htwbTeamMessage || "";
-  htwbTeamLoadStatus.className = "builder-status";
-
-  if (htwbTeamType === "success") {
-    htwbTeamLoadStatus.classList.add("builder-status-success");
-  }
-
-  if (htwbTeamType === "error") {
-    htwbTeamLoadStatus.classList.add("builder-status-error");
-  }
+  parts.push(buildExternalLinks(data));
+  return parts.filter(Boolean).join("\n\n");
 }
 
-function htwbTeamFormatNumber(htwbTeamValue) {
-  const htwbTeamNumber = Number(htwbTeamValue);
-
-  if (!Number.isFinite(htwbTeamNumber)) {
-    return String(htwbTeamValue || "");
-  }
-
-  return htwbTeamNumber.toLocaleString("en-US");
+function renderOutput(label, markup, sectionOnly) {
+  if (!markup) return;
+  htwbOutput.value = markup;
+  htwbOutputTitle.textContent = sectionOnly ? `${label} Section` : "Full Team Page";
+  htwbOutputNote.textContent = sectionOnly
+    ? "This is the complete replacement section, including its section heading."
+    : "Use this output for an initial article build or a deliberate complete page reset.";
+  htwbCopyStatus.textContent = "";
+  htwbOutputSection.hidden = false;
+  htwbOutputSection.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function htwbTeamOrdinal(htwbTeamValue) {
-  const htwbTeamNumber = Number(htwbTeamValue);
-
-  if (!Number.isFinite(htwbTeamNumber) || htwbTeamNumber <= 0) {
-    return String(htwbTeamValue || "");
-  }
-
-  const htwbTeamMod100 = htwbTeamNumber % 100;
-
-  if (htwbTeamMod100 >= 11 && htwbTeamMod100 <= 13) {
-    return `${htwbTeamNumber}th`;
-  }
-
-  if (htwbTeamNumber % 10 === 1) {
-    return `${htwbTeamNumber}st`;
-  }
-
-  if (htwbTeamNumber % 10 === 2) {
-    return `${htwbTeamNumber}nd`;
-  }
-
-  if (htwbTeamNumber % 10 === 3) {
-    return `${htwbTeamNumber}rd`;
-  }
-
-  return `${htwbTeamNumber}th`;
-}
-
-function htwbTeamFormatDate(htwbTeamValue) {
-  if (!htwbTeamValue) {
-    return "";
-  }
-
-  const htwbTeamMatch = String(htwbTeamValue).match(
-    /^(\d{4})-(\d{2})-(\d{2})/
-  );
-
-  if (!htwbTeamMatch) {
-    return String(htwbTeamValue);
-  }
-
-  const htwbTeamMonths = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December"
-  ];
-
-  const htwbTeamYear = Number(htwbTeamMatch[1]);
-  const htwbTeamMonth = Number(htwbTeamMatch[2]);
-  const htwbTeamDay = Number(htwbTeamMatch[3]);
-
-  if (
-    !htwbTeamYear ||
-    htwbTeamMonth < 1 ||
-    htwbTeamMonth > 12 ||
-    htwbTeamDay < 1 ||
-    htwbTeamDay > 31
-  ) {
-    return String(htwbTeamValue);
-  }
-
-  return `${htwbTeamDay} ${htwbTeamMonths[htwbTeamMonth - 1]} ${htwbTeamYear}`;
-}
-
-function htwbTeamWikiText(htwbTeamValue) {
-  return String(htwbTeamValue || "")
-    .replace(/[\r\n]+/g, " ")
-    .replace(/\|/g, "{{!}}")
-    .trim();
-}
-
-function htwbTeamHasValue(htwbTeamValue) {
-  return !(
-    htwbTeamValue === null ||
-    htwbTeamValue === undefined ||
-    String(htwbTeamValue).trim() === "" ||
-    String(htwbTeamValue).toUpperCase() === "NOT AVAILABLE"
-  );
-}
-
-function htwbTeamCoachTypeLabel(htwbTeamValue) {
-  const htwbTeamTypes = {
-    0: "Defensive",
-    1: "Offensive",
-    2: "Balanced"
-  };
-
-  return htwbTeamTypes[Number(htwbTeamValue)] || "";
-}
-
-function htwbTeamSkillLabel(htwbTeamValue) {
-  const htwbTeamSkills = [
-    "",
-    "Disastrous",
-    "Wretched",
-    "Poor",
-    "Weak",
-    "Inadequate",
-    "Passable",
-    "Solid",
-    "Excellent",
-    "Formidable",
-    "Outstanding",
-    "Brilliant",
-    "Magnificent",
-    "World class",
-    "Supernatural",
-    "Titanic",
-    "Extra-terrestrial",
-    "Mythical",
-    "Magical",
-    "Utopian",
-    "Divine"
-  ];
-
-  return htwbTeamSkills[Number(htwbTeamValue)] || "";
-}
-
-function htwbTeamValidWebUrl(htwbTeamValue) {
-  if (!htwbTeamValue) {
-    return "";
-  }
-
+async function loadTeamData() {
+  const teamId = htwbGetSelectedTeamId();
+  if (!teamId || htwbLoading) return;
+  htwbLoading = true;
+  htwbLoadButton.disabled = true;
+  htwbSetStatus("Loading available club data from Hattrick...");
   try {
-    const htwbTeamUrl = new URL(String(htwbTeamValue));
-
-    if (
-      htwbTeamUrl.protocol !== "http:" &&
-      htwbTeamUrl.protocol !== "https:"
-    ) {
-      return "";
-    }
-
-    return htwbTeamUrl.href.replace(/\]/g, "%5D");
-  } catch (htwbTeamError) {
-    return "";
-  }
-}
-
-function htwbTeamBuildInfobox(htwbTeamData) {
-  const htwbTeamLines = ["{{Infobox club"];
-  const htwbTeamAdd = (htwbTeamKey, htwbTeamValue) => {
-    if (!htwbTeamHasValue(htwbTeamValue)) {
-      return;
-    }
-
-    htwbTeamLines.push(
-      `| ${htwbTeamKey.padEnd(15, " ")} = ${htwbTeamValue}`
-    );
-  };
-
-  htwbTeamAdd("teamname", htwbTeamWikiText(htwbTeamData.teamName));
-  htwbTeamAdd("teamid", htwbTeamWikiText(htwbTeamData.teamId));
-
-  if (htwbTeamData.logoUrl && htwbTeamData.teamId) {
-    htwbTeamAdd("logouri", `${htwbTeamData.teamId}.png`);
-  }
-
-  htwbTeamAdd("manager", htwbTeamWikiText(htwbTeamData.managerName));
-  htwbTeamAdd("shortname", htwbTeamWikiText(htwbTeamData.shortTeamName));
-  htwbTeamAdd("region", htwbTeamWikiText(htwbTeamData.region));
-  htwbTeamAdd("country", htwbTeamWikiText(htwbTeamData.country));
-  htwbTeamAdd("league", htwbTeamWikiText(htwbTeamData.league));
-  htwbTeamAdd(
-    "league-pos",
-    htwbTeamData.leaguePosition
-      ? htwbTeamOrdinal(htwbTeamData.leaguePosition)
-      : ""
-  );
-  htwbTeamAdd("arena", htwbTeamWikiText(htwbTeamData.arena?.name));
-  htwbTeamAdd(
-    "capacity",
-    htwbTeamData.arena?.currentCapacity?.total
-      ? htwbTeamFormatNumber(htwbTeamData.arena.currentCapacity.total)
-      : ""
-  );
-  htwbTeamAdd("coach", htwbTeamWikiText(htwbTeamData.coach?.name));
-  htwbTeamAdd(
-    "coach-nat",
-    htwbTeamWikiText(htwbTeamData.coach?.nationality)
-  );
-  htwbTeamAdd("fanclub", htwbTeamWikiText(htwbTeamData.fanclub?.name));
-  htwbTeamAdd(
-    "fanclub-size",
-    htwbTeamData.fanclub?.size
-      ? htwbTeamFormatNumber(htwbTeamData.fanclub.size)
-      : ""
-  );
-  htwbTeamAdd(
-    "founded",
-    htwbTeamData.activationDate
-      ? htwbTeamFormatDate(htwbTeamData.activationDate)
-      : ""
-  );
-
-  if (htwbTeamData.kits?.home && htwbTeamData.teamId) {
-    htwbTeamAdd(
-      "homekit",
-      `[[File:${htwbTeamData.teamId}_home.png|125px]]`
-    );
-  }
-
-  if (htwbTeamData.kits?.away && htwbTeamData.teamId) {
-    htwbTeamAdd(
-      "awaykit",
-      `[[File:${htwbTeamData.teamId}_away.png|125px]]`
-    );
-  }
-
-  htwbTeamLines.push("}}");
-  return htwbTeamLines.join("\n");
-}
-
-function htwbTeamBuildIntro(htwbTeamData) {
-  if (!htwbTeamData.teamName) {
-    return "";
-  }
-
-  let htwbTeamIntro = `'''${htwbTeamWikiText(htwbTeamData.teamName)}''' is a Hattrick club`;
-
-  if (htwbTeamData.region && htwbTeamData.country) {
-    htwbTeamIntro +=
-      ` based in [[${htwbTeamWikiText(htwbTeamData.region)}]], ` +
-      `[[${htwbTeamWikiText(htwbTeamData.country)}]]`;
-  } else if (htwbTeamData.country) {
-    htwbTeamIntro +=
-      ` based in [[${htwbTeamWikiText(htwbTeamData.country)}]]`;
-  }
-
-  if (htwbTeamData.managerName) {
-    htwbTeamIntro +=
-      ` and managed by ${htwbTeamWikiText(htwbTeamData.managerName)}`;
-  }
-
-  htwbTeamIntro += ".";
-
-  if (htwbTeamData.league) {
-    htwbTeamIntro +=
-      ` The club currently competes in ${htwbTeamWikiText(htwbTeamData.league)}`;
-
-    if (htwbTeamData.leaguePosition) {
-      htwbTeamIntro +=
-        `, where it is ${htwbTeamOrdinal(htwbTeamData.leaguePosition)}`;
-    }
-
-    htwbTeamIntro += ".";
-  }
-
-  return htwbTeamIntro;
-}
-
-function htwbTeamBuildClubInformation(htwbTeamData) {
-  const htwbTeamSentences = [];
-
-  if (htwbTeamData.activationDate) {
-    htwbTeamSentences.push(
-      `${htwbTeamWikiText(htwbTeamData.teamName)} came under its current manager's control on ${htwbTeamFormatDate(htwbTeamData.activationDate)}.`
-    );
-  }
-
-  if (htwbTeamData.shortTeamName) {
-    htwbTeamSentences.push(
-      `The club uses '''${htwbTeamWikiText(htwbTeamData.shortTeamName)}''' as its short name.`
-    );
-  }
-
-  if (htwbTeamData.teamRank) {
-    htwbTeamSentences.push(
-      `Its current Hattrick league rank is ${htwbTeamFormatNumber(htwbTeamData.teamRank)}.`
-    );
-  }
-
-  if (!htwbTeamSentences.length) {
-    return "";
-  }
-
-  return `== Club information ==\n\n${htwbTeamSentences.join(" ")}`;
-}
-
-function htwbTeamBuildCoaching(htwbTeamData) {
-  const htwbTeamCoach = htwbTeamData.coach || {};
-
-  if (!htwbTeamCoach.name) {
-    return "";
-  }
-
-  const htwbTeamCoachName = htwbTeamCoach.id
-    ? `{{Playerid|${htwbTeamCoach.id}|${htwbTeamWikiText(htwbTeamCoach.name)}}}`
-    : htwbTeamWikiText(htwbTeamCoach.name);
-  const htwbTeamCoachType = htwbTeamCoachTypeLabel(htwbTeamCoach.type);
-  const htwbTeamCoachSkill = htwbTeamSkillLabel(htwbTeamCoach.skill);
-  const htwbTeamColumns = [
-    ["Role", "Head coach"],
-    ["Name", htwbTeamCoachName],
-    [
-      "Nat.",
-      htwbTeamCoach.nationality
-        ? `{{flagicon|${htwbTeamWikiText(htwbTeamCoach.nationality)}}}`
-        : ""
-    ],
-    ["Type", htwbTeamCoachType],
-    ["Skill", htwbTeamCoachSkill]
-  ].filter(([, htwbTeamValue]) => htwbTeamHasValue(htwbTeamValue));
-
-  return [
-    "== Coaching staff ==",
-    "",
-    '{| class="wikitable"',
-    `! ${htwbTeamColumns.map(([htwbTeamLabel]) => htwbTeamLabel).join(" !! ")}`,
-    "|-",
-    `| ${htwbTeamColumns.map(([, htwbTeamValue]) => htwbTeamValue).join(" || ")}`,
-    "|}"
-  ].join("\n");
-}
-
-function htwbTeamBuildArena(htwbTeamData) {
-  const htwbTeamArena = htwbTeamData.arena || {};
-
-  if (!htwbTeamArena.name) {
-    return "";
-  }
-
-  const htwbTeamParts = ["== Arena ==", ""];
-  let htwbTeamIntro =
-    `${htwbTeamWikiText(htwbTeamData.teamName)} plays its home matches at ` +
-    `'''${htwbTeamWikiText(htwbTeamArena.name)}'''`;
-
-  if (htwbTeamArena.currentCapacity?.total) {
-    htwbTeamIntro +=
-      `, which has a current capacity of ${htwbTeamFormatNumber(htwbTeamArena.currentCapacity.total)}`;
-  }
-
-  htwbTeamIntro += ".";
-  htwbTeamParts.push(htwbTeamIntro);
-
-  if (htwbTeamArena.currentCapacity?.rebuiltDate) {
-    htwbTeamParts.push(
-      "",
-      `The arena reached its current capacity on ${htwbTeamFormatDate(htwbTeamArena.currentCapacity.rebuiltDate)}.`
-    );
-  }
-
-  const htwbTeamCapacity = htwbTeamArena.currentCapacity || {};
-  const htwbTeamCapacityRows = [
-    ["Terraces", htwbTeamCapacity.terraces],
-    ["Basic seating", htwbTeamCapacity.basic],
-    ["Seats under roof", htwbTeamCapacity.roof],
-    ["VIP seats", htwbTeamCapacity.vip],
-    ["Total capacity", htwbTeamCapacity.total]
-  ].filter(([, htwbTeamValue]) => htwbTeamHasValue(htwbTeamValue));
-
-  if (htwbTeamCapacityRows.length >= 2) {
-    htwbTeamParts.push("", '{| class="wikitable"');
-    htwbTeamParts.push("! Seating type !! Capacity");
-
-    for (const [htwbTeamLabel, htwbTeamValue] of htwbTeamCapacityRows) {
-      htwbTeamParts.push("|-");
-      htwbTeamParts.push(
-        `| ${htwbTeamLabel} || ${htwbTeamFormatNumber(htwbTeamValue)}`
-      );
-    }
-
-    htwbTeamParts.push("|}");
-  }
-
-  const htwbTeamExpanded = htwbTeamArena.expandedCapacity || {};
-
-  if (
-    htwbTeamExpanded.total &&
-    Number(htwbTeamExpanded.total) > Number(htwbTeamCapacity.total || 0)
-  ) {
-    let htwbTeamExpansionText =
-      `The arena is scheduled to expand to ${htwbTeamFormatNumber(htwbTeamExpanded.total)} seats`;
-
-    if (htwbTeamExpanded.expansionDate) {
-      htwbTeamExpansionText +=
-        ` on ${htwbTeamFormatDate(htwbTeamExpanded.expansionDate)}`;
-    }
-
-    htwbTeamParts.push("", `${htwbTeamExpansionText}.`);
-  }
-
-  return htwbTeamParts.join("\n");
-}
-
-function htwbTeamBuildSupporters(htwbTeamData) {
-  const htwbTeamFanclub = htwbTeamData.fanclub || {};
-
-  if (!htwbTeamFanclub.name && !htwbTeamFanclub.size) {
-    return "";
-  }
-
-  let htwbTeamText = "== Supporters ==\n\n";
-
-  if (htwbTeamFanclub.name && htwbTeamFanclub.size) {
-    htwbTeamText +=
-      `The club's fan club is '''${htwbTeamWikiText(htwbTeamFanclub.name)}''', ` +
-      `with ${htwbTeamFormatNumber(htwbTeamFanclub.size)} members.`;
-  } else if (htwbTeamFanclub.name) {
-    htwbTeamText +=
-      `The club's fan club is '''${htwbTeamWikiText(htwbTeamFanclub.name)}'''.`;
-  } else {
-    htwbTeamText +=
-      `The club's fan club has ${htwbTeamFormatNumber(htwbTeamFanclub.size)} members.`;
-  }
-
-  return htwbTeamText;
-}
-
-function htwbTeamBuildSquad(htwbTeamData) {
-  const htwbTeamSquad = Array.isArray(htwbTeamData.squad)
-    ? htwbTeamData.squad
-    : [];
-
-  if (!htwbTeamSquad.length) {
-    return "";
-  }
-
-  const htwbTeamColumns = [
-    {
-      key: "number",
-      label: "No.",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.number)
-      ),
-      value: htwbTeamPlayer => htwbTeamPlayer.number || ""
-    },
-    {
-      key: "nationality",
-      label: "Nat.",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.nationality)
-      ),
-      value: htwbTeamPlayer =>
-        htwbTeamPlayer.nationality
-          ? `{{flagicon|${htwbTeamWikiText(htwbTeamPlayer.nationality)}}}`
-          : ""
-    },
-    {
-      key: "player",
-      label: "Player",
-      include: true,
-      value: htwbTeamPlayer =>
-        htwbTeamPlayer.playerId
-          ? `{{Playerid|${htwbTeamPlayer.playerId}|${htwbTeamWikiText(htwbTeamPlayer.name)}}}`
-          : htwbTeamWikiText(htwbTeamPlayer.name)
-    },
-    {
-      key: "age",
-      label: "Age",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.age)
-      ),
-      value: htwbTeamPlayer => htwbTeamPlayer.age || ""
-    },
-    {
-      key: "leagueGoals",
-      label: "League goals",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.leagueGoals)
-      ),
-      value: htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.leagueGoals)
-          ? htwbTeamPlayer.leagueGoals
-          : ""
-    },
-    {
-      key: "cupGoals",
-      label: "Cup goals",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.cupGoals)
-      ),
-      value: htwbTeamPlayer =>
-        htwbTeamHasValue(htwbTeamPlayer.cupGoals)
-          ? htwbTeamPlayer.cupGoals
-          : ""
-    },
-    {
-      key: "caps",
-      label: "NT caps",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        Number(htwbTeamPlayer.caps) > 0
-      ),
-      value: htwbTeamPlayer =>
-        Number(htwbTeamPlayer.caps) > 0 ? htwbTeamPlayer.caps : ""
-    },
-    {
-      key: "capsU20",
-      label: "U20 caps",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        Number(htwbTeamPlayer.capsU20) > 0
-      ),
-      value: htwbTeamPlayer =>
-        Number(htwbTeamPlayer.capsU20) > 0 ? htwbTeamPlayer.capsU20 : ""
-    },
-    {
-      key: "specialty",
-      label: "Specialty",
-      include: htwbTeamSquad.some(htwbTeamPlayer =>
-        Number(htwbTeamPlayer.specialty) > 0
-      ),
-      value: htwbTeamPlayer =>
-        Number(htwbTeamPlayer.specialty) > 0
-          ? `{{Speciality|${htwbTeamPlayer.specialty}}}`
-          : ""
-    }
-  ].filter(htwbTeamColumn => htwbTeamColumn.include);
-
-  const htwbTeamSquadCaption = htwbTeamData.currentSeason
-    ? `''Squad data for Season ${htwbTeamWikiText(htwbTeamData.currentSeason)}.''`
-    : "''Current squad data.''";
-
-  const htwbTeamLines = [
-    "== Current squad ==",
-    "",
-    htwbTeamSquadCaption,
-    "",
-    '{| class="wikitable sortable"',
-    `! ${htwbTeamColumns.map(htwbTeamColumn => htwbTeamColumn.label).join(" !! ")}`
-  ];
-
-  for (const htwbTeamPlayer of htwbTeamSquad) {
-    htwbTeamLines.push("|-");
-    htwbTeamLines.push(
-      `| ${htwbTeamColumns
-        .map(htwbTeamColumn => htwbTeamColumn.value(htwbTeamPlayer))
-        .join(" || ")}`
-    );
-  }
-
-  htwbTeamLines.push("|}");
-  return htwbTeamLines.join("\n");
-}
-
-function htwbTeamBuildCurrentSeason(htwbTeamData) {
-  const htwbTeamLeagueStats = htwbTeamData.leagueStats || {};
-  const htwbTeamCup = htwbTeamData.cup || {};
-  const htwbTeamRows = [];
-
-  if (htwbTeamData.currentSeason) {
-    htwbTeamRows.push(["Season", htwbTeamData.currentSeason]);
-  }
-
-  if (htwbTeamData.league) {
-    htwbTeamRows.push(["Series", htwbTeamWikiText(htwbTeamData.league)]);
-  }
-
-  if (htwbTeamData.leagueLevel) {
-    htwbTeamRows.push(["Division level", htwbTeamData.leagueLevel]);
-  }
-
-  if (htwbTeamData.leaguePosition) {
-    htwbTeamRows.push([
-      "Position",
-      htwbTeamOrdinal(htwbTeamData.leaguePosition)
-    ]);
-  }
-
-  if (htwbTeamHasValue(htwbTeamLeagueStats.matches)) {
-    htwbTeamRows.push(["Played", htwbTeamLeagueStats.matches]);
-  }
-
-  if (htwbTeamHasValue(htwbTeamLeagueStats.points)) {
-    htwbTeamRows.push(["Points", htwbTeamLeagueStats.points]);
-  }
-
-  if (
-    htwbTeamHasValue(htwbTeamLeagueStats.goalsFor) &&
-    htwbTeamHasValue(htwbTeamLeagueStats.goalsAgainst)
-  ) {
-    htwbTeamRows.push([
-      "Goals",
-      `${htwbTeamLeagueStats.goalsFor}-${htwbTeamLeagueStats.goalsAgainst}`
-    ]);
-  }
-
-  if (htwbTeamCup.available) {
-    if (htwbTeamCup.stillInCup && htwbTeamCup.name) {
-      htwbTeamRows.push([
-        "Cup",
-        `Active in ${htwbTeamWikiText(htwbTeamCup.name)}`
-      ]);
-    } else if (htwbTeamCup.stillInCup === false) {
-      htwbTeamRows.push(["Cup", "Eliminated"]);
-    }
-  }
-
-  if (Number(htwbTeamData.winningStreak) >= 2) {
-    htwbTeamRows.push([
-      "Current winning streak",
-      `${htwbTeamData.winningStreak} matches`
-    ]);
-  }
-
-  if (Number(htwbTeamData.undefeatedStreak) >= 2) {
-    htwbTeamRows.push([
-      "Current unbeaten streak",
-      `${htwbTeamData.undefeatedStreak} matches`
-    ]);
-  }
-
-  if (!htwbTeamRows.length) {
-    return "";
-  }
-
-  const htwbTeamLines = [
-    "== Current season ==",
-    "",
-    '{| class="wikitable"',
-    "! Item !! Current status"
-  ];
-
-  for (const [htwbTeamLabel, htwbTeamValue] of htwbTeamRows) {
-    htwbTeamLines.push("|-");
-    htwbTeamLines.push(
-      `| ${htwbTeamLabel} || ${htwbTeamValue}`
-    );
-  }
-
-  htwbTeamLines.push("|}");
-  return htwbTeamLines.join("\n");
-}
-
-function htwbTeamRecordMatchMarkup(htwbTeamMatch) {
-  if (!htwbTeamMatch) {
-    return "";
-  }
-
-  const htwbTeamDate = htwbTeamFormatDate(htwbTeamMatch.date);
-  const htwbTeamOpponent = htwbTeamWikiText(htwbTeamMatch.opponentName);
-  const htwbTeamScore =
-    `${htwbTeamMatch.goalsFor}-${htwbTeamMatch.goalsAgainst}`;
-  const htwbTeamLocation = htwbTeamMatch.home ? "home" : "away";
-
-  return `${htwbTeamScore} vs ${htwbTeamOpponent} (${htwbTeamLocation}, ${htwbTeamDate})`;
-}
-
-function htwbTeamBuildRecords(htwbTeamData) {
-  const htwbTeamRecords = htwbTeamData.records || {};
-
-  if (!htwbTeamRecords.complete || !htwbTeamRecords.competitiveMatches) {
-    return "";
-  }
-
-  const htwbTeamRows = [
-    ["Competitive matches", htwbTeamFormatNumber(htwbTeamRecords.competitiveMatches)],
-    [
-      "Record",
-      `${htwbTeamRecords.wins} wins, ${htwbTeamRecords.draws} draws, ${htwbTeamRecords.losses} losses`
-    ],
-    [
-      "Goals",
-      `${htwbTeamRecords.goalsFor} for, ${htwbTeamRecords.goalsAgainst} against`
-    ]
-  ];
-
-  if (htwbTeamRecords.biggestWin) {
-    htwbTeamRows.push([
-      "Biggest competitive win",
-      htwbTeamRecordMatchMarkup(htwbTeamRecords.biggestWin)
-    ]);
-  }
-
-  if (htwbTeamRecords.biggestLoss) {
-    htwbTeamRows.push([
-      "Heaviest competitive defeat",
-      htwbTeamRecordMatchMarkup(htwbTeamRecords.biggestLoss)
-    ]);
-  }
-
-  if (Number(htwbTeamRecords.longestWinningStreak) > 1) {
-    htwbTeamRows.push([
-      "Longest winning streak",
-      `${htwbTeamRecords.longestWinningStreak} matches`
-    ]);
-  }
-
-  if (Number(htwbTeamRecords.longestUnbeatenStreak) > 1) {
-    htwbTeamRows.push([
-      "Longest unbeaten streak",
-      `${htwbTeamRecords.longestUnbeatenStreak} matches`
-    ]);
-  }
-
-  const htwbTeamLines = [
-    "== Club records ==",
-    "",
-    "The following records are calculated from the complete CHPP match archive available for the current manager's tenure.",
-    "",
-    '{| class="wikitable"',
-    "! Record !! Result"
-  ];
-
-  for (const [htwbTeamLabel, htwbTeamValue] of htwbTeamRows) {
-    htwbTeamLines.push("|-");
-    htwbTeamLines.push(
-      `| ${htwbTeamLabel} || ${htwbTeamValue}`
-    );
-  }
-
-  htwbTeamLines.push("|}");
-  return htwbTeamLines.join("\n");
-}
-
-function htwbTeamBuildExternalLinks(htwbTeamData) {
-  if (!htwbTeamData.teamId) {
-    return "";
-  }
-
-  const htwbTeamLinks = [
-    `* [https://www.hattrick.org/Club/?TeamID=${encodeURIComponent(htwbTeamData.teamId)} ${htwbTeamWikiText(htwbTeamData.teamName)} at Hattrick]`
-  ];
-
-  const htwbTeamHomePage = htwbTeamValidWebUrl(htwbTeamData.homePage);
-
-  if (htwbTeamHomePage) {
-    htwbTeamLinks.push(`* [${htwbTeamHomePage} Official team website]`);
-  }
-
-  if (htwbTeamData.clubhouse) {
-    const htwbTeamClubhouseName = encodeURIComponent(
-      String(htwbTeamData.clubhouse).trim()
-    );
-
-    htwbTeamLinks.push(
-      `* [https://club.hattrick.org/${htwbTeamClubhouseName}/ Hattrick Clubhouse]`
-    );
-  }
-
-  return `== External links ==\n\n${htwbTeamLinks.join("\n")}`;
-}
-
-function htwbTeamBuildArticle(htwbTeamData) {
-  const htwbTeamParts = [];
-  const htwbTeamIncluded = [];
-  const htwbTeamUnavailable = [];
-
-  const htwbTeamInfobox = htwbTeamBuildInfobox(htwbTeamData);
-  const htwbTeamIntro = htwbTeamBuildIntro(htwbTeamData);
-
-  if (htwbTeamInfobox) {
-    htwbTeamParts.push(htwbTeamInfobox);
-    htwbTeamIncluded.push("Infobox");
-  }
-
-  if (htwbTeamIntro) {
-    htwbTeamParts.push(htwbTeamIntro);
-    htwbTeamIncluded.push("Introduction");
-  }
-
-  const htwbTeamSections = [
-    ["Club information", htwbTeamBuildClubInformation(htwbTeamData)],
-    ["Coaching staff", htwbTeamBuildCoaching(htwbTeamData)],
-    ["Arena", htwbTeamBuildArena(htwbTeamData)],
-    ["Supporters", htwbTeamBuildSupporters(htwbTeamData)],
-    ["Current squad", htwbTeamBuildSquad(htwbTeamData)],
-    ["Current season", htwbTeamBuildCurrentSeason(htwbTeamData)],
-    ["Club records", htwbTeamBuildRecords(htwbTeamData)],
-    ["External links", htwbTeamBuildExternalLinks(htwbTeamData)]
-  ];
-
-  for (const [htwbTeamName, htwbTeamMarkup] of htwbTeamSections) {
-    if (htwbTeamMarkup) {
-      htwbTeamParts.push(htwbTeamMarkup);
-      htwbTeamIncluded.push(htwbTeamName);
-    } else {
-      htwbTeamUnavailable.push(htwbTeamName);
-    }
-  }
-
-  if (htwbTeamData.records?.partial) {
-    htwbTeamUnavailable.push("Complete match-history records");
-  }
-
-  return {
-    markup: htwbTeamParts.join("\n\n"),
-    included: [...new Set(htwbTeamIncluded)],
-    unavailable: [...new Set(htwbTeamUnavailable)]
-  };
-}
-
-function htwbTeamRenderChips(htwbTeamElement, htwbTeamItems, htwbTeamMuted = false) {
-  if (!htwbTeamElement) {
-    return;
-  }
-
-  htwbTeamElement.innerHTML = "";
-
-  for (const htwbTeamItem of htwbTeamItems) {
-    const htwbTeamChip = document.createElement("span");
-    htwbTeamChip.className = htwbTeamMuted
-      ? "article-chip article-chip-muted"
-      : "article-chip";
-    htwbTeamChip.textContent = htwbTeamItem;
-    htwbTeamElement.appendChild(htwbTeamChip);
-  }
-}
-
-function htwbTeamRenderArticle(htwbTeamData) {
-  const htwbTeamArticle = htwbTeamBuildArticle(htwbTeamData);
-
-  if (htwbTeamOutput) {
-    htwbTeamOutput.value = htwbTeamArticle.markup;
-  }
-
-  htwbTeamRenderChips(
-    htwbTeamIncludedSections,
-    htwbTeamArticle.included
-  );
-
-  htwbTeamRenderChips(
-    htwbTeamUnavailableSections,
-    htwbTeamArticle.unavailable,
-    true
-  );
-
-  if (htwbTeamUnavailableWrap) {
-    htwbTeamUnavailableWrap.hidden =
-      !htwbTeamArticle.unavailable.length;
-  }
-
-  if (htwbTeamOutputSection) {
-    htwbTeamOutputSection.hidden = false;
-  }
-
-  if (htwbTeamCopyStatus) {
-    htwbTeamCopyStatus.textContent = "";
-  }
-
-  htwbTeamOutputSection?.scrollIntoView({
-    behavior: "smooth",
-    block: "start"
-  });
-}
-
-async function htwbTeamBuild() {
-  const htwbTeamTeamId = htwbTeamGetSelectedTeamId();
-
-  if (!htwbTeamTeamId || htwbTeamLoading) {
-    if (!htwbTeamTeamId) {
-      htwbTeamSetStatus(
-        "No managed Hattrick team is selected.",
-        "error"
-      );
-    }
-    return;
-  }
-
-  htwbTeamLoading = true;
-  htwbTeamSetSelectedTeamId(htwbTeamTeamId);
-
-  if (htwbTeamBuildButton) {
-    htwbTeamBuildButton.textContent = "Building Team Page...";
-  }
-
-  htwbTeamSetStatus(
-    "Loading available team, arena, league, fan club, squad, and match-history data..."
-  );
-
-  try {
-    const htwbTeamResponse = await fetch(
-      `/api/team?teamId=${encodeURIComponent(htwbTeamTeamId)}`,
-      {
-        method: "GET",
-        headers: {
-          Accept: "application/json"
-        }
-      }
-    );
-
-    const htwbTeamData = await htwbTeamResponse.json();
-
-    if (!htwbTeamResponse.ok) {
-      throw new Error(
-        htwbTeamData.error ||
-        `Server returned ${htwbTeamResponse.status}`
-      );
-    }
-
-    htwbTeamRenderArticle(htwbTeamData);
-
-    const htwbTeamSourceCount = Object.values(
-      htwbTeamData.sources || {}
-    ).filter(htwbTeamSource =>
-      htwbTeamSource === "available" ||
-      htwbTeamSource === "complete" ||
-      htwbTeamSource === "partial"
-    ).length;
-
-    let htwbTeamSuccess = "Team article built";
-
-    if (htwbTeamSourceCount) {
-      htwbTeamSuccess +=
-        ` from ${htwbTeamSourceCount} available CHPP data sources`;
-    }
-
-    htwbTeamSuccess += ".";
-
-    if (htwbTeamData.records?.partial) {
-      htwbTeamSuccess +=
-        " The match archive exceeded the safe request limit, so all-time record claims were omitted.";
-    }
-
-    htwbTeamSetStatus(htwbTeamSuccess, "success");
-  } catch (htwbTeamError) {
-    console.error("Could not build team page:", htwbTeamError);
-
-    htwbTeamSetStatus(
-      htwbTeamError.message || "Could not build the team page.",
-      "error"
-    );
+    const response = await fetch(`/api/team?teamId=${encodeURIComponent(teamId)}`, { headers: { Accept: "application/json" } });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
+    htwbLoadedData = data;
+    htwbSetStatus(`Team data loaded for ${data.teamName || `TeamID ${teamId}`}.`, "success");
+    htwbOptionsSection.hidden = false;
+    htwbOutputSection.hidden = true;
+    renderSectionButtons();
+    htwbOptionsSection.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (error) {
+    console.error("Could not load team data:", error);
+    htwbSetStatus(error.message || "Could not load team data from Hattrick.", "error");
   } finally {
-    htwbTeamLoading = false;
-    htwbTeamSetSelectedTeamId(htwbTeamGetSelectedTeamId());
-
-    if (htwbTeamBuildButton) {
-      htwbTeamBuildButton.textContent = "Build Team Page";
-    }
+    htwbLoading = false;
+    htwbLoadButton.disabled = !htwbGetSelectedTeamId();
   }
 }
 
-async function htwbTeamCopyOutput() {
-  if (!htwbTeamOutput || !htwbTeamOutput.value) {
-    return;
-  }
-
+htwbLoadButton?.addEventListener("click", loadTeamData);
+htwbFullPageButton?.addEventListener("click", () => { if (htwbLoadedData) renderOutput("Full Team Page", buildFullPage(htwbLoadedData), false); });
+for (const input of [htwbUsername, htwbIncludeImages, htwbIncludeSeasonLinks]) {
+  input?.addEventListener("change", () => { if (htwbLoadedData) renderSectionButtons(); });
+  input?.addEventListener("input", () => { if (htwbLoadedData) renderSectionButtons(); });
+}
+htwbCopyButton?.addEventListener("click", async () => {
   try {
-    await navigator.clipboard.writeText(htwbTeamOutput.value);
-
-    if (htwbTeamCopyStatus) {
-      htwbTeamCopyStatus.textContent = "Copied.";
-    }
-  } catch (htwbTeamError) {
-    htwbTeamOutput.focus();
-    htwbTeamOutput.select();
-
-    if (htwbTeamCopyStatus) {
-      htwbTeamCopyStatus.textContent =
-        "Select the markup and copy it manually.";
-    }
+    await navigator.clipboard.writeText(htwbOutput.value);
+    htwbCopyStatus.textContent = "Copied.";
+  } catch {
+    htwbOutput.focus();
+    htwbOutput.select();
+    document.execCommand("copy");
+    htwbCopyStatus.textContent = "Copied.";
   }
-}
-
-window.addEventListener("htwb:team-selected", htwbTeamEvent => {
-  htwbTeamSetSelectedTeamId(htwbTeamEvent.detail?.teamId || "");
-
-  if (htwbTeamOutputSection) {
-    htwbTeamOutputSection.hidden = true;
-  }
-
-  htwbTeamSetStatus("");
 });
-
-if (htwbTeamBuildButton) {
-  htwbTeamBuildButton.addEventListener("click", htwbTeamBuild);
-}
-
-if (htwbTeamCopyButton) {
-  htwbTeamCopyButton.addEventListener("click", htwbTeamCopyOutput);
-}
-
-setTimeout(() => {
-  htwbTeamSetSelectedTeamId(htwbTeamGetSelectedTeamId());
-}, 0);
+window.addEventListener("htwb:team-selected", event => htwbSetSelectedTeamId(event.detail?.teamId || ""));
+window.addEventListener("DOMContentLoaded", () => htwbSetSelectedTeamId(htwbGetSelectedTeamId()));
