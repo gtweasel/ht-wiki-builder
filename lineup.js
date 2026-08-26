@@ -143,6 +143,23 @@ const htwbLineupSetPiecesDetailElement =
     "lineup-set-pieces-detail"
   );
 
+const htwbLineupResultSections =
+  Array.from(
+    document.querySelectorAll(
+      "[data-lineup-result-section]"
+    )
+  );
+
+const htwbLineupTrainingMathDetails =
+  document.getElementById(
+    "lineup-training-math"
+  );
+
+const htwbLineupFormationMathDetails =
+  document.getElementById(
+    "lineup-formation-math"
+  );
+
 
 /* =========================================================
    STORAGE
@@ -4869,6 +4886,30 @@ function htwbLineupRecalculateLineup() {
 }
 
 
+function htwbLineupSetResultsVisible(
+  htwbLineupVisible
+) {
+  for (
+    const htwbLineupSection
+    of htwbLineupResultSections
+  ) {
+    htwbLineupSection.hidden =
+      !htwbLineupVisible;
+  }
+}
+
+function htwbLineupCollapseMathTables() {
+  if (htwbLineupTrainingMathDetails) {
+    htwbLineupTrainingMathDetails.open =
+      false;
+  }
+
+  if (htwbLineupFormationMathDetails) {
+    htwbLineupFormationMathDetails.open =
+      false;
+  }
+}
+
 function htwbLineupBuildLineup() {
   htwbLineupFormationOverrideName =
     "";
@@ -4876,7 +4917,15 @@ function htwbLineupBuildLineup() {
   htwbLineupTrainingOverrideId =
     "";
 
+  htwbLineupCollapseMathTables();
+
   htwbLineupRecalculateLineup();
+
+  if (htwbLineupCurrentCalculation) {
+    htwbLineupSetResultsVisible(
+      true
+    );
+  }
 }
 
 
@@ -4999,6 +5048,12 @@ async function htwbLineupLoadTeam(
 
   htwbLineupResetChoiceControls();
 
+  htwbLineupSetResultsVisible(
+    false
+  );
+
+  htwbLineupCollapseMathTables();
+
   if (
     htwbLineupBuildLineupButton
   ) {
@@ -5120,6 +5175,12 @@ function htwbLineupSetupTeamSelectionListener() {
    ========================================================= */
 
 function htwbLineupInitializeLineupBuilder() {
+  htwbLineupSetResultsVisible(
+    false
+  );
+
+  htwbLineupCollapseMathTables();
+
   if (
     htwbLineupBuildLineupButton
   ) {

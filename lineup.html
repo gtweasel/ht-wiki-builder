@@ -279,7 +279,7 @@
            02 TRAINING
            ================================================= -->
 
-      <section class="builder-section">
+      <section class="builder-section" data-lineup-result-section hidden>
 
         <div class="builder-section-number">
           02
@@ -349,56 +349,65 @@
           </div>
 
 
-          <div class="lineup-table-wrap">
+          <details
+            id="lineup-training-math"
+            class="lineup-details"
+          >
+            <summary>
+              Show training calculation table
+            </summary>
 
-            <table class="lineup-table">
+            <div class="lineup-table-wrap">
 
-              <thead>
-                <tr>
+              <table class="lineup-table">
 
-                  <th>
-                    Training Type
-                  </th>
+                <thead>
+                  <tr>
 
-                  <th>
-                    Skill
-                  </th>
+                    <th>
+                      Training Type
+                    </th>
 
-                  <th class="number">
-                    Ideal Weekly Trainees
-                  </th>
+                    <th>
+                      Skill
+                    </th>
 
-                  <th class="number">
-                    Ideal Average
-                  </th>
+                    <th class="number">
+                      Ideal Weekly Trainees
+                    </th>
 
-                  <th class="number">
-                    Training Speed
-                  </th>
+                    <th class="number">
+                      Ideal Average
+                    </th>
 
-                  <th>
-                    Status
-                  </th>
+                    <th class="number">
+                      Training Speed
+                    </th>
 
-                </tr>
-              </thead>
+                    <th>
+                      Status
+                    </th>
 
-              <tbody id="lineup-training-table-body">
-              </tbody>
+                  </tr>
+                </thead>
 
-            </table>
+                <tbody id="lineup-training-table-body">
+                </tbody>
 
-          </div>
+              </table>
+
+            </div>
 
 
-          <p class="lineup-note">
-            All 10 supported training types are compared against all ten
-            CHPP-tracked formations behind the scenes: 100 possible combinations
-            when every training average is available. Focused training uses a
-            100% speed baseline; estimated extended-training speeds are 50% for
-            Defending, 60% for Winger, and 80% for Passing. Changing Training
-            selects that training type's best formation and rebuilds everything below.
-          </p>
+            <p class="lineup-note">
+              All 10 supported training types are compared against all ten
+              CHPP-tracked formations behind the scenes: 100 possible combinations
+              when every training average is available. Focused training uses a
+              100% speed baseline; estimated extended-training speeds are 50% for
+              Defending, 60% for Winger, and 80% for Passing. Changing Training
+              selects that training type's best formation and rebuilds everything below.
+            </p>
+          </details>
 
         </div>
       </section>
@@ -408,7 +417,7 @@
            03 FORMATION
            ================================================= -->
 
-      <section class="builder-section">
+      <section class="builder-section" data-lineup-result-section hidden>
 
         <div class="builder-section-number">
           03
@@ -520,61 +529,70 @@
           </div>
 
 
-          <div class="lineup-table-wrap">
+          <details
+            id="lineup-formation-math"
+            class="lineup-details"
+          >
+            <summary>
+              Show formation calculation table
+            </summary>
 
-            <table class="lineup-table">
+            <div class="lineup-table-wrap">
 
-              <thead>
-                <tr>
-                  <th>
-                    Formation
-                  </th>
+              <table class="lineup-table">
 
-                  <th class="number">
-                    FrmExp
-                  </th>
+                <thead>
+                  <tr>
+                    <th>
+                      Formation
+                    </th>
 
-                  <th class="number">
-                    Utilization
-                  </th>
+                    <th class="number">
+                      FrmExp
+                    </th>
 
-                  <th class="number">
-                    Effective / Ideal Effect
-                  </th>
+                    <th class="number">
+                      Utilization
+                    </th>
 
-                  <th class="number">
-                    Formation Score
-                  </th>
+                    <th class="number">
+                      Effective / Ideal Effect
+                    </th>
 
-                  <th class="number">
-                    Combination Score
-                  </th>
+                    <th class="number">
+                      Formation Score
+                    </th>
 
-                  <th>
-                    Status
-                  </th>
-                </tr>
-              </thead>
+                    <th class="number">
+                      Combination Score
+                    </th>
 
-              <tbody id="lineup-formation-table-body">
-              </tbody>
+                    <th>
+                      Status
+                    </th>
+                  </tr>
+                </thead>
 
-            </table>
+                <tbody id="lineup-formation-table-body">
+                </tbody>
 
-          </div>
+              </table>
+
+            </div>
 
 
-          <p class="lineup-note">
-            Formation Score = Experience Priority Factor x
-            (Ideal Training Effect / Effective Training Effect).
-            Experience Priority Factor = (13 - FrmExp) / 10 for competitive
-            matches and FrmExp / 10 for friendlies. Base Combination Score =
-            Training Ideal Average x Formation Score. Final Combination Score =
-            Base Combination Score / Training Speed. Lowest score wins. There is no utilization cutoff and no
-            formation-experience threshold: all ten formations stay in the
-            calculation. Changing Formation keeps the selected training type
-            and immediately rebuilds everything below.
-          </p>
+            <p class="lineup-note">
+              Formation Score = Experience Priority Factor x
+              (Ideal Training Effect / Effective Training Effect).
+              Experience Priority Factor = (13 - FrmExp) / 10 for competitive
+              matches and FrmExp / 10 for friendlies. Base Combination Score =
+              Training Ideal Average x Formation Score. Final Combination Score =
+              Base Combination Score / Training Speed. Lowest score wins. There is no utilization cutoff and no
+              formation-experience threshold: all ten formations stay in the
+              calculation. Changing Formation keeps the selected training type
+              and immediately rebuilds everything below.
+            </p>
+          </details>
 
         </div>
       </section>
@@ -584,7 +602,7 @@
            04 GENERATED LINEUP
            ================================================= -->
 
-      <section class="builder-section">
+      <section class="builder-section" data-lineup-result-section hidden>
 
         <div class="builder-section-number">
           04
@@ -1183,7 +1201,7 @@
            05 EXCLUDED PLAYERS
            ================================================= -->
 
-      <section class="builder-section">
+      <section class="builder-section" data-lineup-result-section hidden>
 
         <div class="builder-section-number">
           05
@@ -1243,7 +1261,7 @@
            06 DIAGNOSTICS
            ================================================= -->
 
-      <section class="builder-section">
+      <section class="builder-section" data-lineup-result-section hidden>
 
         <div class="builder-section-number">
           06
@@ -1411,7 +1429,7 @@
 
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260826-2"></script>
+  <script src="/lineup.js?v=20260826-3"></script>
 
 </body>
 </html>
