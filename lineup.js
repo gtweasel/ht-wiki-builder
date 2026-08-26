@@ -4072,6 +4072,24 @@ function htwbLineupGetTrainingWeekLabel(
    MATCH DISPLAY
    ========================================================= */
 
+function htwbLineupResetMatchSummary() {
+  for (
+    const htwbLineupElement
+    of [
+      htwbLineupTeamNameElement,
+      htwbLineupMatchNameElement,
+      htwbLineupMatchTypeElement,
+      htwbLineupTrainingWeekPositionElement
+    ]
+  ) {
+    if (htwbLineupElement) {
+      htwbLineupElement.textContent =
+        "-";
+    }
+  }
+}
+
+
 function htwbLineupRenderMatchSummary(
   htwbLineupData
 ) {
@@ -5863,6 +5881,7 @@ async function htwbLineupLoadTeam(
     "Loading lineup data from Hattrick..."
   );
 
+  htwbLineupResetMatchSummary();
   htwbLineupResetChoiceControls();
 
   htwbLineupSetResultsVisible(
@@ -5966,6 +5985,7 @@ function htwbLineupPrepareSelectedTeam(
   htwbLineupTrainingOverrideId =
     "";
 
+  htwbLineupResetMatchSummary();
   htwbLineupResetChoiceControls();
   htwbLineupSetResultsVisible(false);
   htwbLineupCollapseMathTables();
