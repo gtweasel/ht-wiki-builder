@@ -266,7 +266,7 @@ function buildExternalLinks(data) {
 }
 
 const sectionDefinitions = [
-  { key: "team-information", label: "Team Information", build: buildTeamInformation, hasSectionHeading: false },
+  { key: "team-information", label: "Team Information", build: buildTeamInformation },
   { key: "history", label: "History", build: buildHistory },
   { key: "arena", label: "Arena", build: buildArena },
   { key: "supporters", label: "Supporters", build: buildSupporters },
@@ -289,7 +289,7 @@ function renderSectionButtons() {
     button.className = "team-section-button";
     button.disabled = !markup;
     button.innerHTML = `<strong>${sectionLabel(def, htwbLoadedData)}</strong><span>${markup ? "Generate replacement section" : "No data available"}</span>`;
-    button.addEventListener("click", () => renderOutput(sectionLabel(def, htwbLoadedData), markup, true, def.hasSectionHeading !== false));
+    button.addEventListener("click", () => renderOutput(sectionLabel(def, htwbLoadedData), markup, true, def.key === "team-information"));
     htwbSectionButtons.appendChild(button);
   }
 }
@@ -307,15 +307,15 @@ function buildFullPage(data) {
   return parts.filter(Boolean).join("\n\n");
 }
 
-function renderOutput(label, markup, sectionOnly, hasSectionHeading = true) {
+function renderOutput(label, markup, sectionOnly, articleLead = false) {
   if (!markup) return;
   htwbOutput.value = markup;
-  htwbOutputTitle.textContent = sectionOnly ? `${label} Section` : "Full Team Page";
-  htwbOutputNote.textContent = sectionOnly
-    ? (hasSectionHeading
+  htwbOutputTitle.textContent = articleLead ? label : (sectionOnly ? `${label} Section` : "Full Team Page");
+  htwbOutputNote.textContent = articleLead
+    ? "This replaces the article opening (infobox and introduction) and does not include a section heading."
+    : sectionOnly
       ? "This is the complete replacement section, including its section heading."
-      : "This replaces the article lead and infobox, which appear before the first section heading.")
-    : "Use this output for an initial article build or a deliberate complete page reset.";
+      : "Use this output for an initial article build or a deliberate complete page reset.";
   htwbCopyStatus.textContent = "";
   htwbOutputSection.hidden = false;
   htwbOutputSection.scrollIntoView({ behavior: "smooth", block: "start" });
