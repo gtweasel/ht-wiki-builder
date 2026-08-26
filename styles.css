@@ -1182,10 +1182,6 @@ select {
   min-height: 96px;
 }
 
-.lineup-substitute-extra {
-  background: var(--blue-100);
-  border-color: var(--blue-300);
-}
 
 .lineup-coach-picks {
   grid-template-columns: repeat(2, minmax(180px, 1fr));

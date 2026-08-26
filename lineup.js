@@ -3289,9 +3289,8 @@ function htwbLineupSelectSetPiecesTaker(
 /*
  * Community penalty-shootout estimate used by Hattrick Organizer:
  * XP * 1.5 + Set Pieces * 0.7 + Scoring * 0.3, with a 10%
- * bonus for Technical outfield players. Hattrick's manual treats
- * a goalkeeper's Keeper skill as the relevant penalty-contest
- * value for a keeper.
+ * bonus for Technical players. The same penalty-taking formula
+ * is applied to every starter, including the goalkeeper.
  *
  * Number 1 must match the ordinary Set Pieces taker in Hattrick,
  * so that player is pinned first and the remaining starters are
@@ -3308,13 +3307,6 @@ function htwbLineupCalculatePenaltyScore(
 
   if (!htwbLineupPlayer) {
     return Number.NEGATIVE_INFINITY;
-  }
-
-  if (htwbLineupStartingEntry.slot === "GK") {
-    return htwbLineupNumberValue(
-      htwbLineupPlayer.keeper,
-      0
-    );
   }
 
   const htwbLineupBaseScore =
@@ -4547,11 +4539,7 @@ function htwbLineupRenderPenaltyTakers(
             const htwbLineupPlayer =
               htwbLineupTaker.player;
 
-            const htwbLineupIsGoalkeeper =
-              htwbLineupTaker.slot === "GK";
-
             const htwbLineupIsTechnical =
-              !htwbLineupIsGoalkeeper &&
               htwbLineupNumberValue(
                 htwbLineupPlayer.specialty,
                 0
@@ -4559,25 +4547,20 @@ function htwbLineupRenderPenaltyTakers(
               HTWB_LINEUP_TECHNICAL_SPECIALTY;
 
             const htwbLineupDetail =
-              htwbLineupIsGoalkeeper
-                ? `GK ${htwbLineupNumberValue(
-                    htwbLineupPlayer.keeper,
-                    0
-                  )}`
-                : `SP ${htwbLineupNumberValue(
-                    htwbLineupPlayer.setPieces,
-                    0
-                  )} | SC ${htwbLineupNumberValue(
-                    htwbLineupPlayer.scoring,
-                    0
-                  )} | XP ${htwbLineupNumberValue(
-                    htwbLineupPlayer.experience,
-                    0
-                  )}${
-                    htwbLineupIsTechnical
-                      ? " | Technical"
-                      : ""
-                  }`;
+              `SP ${htwbLineupNumberValue(
+                htwbLineupPlayer.setPieces,
+                0
+              )} | SC ${htwbLineupNumberValue(
+                htwbLineupPlayer.scoring,
+                0
+              )} | XP ${htwbLineupNumberValue(
+                htwbLineupPlayer.experience,
+                0
+              )}${
+                htwbLineupIsTechnical
+                  ? " | Technical"
+                  : ""
+              }`;
 
             return `
               <div class="lineup-penalty-card">
@@ -4817,6 +4800,21 @@ function htwbLineupRenderEligiblePlayers(
    SELECTION ORDER DISPLAY
    ========================================================= */
 
+function htwbLineupDisplaySlotLabel(htwbLineupSlot) {
+  const htwbLineupLabels = {
+    "SUB-GK": "GK",
+    "SUB-DE": "CD",
+    "SUB-WB": "WB",
+    "SUB-IM": "IM",
+    "SUB-FW": "FW",
+    "SUB-WG": "WG",
+    "SUB-EX": "Extra"
+  };
+
+  return htwbLineupLabels[htwbLineupSlot] || htwbLineupSlot;
+}
+
+
 function htwbLineupRenderSelectionOrder(
   htwbLineupResult
 ) {
@@ -4846,7 +4844,9 @@ function htwbLineupRenderSelectionOrder(
           <li>
             <strong>
               ${htwbLineupEscapeHtml(
-                htwbLineupSelection.slot
+                htwbLineupDisplaySlotLabel(
+                  htwbLineupSelection.slot
+                )
               )}
             </strong>
 
@@ -4877,7 +4877,9 @@ function htwbLineupRenderSelectionOrder(
           <li>
             <strong>
               ${htwbLineupEscapeHtml(
-                htwbLineupSubstituteSelection.slot
+                htwbLineupDisplaySlotLabel(
+                  htwbLineupSubstituteSelection.slot
+                )
               )}
             </strong>
 

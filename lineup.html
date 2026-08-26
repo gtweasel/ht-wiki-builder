@@ -26,7 +26,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=20260826-4">
+  <link rel="stylesheet" href="/styles.css?v=20260826-5">
 </head>
 
 <body>
@@ -294,13 +294,6 @@
                 Training
               </h2>
 
-              <p>
-                Every senior-team training type is considered except
-                combined Scoring and Set Pieces. Behind the scenes, each
-                training type is paired with all ten CHPP-tracked formations.
-                The lowest training-and-formation combination score is
-                recommended, while Training remains the first user control.
-              </p>
             </div>
 
           </div>
@@ -400,12 +393,8 @@
 
 
             <p class="lineup-note">
-              All 10 supported training types are compared against all ten
-              CHPP-tracked formations behind the scenes: 100 possible combinations
-              when every training average is available. Focused training uses a
-              100% speed baseline; estimated extended-training speeds are 50% for
-              Defending, 60% for Winger, and 80% for Passing. Changing Training
-              selects that training type's best formation and rebuilds everything below.
+              Focused training = 100% speed. Extended Defending = 50%,
+              Winger = 60%, and Passing = 80%. Lowest score wins.
             </p>
           </details>
 
@@ -432,13 +421,6 @@
                 Formation
               </h2>
 
-              <p>
-                For the selected training type, all ten CHPP-tracked
-                formations stay in the calculation. Competitive matches favor
-                higher formation experience; friendlies favor lower formation
-                experience. Lower weighted training utilization raises the
-                score. No formation is removed by a preset cutoff.
-              </p>
             </div>
 
           </div>
@@ -582,15 +564,8 @@
 
 
             <p class="lineup-note">
-              Formation Score = Experience Priority Factor x
-              (Ideal Training Effect / Effective Training Effect).
-              Experience Priority Factor = (13 - FrmExp) / 10 for competitive
-              matches and FrmExp / 10 for friendlies. Base Combination Score =
-              Training Ideal Average x Formation Score. Final Combination Score =
-              Base Combination Score / Training Speed. Lowest score wins. There is no utilization cutoff and no
-              formation-experience threshold: all ten formations stay in the
-              calculation. Changing Formation keeps the selected training type
-              and immediately rebuilds everything below.
+              Combination Score = Training Ideal Average x Formation Score /
+              Training Speed. Lowest score wins.
             </p>
           </details>
 
@@ -617,13 +592,6 @@
                 Generated Lineup
               </h2>
 
-              <p>
-                The position layout is chosen for the selected formation by
-                maximizing weighted training effect first, then lineup strength.
-                Full-training positions are filled before reduced-effect training
-                positions, followed by the remaining starting positions. The
-                seven-player bench is then selected from the remaining players.
-              </p>
             </div>
 
           </div>
@@ -1013,12 +981,6 @@
                   Substitutes
                 </h3>
 
-                <p>
-                  Calculated after the starting XI in this order:
-                  GK, defender, wingback, inner midfielder, winger,
-                  forward, then Extra using the best average across all six ratings.
-                  Displayed below in Hattrick bench order.
-                </p>
               </div>
             </div>
 
@@ -1027,7 +989,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-GK
+                  GK
                 </div>
 
                 <div
@@ -1044,7 +1006,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-DE
+                  CD
                 </div>
 
                 <div
@@ -1061,7 +1023,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-WB
+                  WB
                 </div>
 
                 <div
@@ -1078,7 +1040,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-IM
+                  IM
                 </div>
 
                 <div
@@ -1095,7 +1057,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-FW
+                  FW
                 </div>
 
                 <div
@@ -1112,7 +1074,7 @@
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-WG
+                  WG
                 </div>
 
                 <div
@@ -1127,9 +1089,9 @@
               </div>
 
 
-              <div class="lineup-position lineup-substitute-position lineup-substitute-extra">
+              <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
-                  SUB-EX
+                  Extra
                 </div>
 
                 <div
@@ -1165,17 +1127,33 @@
         <div class="builder-section-content">
 
           <div class="builder-section-heading">
-
             <div>
               <h2>
                 Match Recommendations
               </h2>
-
-              <p>
-                Optional recommendations generated from the starting XI.
-                Hattrick can remain on Coach pick if you prefer.
-              </p>
             </div>
+          </div>
+
+
+          <div class="lineup-penalty-section">
+
+            <div class="lineup-penalty-heading">
+              <h3>
+                Penalty Takers
+              </h3>
+            </div>
+
+
+            <div
+              id="lineup-penalty-takers-1-5"
+              class="lineup-penalty-grid lineup-penalty-grid-five"
+            ></div>
+
+
+            <div
+              id="lineup-penalty-takers-6-11"
+              class="lineup-penalty-grid lineup-penalty-grid-six"
+            ></div>
 
           </div>
 
@@ -1197,9 +1175,7 @@
               <span
                 id="lineup-captain-detail"
                 class="lineup-role-detail"
-              >
-                Calculated from starting XI experience and leadership
-              </span>
+              ></span>
             </div>
 
 
@@ -1218,38 +1194,8 @@
               <span
                 id="lineup-set-pieces-detail"
                 class="lineup-role-detail"
-              >
-                Highest set pieces among starting outfielders
-              </span>
+              ></span>
             </div>
-
-          </div>
-
-
-          <div class="lineup-penalty-section">
-
-            <div class="lineup-penalty-heading">
-              <h3>
-                Penalty Takers
-              </h3>
-
-              <p>
-                Suggested 1-11 order for Hattrick's Penalty Takers page.
-                Number 1 matches the recommended Set Pieces taker.
-              </p>
-            </div>
-
-
-            <div
-              id="lineup-penalty-takers-1-5"
-              class="lineup-penalty-grid lineup-penalty-grid-five"
-            ></div>
-
-
-            <div
-              id="lineup-penalty-takers-6-11"
-              class="lineup-penalty-grid lineup-penalty-grid-six"
-            ></div>
 
           </div>
 
@@ -1276,10 +1222,6 @@
                 Diagnostics
               </h2>
 
-              <p>
-                Detailed exclusions, player ratings, and lineup selection
-                order for testing the calculator.
-              </p>
             </div>
 
           </div>
@@ -1290,11 +1232,6 @@
             <summary>
               Excluded players
             </summary>
-
-            <p class="lineup-note">
-              Availability exclusions are applied after formation and
-              training have been selected.
-            </p>
 
             <div class="lineup-table-wrap">
 
@@ -1471,7 +1408,7 @@
 
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260826-4"></script>
+  <script src="/lineup.js?v=20260826-5"></script>
 
 </body>
 </html>
