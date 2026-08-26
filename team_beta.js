@@ -532,7 +532,10 @@ async function htwbLoadExistingWikiArticle(data) {
     const params = new URLSearchParams({ teamName: data.teamName, teamId: String(data.teamId) });
     const response = await fetch(`/api/wiki-team?${params.toString()}`, { headers: { Accept: "application/json" } });
     const result = await response.json();
-    if (!response.ok) throw new Error(result.error || `Server returned ${response.status}`);
+    if (!response.ok) {
+      const detail = result.detail ? ` ${result.detail}` : "";
+      throw new Error(`${result.error || `Server returned ${response.status}`}${detail}`.trim());
+    }
     htwbWikiArticle = result;
 
     if (result.status === "verified") {
@@ -555,7 +558,7 @@ async function htwbLoadExistingWikiArticle(data) {
   } catch (error) {
     console.error("Could not load existing HT Wiki article:", error);
     htwbWikiArticle = null;
-    htwbSetWikiStatus("Could not check HT Wiki. The beta can still generate a new page from CHPP data, but no existing source will be merged.", "error");
+    htwbSetWikiStatus(`Could not check HT Wiki. ${error?.message || "Unknown lookup error."} The beta can still generate a new page from CHPP data, but no existing source will be merged.`, "error");
   }
 }
 
