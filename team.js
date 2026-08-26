@@ -139,7 +139,7 @@ function buildIntro(data) {
 }
 
 function buildTeamInformation(data) {
-  return ["== Team information ==", "", buildInfobox(data), "", buildIntro(data)].filter(Boolean).join("\n");
+  return [buildInfobox(data), buildIntro(data)].filter(Boolean).join("\n\n");
 }
 
 function buildHistory(data) {
@@ -266,7 +266,7 @@ function buildExternalLinks(data) {
 }
 
 const sectionDefinitions = [
-  { key: "team-information", label: "Team Information", build: buildTeamInformation },
+  { key: "team-information", label: "Team Information", build: buildTeamInformation, hasSectionHeading: false },
   { key: "history", label: "History", build: buildHistory },
   { key: "arena", label: "Arena", build: buildArena },
   { key: "supporters", label: "Supporters", build: buildSupporters },
@@ -289,7 +289,7 @@ function renderSectionButtons() {
     button.className = "team-section-button";
     button.disabled = !markup;
     button.innerHTML = `<strong>${sectionLabel(def, htwbLoadedData)}</strong><span>${markup ? "Generate replacement section" : "No data available"}</span>`;
-    button.addEventListener("click", () => renderOutput(sectionLabel(def, htwbLoadedData), markup, true));
+    button.addEventListener("click", () => renderOutput(sectionLabel(def, htwbLoadedData), markup, true, def.hasSectionHeading !== false));
     htwbSectionButtons.appendChild(button);
   }
 }
@@ -307,12 +307,14 @@ function buildFullPage(data) {
   return parts.filter(Boolean).join("\n\n");
 }
 
-function renderOutput(label, markup, sectionOnly) {
+function renderOutput(label, markup, sectionOnly, hasSectionHeading = true) {
   if (!markup) return;
   htwbOutput.value = markup;
   htwbOutputTitle.textContent = sectionOnly ? `${label} Section` : "Full Team Page";
   htwbOutputNote.textContent = sectionOnly
-    ? "This is the complete replacement section, including its section heading."
+    ? (hasSectionHeading
+      ? "This is the complete replacement section, including its section heading."
+      : "This replaces the article lead and infobox, which appear before the first section heading.")
     : "Use this output for an initial article build or a deliberate complete page reset.";
   htwbCopyStatus.textContent = "";
   htwbOutputSection.hidden = false;
