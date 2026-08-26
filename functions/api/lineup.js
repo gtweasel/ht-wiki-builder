@@ -520,6 +520,12 @@ function htwbApiLineupParsePlayers(
             "SetPiecesSkill"
           ),
 
+        specialty:
+          htwbApiLineupXmlNumber(
+            htwbApiLineupPlayerXml,
+            "Specialty"
+          ) ?? 0,
+
         injuryLevel:
           htwbApiLineupXmlNumber(
             htwbApiLineupPlayerXml,

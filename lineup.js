@@ -143,6 +143,16 @@ const htwbLineupSetPiecesDetailElement =
     "lineup-set-pieces-detail"
   );
 
+const htwbLineupPenaltyTakersFirstRowElement =
+  document.getElementById(
+    "lineup-penalty-takers-1-5"
+  );
+
+const htwbLineupPenaltyTakersSecondRowElement =
+  document.getElementById(
+    "lineup-penalty-takers-6-11"
+  );
+
 const htwbLineupResultSections =
   Array.from(
     document.querySelectorAll(
@@ -3276,6 +3286,195 @@ function htwbLineupSelectSetPiecesTaker(
 }
 
 
+/*
+ * Community penalty-shootout estimate used by Hattrick Organizer:
+ * XP * 1.5 + Set Pieces * 0.7 + Scoring * 0.3, with a 10%
+ * bonus for Technical outfield players. Hattrick's manual treats
+ * a goalkeeper's Keeper skill as the relevant penalty-contest
+ * value for a keeper.
+ *
+ * Number 1 must match the ordinary Set Pieces taker in Hattrick,
+ * so that player is pinned first and the remaining starters are
+ * ranked from strongest to weakest estimated penalty option.
+ */
+const HTWB_LINEUP_TECHNICAL_SPECIALTY = 1;
+
+
+function htwbLineupCalculatePenaltyScore(
+  htwbLineupStartingEntry
+) {
+  const htwbLineupPlayer =
+    htwbLineupStartingEntry?.player;
+
+  if (!htwbLineupPlayer) {
+    return Number.NEGATIVE_INFINITY;
+  }
+
+  if (htwbLineupStartingEntry.slot === "GK") {
+    return htwbLineupNumberValue(
+      htwbLineupPlayer.keeper,
+      0
+    );
+  }
+
+  const htwbLineupBaseScore =
+    (
+      htwbLineupNumberValue(
+        htwbLineupPlayer.experience,
+        0
+      ) *
+      1.5
+    ) +
+    (
+      htwbLineupNumberValue(
+        htwbLineupPlayer.setPieces,
+        0
+      ) *
+      0.7
+    ) +
+    (
+      htwbLineupNumberValue(
+        htwbLineupPlayer.scoring,
+        0
+      ) *
+      0.3
+    );
+
+  const htwbLineupIsTechnical =
+    htwbLineupNumberValue(
+      htwbLineupPlayer.specialty,
+      0
+    ) ===
+    HTWB_LINEUP_TECHNICAL_SPECIALTY;
+
+  return htwbLineupIsTechnical
+    ? htwbLineupBaseScore * 1.1
+    : htwbLineupBaseScore;
+}
+
+
+function htwbLineupSelectPenaltyTakers(
+  htwbLineupLineupResult,
+  htwbLineupSetPiecesResult
+) {
+  const htwbLineupStartingEntries =
+    htwbLineupGetStartingEntries(
+      htwbLineupLineupResult
+    );
+
+  if (
+    !htwbLineupLineupResult?.complete ||
+    htwbLineupStartingEntries.length !== 11
+  ) {
+    return {
+      takers: []
+    };
+  }
+
+  const htwbLineupRankedEntries =
+    htwbLineupStartingEntries
+      .map(
+        htwbLineupStartingEntry => ({
+          ...htwbLineupStartingEntry,
+          penaltyScore:
+            htwbLineupCalculatePenaltyScore(
+              htwbLineupStartingEntry
+            )
+        })
+      )
+      .sort(
+        (htwbLineupA, htwbLineupB) => {
+          if (
+            htwbLineupA.penaltyScore !==
+            htwbLineupB.penaltyScore
+          ) {
+            return (
+              htwbLineupB.penaltyScore -
+              htwbLineupA.penaltyScore
+            );
+          }
+
+          const htwbLineupExperienceDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.player.experience,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.player.experience,
+              0
+            );
+
+          if (htwbLineupExperienceDifference !== 0) {
+            return htwbLineupExperienceDifference;
+          }
+
+          const htwbLineupSetPiecesDifference =
+            htwbLineupNumberValue(
+              htwbLineupB.player.setPieces,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupA.player.setPieces,
+              0
+            );
+
+          if (htwbLineupSetPiecesDifference !== 0) {
+            return htwbLineupSetPiecesDifference;
+          }
+
+          return (
+            htwbLineupNumberValue(
+              htwbLineupA.player.playerId,
+              0
+            ) -
+            htwbLineupNumberValue(
+              htwbLineupB.player.playerId,
+              0
+            )
+          );
+        }
+      );
+
+  const htwbLineupSetPiecesPlayerId =
+    htwbLineupSetPiecesResult
+      ?.player
+      ?.playerId;
+
+  const htwbLineupSetPiecesIndex =
+    htwbLineupRankedEntries.findIndex(
+      htwbLineupStartingEntry =>
+        String(
+          htwbLineupStartingEntry.player.playerId
+        ) ===
+        String(
+          htwbLineupSetPiecesPlayerId
+        )
+    );
+
+  if (htwbLineupSetPiecesIndex > 0) {
+    const [htwbLineupSetPiecesEntry] =
+      htwbLineupRankedEntries.splice(
+        htwbLineupSetPiecesIndex,
+        1
+      );
+
+    htwbLineupRankedEntries.unshift(
+      htwbLineupSetPiecesEntry
+    );
+  }
+
+  return {
+    takers:
+      htwbLineupRankedEntries.map(
+        (htwbLineupStartingEntry, htwbLineupIndex) => ({
+          ...htwbLineupStartingEntry,
+          order: htwbLineupIndex + 1
+        })
+      )
+  };
+}
+
+
 /* =========================================================
    COMPLETE CALCULATION
    ========================================================= */
@@ -3400,6 +3599,12 @@ function htwbLineupCalculateLineup(
       htwbLineupLineupResult
     );
 
+  const htwbLineupPenaltyResult =
+    htwbLineupSelectPenaltyTakers(
+      htwbLineupLineupResult,
+      htwbLineupSetPiecesResult
+    );
+
   /*
    * 7. Build substitute bench
    */
@@ -3419,6 +3624,7 @@ function htwbLineupCalculateLineup(
     lineupResult: htwbLineupLineupResult,
     captainResult: htwbLineupCaptainResult,
     setPiecesResult: htwbLineupSetPiecesResult,
+    penaltyResult: htwbLineupPenaltyResult,
     substituteResult: htwbLineupSubstituteResult
   };
 }
@@ -4307,6 +4513,109 @@ function htwbLineupRenderMatchRoles(
 }
 
 
+function htwbLineupRenderPenaltyTakers(
+  htwbLineupResult
+) {
+  const htwbLineupPenaltyTakers =
+    htwbLineupResult
+      ?.penaltyResult
+      ?.takers ||
+    [];
+
+  const htwbLineupRenderPenaltyGroup = (
+    htwbLineupElement,
+    htwbLineupTakers
+  ) => {
+    if (!htwbLineupElement) {
+      return;
+    }
+
+    if (!htwbLineupPenaltyTakers.length) {
+      htwbLineupElement.innerHTML = `
+        <div class="lineup-penalty-empty">
+          Complete starting XI required.
+        </div>
+      `;
+
+      return;
+    }
+
+    htwbLineupElement.innerHTML =
+      htwbLineupTakers
+        .map(
+          htwbLineupTaker => {
+            const htwbLineupPlayer =
+              htwbLineupTaker.player;
+
+            const htwbLineupIsGoalkeeper =
+              htwbLineupTaker.slot === "GK";
+
+            const htwbLineupIsTechnical =
+              !htwbLineupIsGoalkeeper &&
+              htwbLineupNumberValue(
+                htwbLineupPlayer.specialty,
+                0
+              ) ===
+              HTWB_LINEUP_TECHNICAL_SPECIALTY;
+
+            const htwbLineupDetail =
+              htwbLineupIsGoalkeeper
+                ? `GK ${htwbLineupNumberValue(
+                    htwbLineupPlayer.keeper,
+                    0
+                  )}`
+                : `SP ${htwbLineupNumberValue(
+                    htwbLineupPlayer.setPieces,
+                    0
+                  )} | SC ${htwbLineupNumberValue(
+                    htwbLineupPlayer.scoring,
+                    0
+                  )} | XP ${htwbLineupNumberValue(
+                    htwbLineupPlayer.experience,
+                    0
+                  )}${
+                    htwbLineupIsTechnical
+                      ? " | Technical"
+                      : ""
+                  }`;
+
+            return `
+              <div class="lineup-penalty-card">
+                <span class="lineup-penalty-order">
+                  ${htwbLineupTaker.order}
+                </span>
+
+                <span class="lineup-penalty-name">
+                  ${htwbLineupEscapeHtml(
+                    htwbLineupPlayer.name ||
+                    "OPEN"
+                  )}
+                </span>
+
+                <span class="lineup-penalty-detail">
+                  ${htwbLineupEscapeHtml(
+                    htwbLineupDetail
+                  )}
+                </span>
+              </div>
+            `;
+          }
+        )
+        .join("");
+  };
+
+  htwbLineupRenderPenaltyGroup(
+    htwbLineupPenaltyTakersFirstRowElement,
+    htwbLineupPenaltyTakers.slice(0, 5)
+  );
+
+  htwbLineupRenderPenaltyGroup(
+    htwbLineupPenaltyTakersSecondRowElement,
+    htwbLineupPenaltyTakers.slice(5, 11)
+  );
+}
+
+
 /* =========================================================
    EXCLUDED PLAYERS
    ========================================================= */
@@ -4658,6 +4967,10 @@ function htwbLineupRenderEverything(
   );
 
   htwbLineupRenderMatchRoles(
+    htwbLineupResult
+  );
+
+  htwbLineupRenderPenaltyTakers(
     htwbLineupResult
   );
 

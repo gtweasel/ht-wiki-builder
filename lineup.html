@@ -26,7 +26,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=20260825-3">
+  <link rel="stylesheet" href="/styles.css?v=20260826-4">
 </head>
 
 <body>
@@ -1148,6 +1148,38 @@
           </div>
 
 
+        </div>
+      </section>
+
+
+      <!-- =================================================
+           05 MATCH RECOMMENDATIONS
+           ================================================= -->
+
+      <section class="builder-section" data-lineup-result-section hidden>
+
+        <div class="builder-section-number">
+          05
+        </div>
+
+        <div class="builder-section-content">
+
+          <div class="builder-section-heading">
+
+            <div>
+              <h2>
+                Match Recommendations
+              </h2>
+
+              <p>
+                Optional recommendations generated from the starting XI.
+                Hattrick can remain on Coach pick if you prefer.
+              </p>
+            </div>
+
+          </div>
+
+
           <div class="lineup-coach-picks">
 
             <div class="lineup-summary-item">
@@ -1193,63 +1225,31 @@
 
           </div>
 
-        </div>
-      </section>
 
+          <div class="lineup-penalty-section">
 
-      <!-- =================================================
-           05 EXCLUDED PLAYERS
-           ================================================= -->
-
-      <section class="builder-section" data-lineup-result-section hidden>
-
-        <div class="builder-section-number">
-          05
-        </div>
-
-        <div class="builder-section-content">
-
-          <div class="builder-section-heading">
-
-            <div>
-              <h2>
-                Excluded Players
-              </h2>
+            <div class="lineup-penalty-heading">
+              <h3>
+                Penalty Takers
+              </h3>
 
               <p>
-                Availability exclusions are applied after formation
-                and training have been selected.
+                Suggested 1-11 order for Hattrick's Penalty Takers page.
+                Number 1 matches the recommended Set Pieces taker.
               </p>
             </div>
 
-          </div>
+
+            <div
+              id="lineup-penalty-takers-1-5"
+              class="lineup-penalty-grid lineup-penalty-grid-five"
+            ></div>
 
 
-          <div class="lineup-table-wrap">
-
-            <table class="lineup-table">
-
-              <thead>
-                <tr>
-                  <th>
-                    Player
-                  </th>
-
-                  <th>
-                    Reason
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody id="lineup-excluded-players-table-body">
-                <tr>
-                  <td colspan="2">
-                    No exclusions calculated yet.
-                  </td>
-                </tr>
-              </tbody>
-
-            </table>
+            <div
+              id="lineup-penalty-takers-6-11"
+              class="lineup-penalty-grid lineup-penalty-grid-six"
+            ></div>
 
           </div>
 
@@ -1277,12 +1277,54 @@
               </h2>
 
               <p>
-                Detailed player ratings and lineup selection order
-                for testing the calculator.
+                Detailed exclusions, player ratings, and lineup selection
+                order for testing the calculator.
               </p>
             </div>
 
           </div>
+
+
+          <details class="lineup-details">
+
+            <summary>
+              Excluded players
+            </summary>
+
+            <p class="lineup-note">
+              Availability exclusions are applied after formation and
+              training have been selected.
+            </p>
+
+            <div class="lineup-table-wrap">
+
+              <table class="lineup-table">
+
+                <thead>
+                  <tr>
+                    <th>
+                      Player
+                    </th>
+
+                    <th>
+                      Reason
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody id="lineup-excluded-players-table-body">
+                  <tr>
+                    <td colspan="2">
+                      No exclusions calculated yet.
+                    </td>
+                  </tr>
+                </tbody>
+
+              </table>
+
+            </div>
+
+          </details>
 
 
           <details class="lineup-details">
@@ -1429,7 +1471,7 @@
 
 
   <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260826-3"></script>
+  <script src="/lineup.js?v=20260826-4"></script>
 
 </body>
 </html>
