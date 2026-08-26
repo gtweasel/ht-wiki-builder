@@ -81,6 +81,22 @@
             </div>
           </div>
 
+          <div id="wiki-source-fallback" class="team-wiki-source-fallback" hidden>
+            <div>
+              <strong>Existing article source needed</strong>
+              <p id="wiki-source-fallback-note"></p>
+            </div>
+            <div class="builder-actions team-wiki-source-actions">
+              <a id="wiki-source-link" class="button button-outline-dark" href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">Open HT Wiki source</a>
+            </div>
+            <label for="wiki-source-input">Paste existing article source</label>
+            <textarea id="wiki-source-input" class="wiki-output team-wiki-source-input" rows="12" spellcheck="false" placeholder="Paste the full HT Wiki article source here..."></textarea>
+            <div class="builder-actions">
+              <button id="use-wiki-source" class="button button-primary" type="button">Use This Source</button>
+              <span id="wiki-source-manual-status" class="copy-status" aria-live="polite"></span>
+            </div>
+          </div>
+
           <div class="team-wiki-options">
             <label class="team-wiki-user-label" for="htwiki-username">
               <span>HT-Wiki username <small>(optional)</small></span>

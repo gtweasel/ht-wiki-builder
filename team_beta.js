@@ -15,6 +15,12 @@ const htwbOutputNote = document.getElementById("wiki-output-note");
 const htwbOutput = document.getElementById("wiki-output");
 const htwbCopyButton = document.getElementById("copy-wiki-output");
 const htwbCopyStatus = document.getElementById("copy-status");
+const htwbWikiSourceFallback = document.getElementById("wiki-source-fallback");
+const htwbWikiSourceFallbackNote = document.getElementById("wiki-source-fallback-note");
+const htwbWikiSourceLink = document.getElementById("wiki-source-link");
+const htwbWikiSourceInput = document.getElementById("wiki-source-input");
+const htwbUseWikiSourceButton = document.getElementById("use-wiki-source");
+const htwbWikiSourceManualStatus = document.getElementById("wiki-source-manual-status");
 
 let htwbSelectedTeamId = "";
 let htwbLoadedData = null;
@@ -35,6 +41,9 @@ function htwbSetSelectedTeamId(value) {
   htwbLoadedData = null;
   htwbWikiArticle = null;
   if (htwbWikiStatus) { htwbWikiStatus.hidden = true; htwbWikiStatus.textContent = ""; htwbWikiStatus.className = "builder-status"; }
+  if (htwbWikiSourceFallback) htwbWikiSourceFallback.hidden = true;
+  if (htwbWikiSourceInput) htwbWikiSourceInput.value = "";
+  if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = "";
   if (htwbOptionsSection) htwbOptionsSection.hidden = true;
   if (htwbOutputSection) htwbOutputSection.hidden = true;
   if (htwbLoadButton) htwbLoadButton.disabled = !htwbSelectedTeamId || htwbLoading;
@@ -55,6 +64,31 @@ function htwbSetWikiStatus(message, type = "") {
   htwbWikiStatus.className = "builder-status";
   if (type === "success") htwbWikiStatus.classList.add("builder-status-success");
   if (type === "error") htwbWikiStatus.classList.add("builder-status-error");
+  if (type === "warning") htwbWikiStatus.classList.add("builder-status-warning");
+}
+
+function htwbExtractTeamIdFromWikiSource(source) {
+  const match = String(source || "").match(/\|\s*teamid\s*=\s*(\d+)/i);
+  return match ? match[1] : "";
+}
+
+function htwbShowWikiSourceFallback(result, data) {
+  if (!htwbWikiSourceFallback) return;
+  htwbWikiSourceFallback.hidden = false;
+  if (htwbWikiSourceFallbackNote) {
+    htwbWikiSourceFallbackNote.textContent = `HT Wiki verified ${result.pageTitle || data.teamName} as TeamID ${data.teamId}, but returned 403 when the beta requested wikitext. Open the article source, copy it, and paste it here to enable the merge.`;
+  }
+  if (htwbWikiSourceLink) {
+    const base = result.pageUrl || `https://wiki.hattrick.org/wiki/${encodeURIComponent(String(result.pageTitle || data.teamName).replace(/ /g, "_"))}`;
+    try {
+      const url = new URL(base);
+      url.searchParams.set("action", "edit");
+      htwbWikiSourceLink.href = url.toString();
+    } catch {
+      htwbWikiSourceLink.href = base;
+    }
+  }
+  if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = "";
 }
 
 function hasValue(value) {
@@ -522,6 +556,9 @@ function buildMergedFullPage(data) {
 
 async function htwbLoadExistingWikiArticle(data) {
   htwbWikiArticle = null;
+  if (htwbWikiSourceFallback) htwbWikiSourceFallback.hidden = true;
+  if (htwbWikiSourceInput) htwbWikiSourceInput.value = "";
+  if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = "";
   if (!data?.teamName || !data?.teamId) {
     htwbSetWikiStatus("HT Wiki lookup skipped because the team identity is incomplete.", "error");
     return;
@@ -541,6 +578,12 @@ async function htwbLoadExistingWikiArticle(data) {
     if (result.status === "verified") {
       const redirectNote = Array.isArray(result.redirectChain) && result.redirectChain.length ? " (redirect resolved)" : "";
       htwbSetWikiStatus(`Existing HT Wiki article found and TeamID ${data.teamId} verified: ${result.pageTitle}${redirectNote}. Full-page generation will merge with its source.`, "success");
+      return;
+    }
+
+    if (result.status === "verified_source_blocked") {
+      htwbSetWikiStatus(`Existing HT Wiki article found and TeamID ${data.teamId} verified: ${result.pageTitle}. HT Wiki is returning 403 to automated wikitext requests, so the beta cannot pull the source directly.`, "warning");
+      htwbShowWikiSourceFallback(result, data);
       return;
     }
 
@@ -570,9 +613,11 @@ function renderOutput(label, markup, sectionOnly, articleLead = false) {
     ? "This replaces the article opening (infobox and introduction) and does not include a section heading."
     : sectionOnly
       ? "This is the complete replacement section, including its section heading."
-      : (htwbWikiArticle?.verified
+      : (htwbWikiArticle?.verified && hasValue(htwbWikiArticle.source)
         ? "Merged with the verified existing HT Wiki source. Known infobox fields are refreshed; existing unmarked sections are preserved; beta-generated sections are safely refreshable through invisible HTWB markers."
-        : "No verified existing HT Wiki article was available, so this is a new full-page build from the currently available data.");
+        : (htwbWikiArticle?.status === "verified_source_blocked"
+          ? "The existing HT Wiki article was verified by TeamID, but HT Wiki blocked automated source retrieval. This output is a new CHPP build unless you paste the existing wikitext into the source box above first."
+          : "No verified existing HT Wiki article was available, so this is a new full-page build from the currently available data."));
   htwbCopyStatus.textContent = "";
   htwbOutputSection.hidden = false;
   htwbOutputSection.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -603,6 +648,37 @@ async function loadTeamData() {
     htwbLoadButton.disabled = !htwbGetSelectedTeamId();
   }
 }
+
+
+htwbUseWikiSourceButton?.addEventListener("click", () => {
+  if (!htwbLoadedData || !htwbWikiArticle?.verified) return;
+  const source = String(htwbWikiSourceInput?.value || "").trim();
+  if (!source) {
+    if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = "Paste the article source first.";
+    return;
+  }
+  const wikiTeamId = htwbExtractTeamIdFromWikiSource(source);
+  if (!wikiTeamId) {
+    if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = "No teamid field was found in that source, so it was not imported.";
+    return;
+  }
+  if (String(wikiTeamId) !== String(htwbLoadedData.teamId)) {
+    if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = `That source belongs to TeamID ${wikiTeamId}, not ${htwbLoadedData.teamId}. It was not imported.`;
+    return;
+  }
+
+  htwbWikiArticle = {
+    ...htwbWikiArticle,
+    status: "verified",
+    verified: true,
+    sourceAvailable: true,
+    sourceBlocked: false,
+    source,
+    wikiTeamId
+  };
+  if (htwbWikiSourceManualStatus) htwbWikiSourceManualStatus.textContent = `Source accepted. TeamID ${wikiTeamId} verified. Full-page generation will now merge it with fresh CHPP data.`;
+  htwbSetWikiStatus(`Existing HT Wiki source loaded manually and TeamID ${wikiTeamId} verified. Full-page generation will merge with it.`, "success");
+});
 
 htwbLoadButton?.addEventListener("click", loadTeamData);
 htwbFullPageButton?.addEventListener("click", () => { if (htwbLoadedData) renderOutput("Merged Full Team Page", buildMergedFullPage(htwbLoadedData), false); });

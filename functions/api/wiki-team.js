@@ -1,4 +1,5 @@
 const HTWB_WIKI_TEAM_BASE_URL = "https://wiki.hattrick.org/index.php";
+const HTWB_WIKI_TEAM_ARTICLE_BASE_URL = "https://wiki.hattrick.org/wiki/";
 const HTWB_WIKI_TEAM_MAX_SOURCE_BYTES = 1024 * 1024;
 const HTWB_WIKI_TEAM_MAX_RESPONSE_BYTES = 3 * 1024 * 1024;
 const HTWB_WIKI_TEAM_MAX_REDIRECTS = 3;
@@ -10,6 +11,21 @@ function htwbWikiTeamNormalizeTitle(value) {
 function htwbWikiTeamExtractTeamId(source) {
   const match = String(source || "").match(/\|\s*teamid\s*=\s*(\d+)/i);
   return match ? match[1] : "";
+}
+
+function htwbWikiTeamExtractRenderedTeamId(html) {
+  const text = String(html || "");
+  const patterns = [
+    /TeamID=(\d+)/i,
+    /TeamID%3D(\d+)/i,
+    /TeamID&#61;(\d+)/i,
+    /teamid[^0-9]{0,24}(\d{3,})/i
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    if (match) return match[1];
+  }
+  return "";
 }
 
 function htwbWikiTeamExtractRedirect(source) {
@@ -44,6 +60,12 @@ function htwbWikiTeamExtractExportSource(xml) {
   return htwbWikiTeamDecodeEntities(match[1]);
 }
 
+function htwbWikiTeamExtractRenderedTitle(html, fallbackTitle) {
+  const match = String(html || "").match(/<h1\b[^>]*\bid=["']firstHeading["'][^>]*>([\s\S]*?)<\/h1>/i);
+  if (!match) return htwbWikiTeamNormalizeTitle(fallbackTitle);
+  return htwbWikiTeamNormalizeTitle(htwbWikiTeamDecodeEntities(match[1].replace(/<[^>]+>/g, "")));
+}
+
 function htwbWikiTeamLooksMissingSource(source) {
   return !String(source || "").trim();
 }
@@ -53,7 +75,7 @@ async function htwbWikiTeamFetchText(url, accept) {
     method: "GET",
     headers: {
       Accept: accept || "text/html,*/*;q=0.1",
-      "User-Agent": "HT Wiki Builder/0.2 team-beta"
+      "User-Agent": "HT Wiki Builder/0.3 team-beta"
     },
     redirect: "follow"
   });
@@ -69,8 +91,6 @@ async function htwbWikiTeamFetchText(url, accept) {
 async function htwbWikiTeamFetchSourceOnce(title) {
   const attempts = [];
 
-  // Preferred path: HT Wiki's public View source page. This works even when
-  // anonymous users cannot edit the article and avoids depending on action=raw.
   try {
     const editUrl = new URL(HTWB_WIKI_TEAM_BASE_URL);
     editUrl.searchParams.set("title", title);
@@ -82,8 +102,6 @@ async function htwbWikiTeamFetchSourceOnce(title) {
     if (response.ok) {
       const source = htwbWikiTeamExtractEditSource(text);
       if (source) return { found: true, source, method: "view-source", attempts };
-
-      // On a missing article MediaWiki normally supplies an empty edit box.
       if (/creating\s+[^<]+|create this page|there is currently no text in this page/i.test(text)) {
         return { found: false, source: "", method: "view-source", attempts };
       }
@@ -92,8 +110,6 @@ async function htwbWikiTeamFetchSourceOnce(title) {
     attempts.push(`view-source:error:${error?.message || "unknown"}`);
   }
 
-  // Fallback: standard MediaWiki raw action. Some installations disable it,
-  // but it is cheap to try after the normal view-source route.
   try {
     const rawUrl = new URL(HTWB_WIKI_TEAM_BASE_URL);
     rawUrl.searchParams.set("title", title);
@@ -110,8 +126,6 @@ async function htwbWikiTeamFetchSourceOnce(title) {
     attempts.push(`raw:error:${error?.message || "unknown"}`);
   }
 
-  // Final fallback: MediaWiki Special:Export, which is designed to expose the
-  // stored wikitext of a public page without requiring edit permissions.
   try {
     const exportUrl = new URL(HTWB_WIKI_TEAM_BASE_URL);
     exportUrl.searchParams.set("title", `Special:Export/${String(title).replace(/ /g, "_")}`);
@@ -128,7 +142,33 @@ async function htwbWikiTeamFetchSourceOnce(title) {
     attempts.push(`export:error:${error?.message || "unknown"}`);
   }
 
-  throw new Error(`HT Wiki source retrieval failed (${attempts.join(", ") || "no response"}).`);
+  return { found: null, source: "", method: "blocked", attempts, sourceBlocked: true };
+}
+
+async function htwbWikiTeamFetchRenderedPage(title) {
+  const articleUrl = new URL(`${HTWB_WIKI_TEAM_ARTICLE_BASE_URL}${encodeURIComponent(String(title).replace(/ /g, "_"))}`);
+  const { response, text } = await htwbWikiTeamFetchText(articleUrl, "text/html,*/*;q=0.1");
+
+  if (response.status === 404) {
+    return { found: false, pageTitle: htwbWikiTeamNormalizeTitle(title), pageUrl: articleUrl.toString(), wikiTeamId: "" };
+  }
+  if (!response.ok) {
+    throw new Error(`HT Wiki public article returned status ${response.status}.`);
+  }
+
+  if (/there is currently no text in this page|create this page/i.test(text)) {
+    return { found: false, pageTitle: htwbWikiTeamNormalizeTitle(title), pageUrl: articleUrl.toString(), wikiTeamId: "" };
+  }
+
+  const pageTitle = htwbWikiTeamExtractRenderedTitle(text, title);
+  const wikiTeamId = htwbWikiTeamExtractRenderedTeamId(text);
+  return {
+    found: true,
+    pageTitle,
+    pageUrl: response.url || articleUrl.toString(),
+    wikiTeamId,
+    rendered: true
+  };
 }
 
 async function htwbWikiTeamFetchPage(title) {
@@ -140,13 +180,28 @@ async function htwbWikiTeamFetchPage(title) {
     const result = await htwbWikiTeamFetchSourceOnce(currentTitle);
     sourceMethods.push({ title: currentTitle, method: result.method, attempts: result.attempts });
 
+    if (result.found === null && result.sourceBlocked) {
+      const rendered = await htwbWikiTeamFetchRenderedPage(currentTitle);
+      return {
+        found: rendered.found,
+        pageTitle: rendered.pageTitle,
+        pageUrl: rendered.pageUrl,
+        source: "",
+        redirectChain,
+        sourceMethods,
+        sourceBlocked: true,
+        renderedWikiTeamId: rendered.wikiTeamId || ""
+      };
+    }
+
     if (!result.found || htwbWikiTeamLooksMissingSource(result.source)) {
       return {
         found: false,
         pageTitle: currentTitle,
         source: "",
         redirectChain,
-        sourceMethods
+        sourceMethods,
+        sourceBlocked: false
       };
     }
 
@@ -160,9 +215,11 @@ async function htwbWikiTeamFetchPage(title) {
       return {
         found: true,
         pageTitle: currentTitle,
+        pageUrl: `${HTWB_WIKI_TEAM_ARTICLE_BASE_URL}${encodeURIComponent(currentTitle.replace(/ /g, "_"))}`,
         source,
         redirectChain,
-        sourceMethods
+        sourceMethods,
+        sourceBlocked: false
       };
     }
 
@@ -179,7 +236,10 @@ async function htwbWikiTeamCheckCandidate(title, requestedTeamId) {
     return { ...result, status: "not_found", verified: false, wikiTeamId: "" };
   }
 
-  const wikiTeamId = htwbWikiTeamExtractTeamId(result.source);
+  const wikiTeamId = result.sourceBlocked
+    ? String(result.renderedWikiTeamId || "")
+    : htwbWikiTeamExtractTeamId(result.source);
+
   if (!wikiTeamId) {
     return { ...result, status: "unverified", verified: false, wikiTeamId: "" };
   }
@@ -188,7 +248,11 @@ async function htwbWikiTeamCheckCandidate(title, requestedTeamId) {
     return { ...result, status: "id_mismatch", verified: false, wikiTeamId };
   }
 
-  return { ...result, status: "verified", verified: true, wikiTeamId };
+  if (result.sourceBlocked) {
+    return { ...result, status: "verified_source_blocked", verified: true, sourceAvailable: false, wikiTeamId };
+  }
+
+  return { ...result, status: "verified", verified: true, sourceAvailable: true, wikiTeamId };
 }
 
 export async function onRequestGet(context) {
@@ -214,6 +278,7 @@ export async function onRequestGet(context) {
         requestedTitle: candidate,
         status: result.status,
         pageTitle: result.pageTitle,
+        pageUrl: result.pageUrl || "",
         wikiTeamId: result.wikiTeamId || "",
         sourceMethods: result.sourceMethods || []
       });
@@ -221,15 +286,17 @@ export async function onRequestGet(context) {
       if (result.verified) {
         return Response.json(
           {
-            status: "verified",
+            status: result.status,
             found: true,
             verified: true,
+            sourceAvailable: Boolean(result.sourceAvailable),
+            sourceBlocked: Boolean(result.sourceBlocked),
             requestedTitle: candidate,
             pageTitle: result.pageTitle,
-            pageUrl: `https://wiki.hattrick.org/wiki/${encodeURIComponent(result.pageTitle.replace(/ /g, "_"))}`,
+            pageUrl: result.pageUrl || `${HTWB_WIKI_TEAM_ARTICLE_BASE_URL}${encodeURIComponent(result.pageTitle.replace(/ /g, "_"))}`,
             wikiTeamId: result.wikiTeamId,
-            source: result.source,
-            redirectChain: result.redirectChain,
+            source: result.source || "",
+            redirectChain: result.redirectChain || [],
             sourceMethods: result.sourceMethods || [],
             checked
           },
@@ -247,6 +314,7 @@ export async function onRequestGet(context) {
           verified: false,
           requestedTitle: firstFound.requestedTitle,
           pageTitle: firstFound.pageTitle,
+          pageUrl: firstFound.pageUrl || "",
           wikiTeamId: firstFound.wikiTeamId,
           source: "",
           sourceMethods: firstFound.sourceMethods || [],
@@ -273,7 +341,7 @@ export async function onRequestGet(context) {
     console.error("HT Wiki team lookup failed:", error);
     return Response.json(
       {
-        error: "Could not retrieve the existing HT Wiki article.",
+        error: "Could not check the public HT Wiki article.",
         detail: error?.message || "Unknown HT Wiki error."
       },
       { status: 502, headers: noStoreHeaders }
