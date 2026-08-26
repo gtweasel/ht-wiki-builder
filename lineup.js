@@ -11,6 +11,8 @@
  * 4. Combination Score = Training Ideal Average * Formation Score
  * 5. Lowest combination score wins
  * 6. Display Training first, then Formation, then build the lineup
+ * 7. Starting layouts are symmetrical; training coverage wins first,
+ *    then total Playmaking contribution, then total position rating
  *
  * User overrides:
  * - Training and formation are dropdowns after the first build
@@ -159,9 +161,9 @@ const HTWB_LINEUP_TEAM_STORAGE_KEY =
  * CHPP formation experience.
  *
  * A formation defines only how many defenders, midfielders,
- * and forwards are used. The optimizer chooses the actual
- * central / wing slots for the selected training type instead
- * of forcing wingbacks and wingers into every formation.
+ * and forwards are used. The optimizer chooses between the legal
+ * symmetrical central / wing layouts for that count. Training
+ * coverage is protected before Playmaking or lineup strength.
  */
 
 const HTWB_LINEUP_FORMATIONS = {
@@ -228,40 +230,79 @@ const HTWB_LINEUP_FORMATIONS = {
 
 
 /* =========================================================
-   LEGAL POSITION POOLS
+   SYMMETRICAL POSITION LAYOUTS
    ========================================================= */
 
 /*
- * Hattrick allows at most three central defenders, three inner
- * midfielders, and three forwards. Wing positions fill the two
- * remaining defender / midfielder locations.
+ * Every starting formation is symmetrical.
  *
- * The optimizer chooses a legal subset from each line according
- * to training effect first, then lineup strength.
+ * For two- and three-player defender / midfielder lines there
+ * are two legal symmetrical shapes. Training effect decides
+ * between them first. When training effect is equal, the lineup
+ * with the stronger total Playmaking contribution is preferred.
+ *
+ * Four- and five-player lines have one symmetrical shape.
+ * Forward lines also have one symmetrical shape for each count.
  */
 
-const HTWB_LINEUP_POSITION_GROUPS = {
-  defenders: [
-    "LWB",
-    "LCD",
-    "CD",
-    "RCD",
-    "RWB"
-  ],
+const HTWB_LINEUP_SYMMETRICAL_SLOT_LAYOUTS = {
+  defenders: {
+    2: [
+      ["LWB", "RWB"],
+      ["LCD", "RCD"]
+    ],
 
-  midfielders: [
-    "LW",
-    "LCM",
-    "CM",
-    "RCM",
-    "RW"
-  ],
+    3: [
+      ["LWB", "CD", "RWB"],
+      ["LCD", "CD", "RCD"]
+    ],
 
-  forwards: [
-    "LF",
-    "CF",
-    "RF"
-  ]
+    4: [
+      ["LWB", "LCD", "RCD", "RWB"]
+    ],
+
+    5: [
+      ["LWB", "LCD", "CD", "RCD", "RWB"]
+    ]
+  },
+
+  midfielders: {
+    2: [
+      ["LW", "RW"],
+      ["LCM", "RCM"]
+    ],
+
+    3: [
+      ["LW", "CM", "RW"],
+      ["LCM", "CM", "RCM"]
+    ],
+
+    4: [
+      ["LW", "LCM", "RCM", "RW"]
+    ],
+
+    5: [
+      ["LW", "LCM", "CM", "RCM", "RW"]
+    ]
+  },
+
+  forwards: {
+    0: [
+      []
+    ],
+
+    1: [
+      ["CF"]
+    ],
+
+    2: [
+      ["LF", "RF"]
+    ],
+
+    3: [
+      ["LF", "CF", "RF"]
+    ]
+  }
 };
 
 
@@ -942,68 +983,23 @@ function htwbLineupSlotMatchesTrainingRole(
    FORMATION SLOT LAYOUTS / TRAINING EFFECT
    ========================================================= */
 
-function htwbLineupCombinations(
-  htwbLineupItems,
+function htwbLineupGetSymmetricalLineLayouts(
+  htwbLineupLine,
   htwbLineupCount
 ) {
-  if (htwbLineupCount === 0) {
-    return [[]];
-  }
+  const htwbLineupLayouts =
+    HTWB_LINEUP_SYMMETRICAL_SLOT_LAYOUTS
+      ?.[htwbLineupLine]
+      ?.[htwbLineupCount];
 
-  if (
-    htwbLineupCount < 0 ||
-    htwbLineupCount > htwbLineupItems.length
-  ) {
+  if (!Array.isArray(htwbLineupLayouts)) {
     return [];
   }
 
-  const htwbLineupResults = [];
-
-  function htwbLineupBuildCombination(
-    htwbLineupStart,
-    htwbLineupCurrent
-  ) {
-    if (
-      htwbLineupCurrent.length ===
-      htwbLineupCount
-    ) {
-      htwbLineupResults.push(
-        [...htwbLineupCurrent]
-      );
-
-      return;
-    }
-
-    const htwbLineupNeeded =
-      htwbLineupCount -
-      htwbLineupCurrent.length;
-
-    for (
-      let htwbLineupIndex = htwbLineupStart;
-      htwbLineupIndex <=
-        htwbLineupItems.length -
-          htwbLineupNeeded;
-      htwbLineupIndex += 1
-    ) {
-      htwbLineupCurrent.push(
-        htwbLineupItems[htwbLineupIndex]
-      );
-
-      htwbLineupBuildCombination(
-        htwbLineupIndex + 1,
-        htwbLineupCurrent
-      );
-
-      htwbLineupCurrent.pop();
-    }
-  }
-
-  htwbLineupBuildCombination(
-    0,
-    []
+  return htwbLineupLayouts.map(
+    htwbLineupLayout =>
+      [...htwbLineupLayout]
   );
-
-  return htwbLineupResults;
 }
 
 
@@ -1011,22 +1007,30 @@ function htwbLineupGenerateFormationSlotLayouts(
   htwbLineupFormation
 ) {
   const htwbLineupDefenderLayouts =
-    htwbLineupCombinations(
-      HTWB_LINEUP_POSITION_GROUPS.defenders,
+    htwbLineupGetSymmetricalLineLayouts(
+      "defenders",
       htwbLineupFormation.defenders
     );
 
   const htwbLineupMidfielderLayouts =
-    htwbLineupCombinations(
-      HTWB_LINEUP_POSITION_GROUPS.midfielders,
+    htwbLineupGetSymmetricalLineLayouts(
+      "midfielders",
       htwbLineupFormation.midfielders
     );
 
   const htwbLineupForwardLayouts =
-    htwbLineupCombinations(
-      HTWB_LINEUP_POSITION_GROUPS.forwards,
+    htwbLineupGetSymmetricalLineLayouts(
+      "forwards",
       htwbLineupFormation.forwards
     );
+
+  if (
+    !htwbLineupDefenderLayouts.length ||
+    !htwbLineupMidfielderLayouts.length ||
+    !htwbLineupForwardLayouts.length
+  ) {
+    return [];
+  }
 
   const htwbLineupLayouts = [];
 
@@ -2150,6 +2154,80 @@ function htwbLineupCalculateRawPositionSkills(
 
 
 /* =========================================================
+   PLAYMAKING CONTRIBUTION
+   ========================================================= */
+
+/*
+ * Reuse the Playmaking shares from the existing player-position
+ * formulas. This score is used only after training-effect coverage
+ * is tied between symmetrical layouts. Form and stamina factors are
+ * included so the extra layer follows the same match priorities as
+ * the existing player ratings.
+ */
+
+const HTWB_LINEUP_PLAYMAKING_ROLE_WEIGHTS = {
+  GK: 0,
+  CD: 0.25,
+  WB: (1 / 9),
+  IM: (6 / 9),
+  WG: 0.20,
+  FW: 0
+};
+
+
+function htwbLineupGetPlayerPlaymakingContribution(
+  htwbLineupPlayer,
+  htwbLineupSlot
+) {
+  const htwbLineupRole =
+    htwbLineupGetSlotRole(
+      htwbLineupSlot
+    );
+
+  if (!htwbLineupRole) {
+    return 0;
+  }
+
+  const htwbLineupRoleWeight =
+    htwbLineupNumberValue(
+      HTWB_LINEUP_PLAYMAKING_ROLE_WEIGHTS[
+        htwbLineupRole
+      ],
+      0
+    );
+
+  if (htwbLineupRoleWeight <= 0) {
+    return 0;
+  }
+
+  const htwbLineupPlaymaking =
+    htwbLineupNumberValue(
+      htwbLineupPlayer?.playmaking,
+      0
+    );
+
+  const htwbLineupFormFactor =
+    htwbLineupNumberValue(
+      htwbLineupPlayer?.formFactor,
+      1
+    );
+
+  const htwbLineupStaminaFactor =
+    htwbLineupNumberValue(
+      htwbLineupPlayer?.staminaFactor,
+      1
+    );
+
+  return (
+    htwbLineupPlaymaking *
+    htwbLineupRoleWeight *
+    htwbLineupFormFactor *
+    htwbLineupStaminaFactor
+  );
+}
+
+
+/* =========================================================
    FINAL POSITION RATINGS
    ========================================================= */
 
@@ -2501,6 +2579,8 @@ function htwbLineupConstructLineupForSlots(
 
   let htwbLineupTotalRating = 0;
 
+  let htwbLineupPlaymakingScore = 0;
+
   for (
     const htwbLineupSlot
     of htwbLineupOrder.all
@@ -2550,6 +2630,12 @@ function htwbLineupConstructLineupForSlots(
         htwbLineupSelectedRating;
     }
 
+    htwbLineupPlaymakingScore +=
+      htwbLineupGetPlayerPlaymakingContribution(
+        htwbLineupSelectedPlayer,
+        htwbLineupSlot
+      );
+
     const htwbLineupIndex =
       htwbLineupRemaining.findIndex(
         htwbLineupPlayer =>
@@ -2587,6 +2673,9 @@ function htwbLineupConstructLineupForSlots(
       ),
 
     totalRating: htwbLineupTotalRating,
+
+    playmakingScore:
+      htwbLineupPlaymakingScore,
 
     playersRemaining:
       htwbLineupRemaining,
@@ -2630,6 +2719,16 @@ function htwbLineupCompareSlotLayoutResults(
     return (
       htwbLineupPlayerCountB -
       htwbLineupPlayerCountA
+    );
+  }
+
+  if (
+    htwbLineupA.playmakingScore !==
+    htwbLineupB.playmakingScore
+  ) {
+    return (
+      htwbLineupB.playmakingScore -
+      htwbLineupA.playmakingScore
     );
   }
 
