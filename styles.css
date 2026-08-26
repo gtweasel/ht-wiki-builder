@@ -1671,3 +1671,72 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+/* =========================================================
+   ROSTER USEFULNESS
+   ========================================================= */
+
+.roster-summary {
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+}
+
+.roster-table-wrap {
+  margin-top: 22px;
+}
+
+.roster-table .roster-rank,
+.roster-table .roster-usefulness-score {
+  color: var(--blue-950);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.roster-player-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-weight: 700;
+}
+
+.roster-player-badge {
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: var(--gray-100);
+  color: var(--gray-600);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.roster-formula-copy {
+  max-width: 800px;
+  color: var(--gray-600);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.roster-formula-copy p {
+  margin: 12px 0 0;
+}
+
+.roster-formula-block {
+  margin-top: 12px;
+  padding: 10px 12px;
+  overflow-x: auto;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  color: var(--blue-950);
+  font-family: monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+@media (max-width: 800px) {
+  .roster-summary {
+    grid-template-columns: 1fr;
+  }
+}

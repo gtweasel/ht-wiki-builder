@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Roster Usefulness - HT Wiki Builder</title>
+
+  <meta
+    name="description"
+    content="Rank Hattrick players from least useful to most useful using current skills, development runway, and time unused."
+  >
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="/styles.css?v=20260826-6">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark">
+          <img class="brand-logo" src="/ht-wiki-builder-logo.png" alt="">
+        </span>
+
+        <span class="brand-name">
+          <span class="brand-wiki">Wiki</span>
+          <span class="brand-builder">Builder</span>
+        </span>
+      </a>
+
+      <div class="header-status">
+        <div id="user-status" class="user-status">
+          Not connected
+        </div>
+
+        <a
+          id="header-login"
+          class="button button-small button-gold"
+          href="/auth/login"
+        >
+          Log in
+        </a>
+
+        <a
+          id="header-logout"
+          class="button button-small button-outline"
+          href="/auth/logout"
+          hidden
+        >
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-page-inner">
+      <div class="builder-heading">
+        <div>
+          <div class="eyebrow">Manager Tool</div>
+          <h1>Roster Usefulness</h1>
+        </div>
+
+        <a class="button button-outline-dark" href="/">
+          Back to tools
+        </a>
+      </div>
+
+      <div id="login-panel" class="builder-login">
+        <h2>Connect to Hattrick</h2>
+        <p>Log in before loading roster data.</p>
+
+        <a class="button button-primary" href="/auth/login">
+          Log in with Hattrick
+        </a>
+      </div>
+
+      <div id="connected-panel" class="builder-account" hidden>
+        <div>
+          <span class="builder-account-label">
+            Connected to Hattrick
+          </span>
+
+          <strong id="team-name">
+            Loading team...
+          </strong>
+
+          <div class="builder-account-details">
+            <span id="manager-name"></span>
+            <span id="team-id"></span>
+          </div>
+        </div>
+      </div>
+
+      <section class="builder-section">
+        <div class="builder-section-number">01</div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Roster</h2>
+              <p>
+                Rank every current player from least useful to most useful.
+                Roster size does not affect the calculation.
+              </p>
+            </div>
+          </div>
+
+          <div
+            id="roster-status"
+            class="builder-status"
+            aria-live="polite"
+          >
+            Waiting for team data.
+          </div>
+
+          <div class="builder-actions">
+            <button
+              id="roster-rank-button"
+              class="button button-primary"
+              type="button"
+              disabled
+            >
+              Rank Roster
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section
+        id="roster-results-section"
+        class="builder-section"
+        hidden
+      >
+        <div class="builder-section-number">02</div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Usefulness Ranking</h2>
+              <p>
+                Lowest score appears first. The tool does not choose a cutoff
+                or recommend an action.
+              </p>
+            </div>
+          </div>
+
+          <div class="lineup-summary roster-summary">
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Team</span>
+              <span
+                id="roster-summary-team"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Players Ranked</span>
+              <span
+                id="roster-summary-count"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Calculated As Of</span>
+              <span
+                id="roster-summary-date"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+          </div>
+
+          <div class="lineup-table-wrap roster-table-wrap">
+            <table class="lineup-table roster-table">
+              <thead>
+                <tr>
+                  <th class="number">Rank</th>
+                  <th>Player</th>
+                  <th>Age</th>
+                  <th>Last Played</th>
+                  <th>Joined</th>
+                  <th class="number">Unused</th>
+                  <th class="number">Current Value</th>
+                  <th class="number">Development</th>
+                  <th class="number">Usefulness</th>
+                </tr>
+              </thead>
+
+              <tbody id="roster-table-body"></tbody>
+            </table>
+          </div>
+
+          <details class="lineup-details roster-formula-details">
+            <summary>Show calculation</summary>
+
+            <div class="roster-formula-copy">
+              <p>
+                <strong>Unused days</strong> are counted from the later of the
+                player's arrival date or last played match.
+              </p>
+
+              <p>
+                <strong>Current Value</strong> is the sum of smooth skill-value
+                curves for keeper, defending, playmaking, winger, passing,
+                scoring, and set pieces.
+              </p>
+
+              <p>
+                <strong>Development</strong> is a continuous age-in-days curve
+                through age 30. Players age 30 and older receive no future
+                development value.
+              </p>
+
+              <div class="roster-formula-block">
+                Usage = 2<sup>(-Unused Days / 28)</sup>
+              </div>
+
+              <div class="roster-formula-block">
+                Usefulness = (Current Value x Usage) +
+                (Development x Usage<sup>2</sup>)
+              </div>
+
+              <p class="lineup-note">
+                Injury status, form, salary, TSI, and roster size do not change
+                the score.
+              </p>
+            </div>
+          </details>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>HT Wiki Builder</strong>
+        <span>Free. Read-only. Built for the Hattrick community.</span>
+      </div>
+
+      <div class="footer-links">
+        <a
+          href="https://www.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hattrick
+        </a>
+
+        <a
+          href="https://www.hattrick.org/?inviteRef=TS7E2C"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="New to Hattrick? Create a team using the HT Wiki Builder recruitment link."
+        >
+          Join Hattrick
+        </a>
+
+        <a
+          href="https://wiki.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          HT Wiki
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      HT Wiki Builder is an independent CHPP application. The Join Hattrick link is a recruitment link that may earn the site creator Hattrick reward points.
+    </div>
+  </footer>
+
+  <script src="/app.js?v=20260825-2"></script>
+  <script src="/roster.js?v=20260826-1"></script>
+</body>
+</html>

@@ -9,9 +9,11 @@ The project uses file-scoped identifier prefixes so browser scripts and Cloudfla
 - `app.js`: `htwbApp...` / `HTWB_APP_...`
 - `team.js`: `htwbTeam...` / `HTWB_TEAM_...`
 - `lineup.js`: `htwbLineup...` / `HTWB_LINEUP_...`
+- `roster.js`: `htwbRoster...` / `HTWB_ROSTER_...`
 - `functions/api/me.js`: `htwbApiMe...` / `HTWB_API_ME_...`
 - `functions/api/team.js`: `htwbApiTeam...` / `HTWB_API_TEAM_...`
 - `functions/api/lineup.js`: `htwbApiLineup...` / `HTWB_API_LINEUP_...`
+- `functions/api/roster.js`: `htwbApiRoster...` / `HTWB_API_ROSTER_...`
 - `functions/auth/login.js`: `htwbAuthLogin...` / `HTWB_AUTH_LOGIN_...`
 - `functions/auth/callback.js`: `htwbAuthCallback...` / `HTWB_AUTH_CALLBACK_...`
 - `functions/auth/logout.js`: `htwbAuthLogout...` / `HTWB_AUTH_LOGOUT_...`
@@ -134,6 +136,29 @@ Historical club-record claims are generated only when `matchesarchive` is comple
 The main index separates the application into two product groups:
 
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
-- **Manager Tools:** Lineup Planner.
+- **Manager Tools:** Lineup Planner, Roster Usefulness.
 
-Only the Team Page Builder and Lineup Planner are currently active; the other Wiki Builder cards are presented as coming soon.
+The Team Page Builder, Lineup Planner, and Roster Usefulness tool are active; the other Wiki Builder cards are presented as coming soon.
+
+
+## Roster Usefulness
+
+The Roster Usefulness tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
+
+The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v1.3 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
+
+`Unused Days = today - max(Arrival Date, Last Match Date)`
+
+Current Value is the sum of seven continuous fitted skill curves (keeper, defending, playmaking, winger, passing, scoring, and set pieces):
+
+`SkillValue(x) = A * (exp(K * x) - 1) + C * x`
+
+The coefficients are fitted to the established HTMS skill-value progression, but the roster score is intentionally its own system rather than HTMS.
+
+Development Potential uses exact age (`years + AgeDays / 112`) and a continuous cubic fit to the established age progression, shifted so age 30 is zero. Future development is clamped to zero for players age 30 and older; current skill value is never reduced merely because a player is older.
+
+`Usage = 2 ^ (-Unused Days / 28)`
+
+`Usefulness = (Current Value * Usage) + (Development Potential * Usage ^ 2)`
+
+The usage term therefore has a 28-day half-life while unused development opportunity has an effective 14-day half-life. Injury status, form, salary, TSI, and total roster size do not affect the score.
