@@ -56,7 +56,7 @@ The Lineup Builder optimizes **training and formation together**, while keeping 
 
 ### Supported training types
 
-All senior-team Hattrick training types are considered except the combined **Scoring and Set Pieces** type:
+All senior-team Hattrick training types used by the planner are considered in Hattrick display order:
 
 - Keeper
 - Defending
@@ -68,6 +68,7 @@ All senior-team Hattrick training types are considered except the combined **Sco
 - Defending (Defenders, Keepers + All Midfielders)
 - Winger (Winger + Attackers)
 - Passing (Defenders + All Midfielders)
+- Scoring and Set Pieces
 
 Each training type is evaluated with its full ideal weekly trainee group. The coach is retained in roster data so the UI can show `Excluded: Coach`, but the coach is not included in ideal training-average calculations.
 
@@ -75,18 +76,18 @@ Each training type is evaluated with its full ideal weekly trainee group. The co
 
 Behind the scenes, every supported training type is paired with every CHPP-tracked formation:
 
-- 4-3-3
-- 4-5-1
-- 3-5-2
-- 5-3-2
-- 3-4-3
-- 5-4-1
-- 4-4-2
-- 2-5-3
-- 5-2-3
 - 5-5-0
+- 5-4-1
+- 5-3-2
+- 5-2-3
+- 4-5-1
+- 4-4-2
+- 4-3-3
+- 3-5-2
+- 3-4-3
+- 2-5-3
 
-With 10 training types and 10 formations, the normal optimizer evaluates **100 training/formation combinations**. No formation is pre-excluded because of utilization and there is no formation-experience threshold.
+With 11 training types and 10 formations, the normal optimizer evaluates **110 training/formation combinations**. No formation is pre-excluded because of utilization and there is no formation-experience threshold.
 
 For each training/formation pair:
 
@@ -96,9 +97,13 @@ For each training/formation pair:
 
 `Combination Score = Base Combination Score / Training Speed Efficiency`
 
-Focused training uses a `1.00` efficiency baseline. Estimated extended-training efficiencies are `0.50` for Defending, `0.60` for Winger, and `0.80` for Passing. Because the optimizer is lowest-score-wins, dividing by a value below `1.00` makes slower training appropriately less attractive while still allowing the extra trainee coverage to overcome the penalty when the roster supports it.
+Focused training uses a `1.00` efficiency baseline. Estimated extended-training efficiencies are `0.50` for Defending, `0.60` for Winger, and `0.80` for Passing. Combined Scoring and Set Pieces uses `0.571` for its primary Scoring effect. Because the optimizer is lowest-score-wins, dividing by a value below `1.00` makes slower training appropriately less attractive while still allowing the extra trainee coverage to overcome the penalty when the roster supports it.
 
 The **lowest Combination Score wins**. A formation with zero effective training slots naturally receives an infinite score because the ideal/effective ratio cannot be calculated.
+
+When two formations are otherwise tied for the same training type, the coach style is used only as a final formation tiebreaker. An Offensive coach prefers more forwards, then fewer defenders. Defensive, Balanced, or unavailable coach-style data defaults to the more defensive formation: more defenders, then fewer forwards. The coach style is read from the current coach's `TrainerData` already present in the CHPP `players` response, so no extra CHPP request is required.
+
+The Formation table/dropdown always uses Hattrick's formation order shown above, and the Training table/dropdown always uses the training order listed above. Recommendation score never reorders the visible lists.
 
 This single formula lets all three priorities compete mathematically every time:
 

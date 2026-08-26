@@ -472,6 +472,15 @@ function htwbApiLineupParsePlayers(
             "Leadership"
           ),
 
+        trainerType:
+          htwbApiLineupXmlNumber(
+            htwbApiLineupXmlContainer(
+              htwbApiLineupPlayerXml,
+              "TrainerData"
+            ),
+            "TrainerType"
+          ),
+
         stamina:
           htwbApiLineupXmlNumber(
             htwbApiLineupPlayerXml,
@@ -596,16 +605,16 @@ function htwbApiLineupParsePlayers(
  */
 
 const HTWB_API_LINEUP_REQUIRED_FORMATIONS = [
-  "2-5-3",
-  "3-4-3",
-  "3-5-2",
-  "4-3-3",
-  "4-4-2",
-  "4-5-1",
-  "5-2-3",
-  "5-3-2",
+  "5-5-0",
   "5-4-1",
-  "5-5-0"
+  "5-3-2",
+  "5-2-3",
+  "4-5-1",
+  "4-4-2",
+  "4-3-3",
+  "3-5-2",
+  "3-4-3",
+  "2-5-3"
 ];
 
 function htwbApiLineupParseFormationExperience(
@@ -722,7 +731,7 @@ const HTWB_API_LINEUP_TRAINING_TYPE_MAP = {
   },
   6: {
     name: "Scoring and Set Pieces",
-    lineupTrainingId: ""
+    lineupTrainingId: "scoringSetPieces"
   },
   7: {
     name: "Passing",
@@ -1418,6 +1427,25 @@ export async function onRequestGet(
         htwbApiLineupRequestedTeamId
       );
 
+    const htwbApiLineupCoachType =
+      htwbApiLineupPlayers.find(
+        htwbApiLineupPlayer =>
+          String(htwbApiLineupPlayer.playerId) ===
+          String(htwbApiLineupTeam.coachId)
+      )?.trainerType ?? null;
+
+    const htwbApiLineupPublicPlayers =
+      htwbApiLineupPlayers.map(
+        htwbApiLineupPlayer => {
+          const {
+            trainerType: htwbApiLineupUnusedTrainerType,
+            ...htwbApiLineupPublicPlayer
+          } = htwbApiLineupPlayer;
+
+          return htwbApiLineupPublicPlayer;
+        }
+      );
+
     const htwbApiLineupFormationExperience =
       htwbApiLineupParseFormationExperience(
         htwbApiLineupTrainingXml,
@@ -1552,6 +1580,9 @@ export async function onRequestGet(
         coachName:
           htwbApiLineupTeam.coachName,
 
+        coachType:
+          htwbApiLineupCoachType,
+
         nextTrainingDate:
           htwbApiLineupLeagueSchedule.trainingDate,
 
@@ -1589,7 +1620,7 @@ export async function onRequestGet(
 
         formationExperience: htwbApiLineupFormationExperience,
 
-        players: htwbApiLineupPlayers,
+        players: htwbApiLineupPublicPlayers,
 
         previousTrainingMatch: htwbApiLineupPreviousTrainingMatch
       },
