@@ -692,6 +692,129 @@ function htwbApiLineupParseFormationExperience(
 
 
 /* =========================================================
+   CURRENT TRAINING TYPE
+   ========================================================= */
+
+const HTWB_API_LINEUP_TRAINING_TYPE_MAP = {
+  0: {
+    name: "General",
+    lineupTrainingId: ""
+  },
+  1: {
+    name: "Stamina",
+    lineupTrainingId: ""
+  },
+  2: {
+    name: "Set Pieces",
+    lineupTrainingId: "setPieces"
+  },
+  3: {
+    name: "Defending",
+    lineupTrainingId: "defending"
+  },
+  4: {
+    name: "Scoring",
+    lineupTrainingId: "scoring"
+  },
+  5: {
+    name: "Winger",
+    lineupTrainingId: "winger"
+  },
+  6: {
+    name: "Scoring and Set Pieces",
+    lineupTrainingId: ""
+  },
+  7: {
+    name: "Passing",
+    lineupTrainingId: "passing"
+  },
+  8: {
+    name: "Playmaking",
+    lineupTrainingId: "playmaking"
+  },
+  9: {
+    name: "Keeper",
+    lineupTrainingId: "keeper"
+  },
+  10: {
+    name: "Passing (Defenders + All Midfielders)",
+    lineupTrainingId: "passingExtended"
+  },
+  11: {
+    name: "Defending (Defenders, Keepers + All Midfielders)",
+    lineupTrainingId: "defendingExtended"
+  },
+  12: {
+    name: "Winger (Winger + Attackers)",
+    lineupTrainingId: "wingerExtended"
+  }
+};
+
+function htwbApiLineupParseCurrentTraining(
+  htwbApiLineupTrainingXml,
+  htwbApiLineupRequestedTeamId
+) {
+  const htwbApiLineupTeamXml =
+    htwbApiLineupXmlContainer(
+      htwbApiLineupTrainingXml,
+      "Team"
+    );
+
+  if (!htwbApiLineupTeamXml) {
+    throw htwbApiLineupMakeError(
+      "Hattrick did not return training data."
+    );
+  }
+
+  const htwbApiLineupReturnedTeamId =
+    htwbApiLineupXmlValue(
+      htwbApiLineupTeamXml,
+      "TeamID"
+    );
+
+  if (
+    htwbApiLineupReturnedTeamId &&
+    String(htwbApiLineupReturnedTeamId) !==
+      String(htwbApiLineupRequestedTeamId)
+  ) {
+    throw htwbApiLineupMakeError(
+      "Hattrick returned training data for a different team."
+    );
+  }
+
+  const htwbApiLineupTrainingType =
+    htwbApiLineupXmlNumber(
+      htwbApiLineupTeamXml,
+      "TrainingType"
+    );
+
+  if (htwbApiLineupTrainingType === null) {
+    return {
+      typeId: null,
+      name: "",
+      lineupTrainingId: ""
+    };
+  }
+
+  const htwbApiLineupTrainingDefinition =
+    HTWB_API_LINEUP_TRAINING_TYPE_MAP[
+      htwbApiLineupTrainingType
+    ];
+
+  return {
+    typeId: htwbApiLineupTrainingType,
+    name:
+      htwbApiLineupTrainingDefinition?.name ||
+      `Training type ${htwbApiLineupTrainingType}`,
+    lineupTrainingId:
+      htwbApiLineupTrainingDefinition
+        ?.lineupTrainingId ||
+      ""
+  };
+}
+
+
+/* =========================================================
    WORLD DETAILS / TRAINING DATE
    ========================================================= */
 
@@ -1218,78 +1341,76 @@ export async function onRequestGet(
         htwbApiLineupRequestedTeamId
       );
 
-    const [
-      htwbApiLineupPlayersXml,
-      htwbApiLineupTrainingXml,
-      htwbApiLineupMatchesXml,
-      htwbApiLineupWorldDetailsXml
-    ] =
-      await Promise.all([
-        htwbApiLineupChppFetch(
-          htwbApiLineupContext,
-          {
-            file:
-              "players",
+    // CHPP asks applications to download XML files one at a time.
+    // Keep these requests deliberately sequential rather than parallel.
+    const htwbApiLineupPlayersXml =
+      await htwbApiLineupChppFetch(
+        htwbApiLineupContext,
+        {
+          file:
+            "players",
 
-            version:
-              "1.3",
+          version:
+            "1.3",
 
-            actionType:
-              "view",
+          actionType:
+            "view",
 
-            teamID:
-              htwbApiLineupRequestedTeamId
-          }
-        ),
+          teamID:
+            htwbApiLineupRequestedTeamId
+        }
+      );
 
-        htwbApiLineupChppFetch(
-          htwbApiLineupContext,
-          {
-            file:
-              "training",
+    const htwbApiLineupTrainingXml =
+      await htwbApiLineupChppFetch(
+        htwbApiLineupContext,
+        {
+          file:
+            "training",
 
-            version:
-              "2.2",
+          version:
+            "2.2",
 
-            actionType:
-              "view",
+          actionType:
+            "view",
 
-            teamID:
-              htwbApiLineupRequestedTeamId
-          }
-        ),
+          teamID:
+            htwbApiLineupRequestedTeamId
+        }
+      );
 
-        htwbApiLineupChppFetch(
-          htwbApiLineupContext,
-          {
-            file:
-              "matches",
+    const htwbApiLineupMatchesXml =
+      await htwbApiLineupChppFetch(
+        htwbApiLineupContext,
+        {
+          file:
+            "matches",
 
-            version:
-              "2.2",
+          version:
+            "2.2",
 
-            actionType:
-              "view",
+          actionType:
+            "view",
 
-            teamID:
-              htwbApiLineupRequestedTeamId
-          }
-        ),
+          teamID:
+            htwbApiLineupRequestedTeamId
+        }
+      );
 
-        htwbApiLineupChppFetch(
-          htwbApiLineupContext,
-          {
-            file:
-              "worlddetails",
+    const htwbApiLineupWorldDetailsXml =
+      await htwbApiLineupChppFetch(
+        htwbApiLineupContext,
+        {
+          file:
+            "worlddetails",
 
-            version:
-              "1.2",
+          version:
+            "1.2",
 
-            actionType:
-              "leagues"
-          }
-        )
-      ]);
+          actionType:
+            "leagues"
+        }
+      );
 
     const htwbApiLineupPlayers =
       htwbApiLineupParsePlayers(
@@ -1299,6 +1420,12 @@ export async function onRequestGet(
 
     const htwbApiLineupFormationExperience =
       htwbApiLineupParseFormationExperience(
+        htwbApiLineupTrainingXml,
+        htwbApiLineupRequestedTeamId
+      );
+
+    const htwbApiLineupCurrentTraining =
+      htwbApiLineupParseCurrentTraining(
         htwbApiLineupTrainingXml,
         htwbApiLineupRequestedTeamId
       );
@@ -1457,6 +1584,8 @@ export async function onRequestGet(
             htwbApiLineupUpcomingMatch
               .trainingWeekPosition
         },
+
+        currentTraining: htwbApiLineupCurrentTraining,
 
         formationExperience: htwbApiLineupFormationExperience,
 

@@ -11,7 +11,9 @@
  * 4. Combination Score = Training Ideal Average * Formation Score
  * 5. Lowest combination score wins
  * 6. Display Training first, then Formation, then build the lineup
- * 7. Starting layouts are symmetrical; training coverage wins first,
+ * 7. The second training match inherits the first match's weekly
+ *    training plan so a new recommendation cannot erase earlier slots
+ * 8. Starting layouts are symmetrical; training coverage wins first,
  *    then total Playmaking contribution, then total position rating
  *
  * User overrides:
@@ -177,6 +179,9 @@ const htwbLineupFormationMathDetails =
 
 const HTWB_LINEUP_TEAM_STORAGE_KEY =
   "htwb_selected_team_id";
+
+const HTWB_LINEUP_WEEKLY_TRAINING_STORAGE_PREFIX =
+  "htwb_lineup_weekly_training";
 
 
 /* =========================================================
@@ -673,6 +678,10 @@ let htwbLineupFormationOverrideName = "";
 
 let htwbLineupTrainingOverrideId = "";
 
+let htwbLineupInheritedTrainingId = "";
+
+let htwbLineupInheritedTrainingSource = "";
+
 
 /* =========================================================
    BASIC HELPERS
@@ -867,6 +876,169 @@ function htwbLineupGetSelectedTeamId() {
   }
 
   return "";
+}
+
+
+/* =========================================================
+   WEEKLY TRAINING PLAN
+   ========================================================= */
+
+function htwbLineupGetWeeklyTrainingStorageKey(
+  htwbLineupData
+) {
+  const htwbLineupTeamId =
+    String(
+      htwbLineupData?.teamId ||
+      ""
+    );
+
+  const htwbLineupTrainingDate =
+    String(
+      htwbLineupData?.nextTrainingDate ||
+      ""
+    )
+      .trim()
+      .slice(0, 10)
+      .replace(/[^0-9]/g, "");
+
+  if (
+    !htwbLineupValidTeamId(htwbLineupTeamId) ||
+    htwbLineupTrainingDate.length !== 8
+  ) {
+    return "";
+  }
+
+  return (
+    `${HTWB_LINEUP_WEEKLY_TRAINING_STORAGE_PREFIX}:` +
+    `${htwbLineupTeamId}:` +
+    htwbLineupTrainingDate
+  );
+}
+
+function htwbLineupIsSupportedTrainingId(
+  htwbLineupTrainingId
+) {
+  return HTWB_LINEUP_TRAINING_TYPES.some(
+    htwbLineupTraining =>
+      htwbLineupTraining.id ===
+      htwbLineupTrainingId
+  );
+}
+
+function htwbLineupGetSavedWeeklyTrainingId(
+  htwbLineupData
+) {
+  const htwbLineupStorageKey =
+    htwbLineupGetWeeklyTrainingStorageKey(
+      htwbLineupData
+    );
+
+  if (!htwbLineupStorageKey) {
+    return "";
+  }
+
+  try {
+    const htwbLineupSavedTrainingId =
+      localStorage.getItem(
+        htwbLineupStorageKey
+      ) ||
+      "";
+
+    return htwbLineupIsSupportedTrainingId(
+      htwbLineupSavedTrainingId
+    )
+      ? htwbLineupSavedTrainingId
+      : "";
+  } catch (htwbLineupError) {
+    return "";
+  }
+}
+
+function htwbLineupSaveWeeklyTrainingId(
+  htwbLineupData,
+  htwbLineupTrainingId
+) {
+  if (
+    htwbLineupData
+      ?.upcomingMatch
+      ?.trainingWeekPosition !==
+      "first" ||
+    !htwbLineupIsSupportedTrainingId(
+      htwbLineupTrainingId
+    )
+  ) {
+    return;
+  }
+
+  const htwbLineupStorageKey =
+    htwbLineupGetWeeklyTrainingStorageKey(
+      htwbLineupData
+    );
+
+  if (!htwbLineupStorageKey) {
+    return;
+  }
+
+  try {
+    localStorage.setItem(
+      htwbLineupStorageKey,
+      htwbLineupTrainingId
+    );
+  } catch (htwbLineupError) {
+    // The lineup still works if local storage is unavailable.
+  }
+}
+
+function htwbLineupResolveInheritedTraining(
+  htwbLineupData
+) {
+  if (
+    htwbLineupData
+      ?.upcomingMatch
+      ?.trainingWeekPosition !==
+      "second"
+  ) {
+    return {
+      trainingId: "",
+      source: ""
+    };
+  }
+
+  const htwbLineupSavedTrainingId =
+    htwbLineupGetSavedWeeklyTrainingId(
+      htwbLineupData
+    );
+
+  if (htwbLineupSavedTrainingId) {
+    return {
+      trainingId: htwbLineupSavedTrainingId,
+      source: "first-match plan"
+    };
+  }
+
+  const htwbLineupHattrickTrainingId =
+    String(
+      htwbLineupData
+        ?.currentTraining
+        ?.lineupTrainingId ||
+      ""
+    );
+
+  if (
+    htwbLineupIsSupportedTrainingId(
+      htwbLineupHattrickTrainingId
+    )
+  ) {
+    return {
+      trainingId: htwbLineupHattrickTrainingId,
+      source: "current Hattrick training"
+    };
+  }
+
+  return {
+    trainingId: "",
+    source: ""
+  };
 }
 
 
@@ -1662,7 +1834,8 @@ function htwbLineupSelectTraining(
   htwbLineupPlayers,
   htwbLineupFormationExperience,
   htwbLineupUpcomingMatch,
-  htwbLineupRequestedTrainingId = ""
+  htwbLineupRequestedTrainingId = "",
+  htwbLineupDefaultTrainingId = ""
 ) {
   const htwbLineupResults =
     HTWB_LINEUP_TRAINING_TYPES.map(
@@ -1748,12 +1921,20 @@ function htwbLineupSelectTraining(
           )
       );
 
-  const htwbLineupRecommendedTraining =
+  const htwbLineupOptimizerRecommendedTraining =
     htwbLineupCandidates.find(
       htwbLineupCandidate =>
         htwbLineupCandidate.training.id ===
         htwbLineupRecommendedCombination.training.id
     ) || htwbLineupCandidates[0];
+
+  const htwbLineupDefaultTraining =
+    htwbLineupCandidates.find(
+      htwbLineupCandidate =>
+        htwbLineupCandidate.training.id ===
+        htwbLineupDefaultTrainingId
+    ) ||
+    htwbLineupOptimizerRecommendedTraining;
 
   const htwbLineupRequestedTraining =
     htwbLineupCandidates.find(
@@ -1764,18 +1945,26 @@ function htwbLineupSelectTraining(
 
   const htwbLineupSelectedTraining =
     htwbLineupRequestedTraining ||
-    htwbLineupRecommendedTraining;
+    htwbLineupDefaultTraining;
 
   return {
     selected:
       htwbLineupSelectedTraining,
     recommended:
-      htwbLineupRecommendedTraining,
+      htwbLineupDefaultTraining,
+    optimizerRecommended:
+      htwbLineupOptimizerRecommendedTraining,
     recommendedCombination:
       htwbLineupRecommendedCombination,
+    isInheritedRecommendation:
+      Boolean(
+        htwbLineupDefaultTrainingId &&
+        htwbLineupDefaultTraining.training.id ===
+          htwbLineupDefaultTrainingId
+      ),
     isOverride:
       htwbLineupSelectedTraining.training.id !==
-      htwbLineupRecommendedTraining.training.id,
+      htwbLineupDefaultTraining.training.id,
     results: htwbLineupResults,
     candidates: htwbLineupCandidates,
     combinationMatrix:
@@ -3514,7 +3703,8 @@ function htwbLineupCalculateLineup(
       htwbLineupTrainingPool,
       htwbLineupData.formationExperience,
       htwbLineupData.upcomingMatch,
-      htwbLineupChoices.trainingId || ""
+      htwbLineupChoices.trainingId || "",
+      htwbLineupChoices.defaultTrainingId || ""
     );
 
   const htwbLineupSelectedTraining =
@@ -3986,7 +4176,11 @@ function htwbLineupRenderTraining(
             const htwbLineupRecommendedSuffix =
               htwbLineupItem.training.id ===
               htwbLineupRecommended.training.id
-                ? " (recommended)"
+                ? htwbLineupResult
+                    .trainingResult
+                    .isInheritedRecommendation
+                  ? " (weekly training)"
+                  : " (recommended)"
                 : "";
 
             return `
@@ -4011,12 +4205,52 @@ function htwbLineupRenderTraining(
   }
 
   if (htwbLineupTrainingChoiceNoteElement) {
-    htwbLineupTrainingChoiceNoteElement.textContent =
+    if (
       htwbLineupResult
         .trainingResult
-        .isOverride
-        ? `Override selected - recommended: ${htwbLineupRecommended.training.name}`
-        : "Recommended automatically";
+        .isInheritedRecommendation
+    ) {
+      const htwbLineupCurrentHattrickTrainingId =
+        String(
+          htwbLineupSourceData
+            ?.currentTraining
+            ?.lineupTrainingId ||
+          ""
+        );
+
+      const htwbLineupCurrentHattrickTrainingName =
+        String(
+          htwbLineupSourceData
+            ?.currentTraining
+            ?.name ||
+          ""
+        );
+
+      const htwbLineupTrainingMismatch =
+        htwbLineupInheritedTrainingSource ===
+          "first-match plan" &&
+        htwbLineupIsSupportedTrainingId(
+          htwbLineupCurrentHattrickTrainingId
+        ) &&
+        htwbLineupCurrentHattrickTrainingId !==
+          htwbLineupRecommended.training.id;
+
+      htwbLineupTrainingChoiceNoteElement.textContent =
+        htwbLineupResult
+          .trainingResult
+          .isOverride
+          ? `Override selected - weekly training: ${htwbLineupRecommended.training.name}`
+          : htwbLineupTrainingMismatch
+            ? `Inherited from first-match plan - Hattrick currently set to ${htwbLineupCurrentHattrickTrainingName}`
+            : `Inherited from ${htwbLineupInheritedTrainingSource}`;
+    } else {
+      htwbLineupTrainingChoiceNoteElement.textContent =
+        htwbLineupResult
+          .trainingResult
+          .isOverride
+          ? `Override selected - recommended: ${htwbLineupRecommended.training.name}`
+          : "Recommended automatically";
+    }
   }
 
   if (htwbLineupSelectedTrainingAverageElement) {
@@ -4058,7 +4292,11 @@ function htwbLineupRenderTraining(
             htwbLineupIsRecommended
           ) {
             htwbLineupStatus =
-              "Selected / Recommended";
+              htwbLineupResult
+                .trainingResult
+                .isInheritedRecommendation
+                ? "Selected / Weekly training"
+                : "Selected / Recommended";
             htwbLineupRowClass =
               "selected-training";
           } else if (htwbLineupIsSelected) {
@@ -4066,7 +4304,12 @@ function htwbLineupRenderTraining(
             htwbLineupRowClass =
               "selected-training";
           } else if (htwbLineupIsRecommended) {
-            htwbLineupStatus = "Recommended";
+            htwbLineupStatus =
+              htwbLineupResult
+                .trainingResult
+                .isInheritedRecommendation
+                ? "Weekly training"
+                : "Recommended";
           }
 
           const htwbLineupAverageText =
@@ -5176,9 +5419,19 @@ function htwbLineupRecalculateLineup() {
             htwbLineupFormationOverrideName,
 
           trainingId:
-            htwbLineupTrainingOverrideId
+            htwbLineupTrainingOverrideId,
+
+          defaultTrainingId:
+            htwbLineupInheritedTrainingId
         }
       );
+
+    htwbLineupSaveWeeklyTrainingId(
+      htwbLineupSourceData,
+      htwbLineupCurrentCalculation
+        .selectedTraining
+        .id
+    );
 
     htwbLineupRenderEverything(
       htwbLineupSourceData,
@@ -5225,14 +5478,77 @@ function htwbLineupCollapseMathTables() {
   }
 }
 
-function htwbLineupBuildLineup() {
+async function htwbLineupBuildLineup() {
+  const htwbLineupTeamId =
+    htwbLineupGetSelectedTeamId();
+
+  if (!htwbLineupValidTeamId(htwbLineupTeamId)) {
+    htwbLineupSetStatus(
+      "Select your Hattrick team first.",
+      "error"
+    );
+    return;
+  }
+
   htwbLineupFormationOverrideName =
     "";
 
   htwbLineupTrainingOverrideId =
     "";
 
+  htwbLineupInheritedTrainingId =
+    "";
+
+  htwbLineupInheritedTrainingSource =
+    "";
+
   htwbLineupCollapseMathTables();
+
+  /*
+   * CHPP data downloads are deliberately user-initiated.
+   * Load fresh data only after Build Lineup is clicked.
+   */
+  await htwbLineupLoadTeam(
+    String(htwbLineupTeamId)
+  );
+
+  if (!htwbLineupSourceData) {
+    return;
+  }
+
+  const htwbLineupInheritedTraining =
+    htwbLineupResolveInheritedTraining(
+      htwbLineupSourceData
+    );
+
+  htwbLineupInheritedTrainingId =
+    htwbLineupInheritedTraining.trainingId;
+
+  htwbLineupInheritedTrainingSource =
+    htwbLineupInheritedTraining.source;
+
+  if (
+    htwbLineupSourceData
+      ?.upcomingMatch
+      ?.trainingWeekPosition ===
+      "second" &&
+    !htwbLineupInheritedTrainingId
+  ) {
+    const htwbLineupCurrentTrainingName =
+      String(
+        htwbLineupSourceData
+          ?.currentTraining
+          ?.name ||
+        "the current Hattrick training type"
+      );
+
+    htwbLineupSetStatus(
+      `${htwbLineupCurrentTrainingName} cannot be inherited by the Lineup Builder. Build the first training match with this tool before planning the second match, or use a supported Hattrick training type.`,
+      "error"
+    );
+
+    return;
+  }
 
   htwbLineupRecalculateLineup();
 
@@ -5242,6 +5558,7 @@ function htwbLineupBuildLineup() {
     );
   }
 }
+
 
 
 function htwbLineupHandleFormationChange() {
@@ -5410,11 +5727,6 @@ async function htwbLineupLoadTeam(
       htwbLineupBuildLineupButton.disabled =
         false;
     }
-
-    htwbLineupSetStatus(
-      "Lineup data loaded. Ready to build.",
-      "success"
-    );
   } catch (htwbLineupError) {
     console.error(
       "Lineup data load error:",
@@ -5431,7 +5743,7 @@ async function htwbLineupLoadTeam(
       htwbLineupBuildLineupButton
     ) {
       htwbLineupBuildLineupButton.disabled =
-        true;
+        false;
     }
 
     htwbLineupSetStatus(
@@ -5446,6 +5758,44 @@ async function htwbLineupLoadTeam(
 /* =========================================================
    TEAM SELECTION
    ========================================================= */
+
+function htwbLineupPrepareSelectedTeam(
+  htwbLineupTeamId
+) {
+  if (!htwbLineupValidTeamId(htwbLineupTeamId)) {
+    return;
+  }
+
+  htwbLineupLoadedTeamId =
+    String(htwbLineupTeamId);
+
+  htwbLineupSourceData =
+    null;
+
+  htwbLineupCurrentCalculation =
+    null;
+
+  htwbLineupFormationOverrideName =
+    "";
+
+  htwbLineupTrainingOverrideId =
+    "";
+
+  htwbLineupResetChoiceControls();
+  htwbLineupSetResultsVisible(false);
+  htwbLineupCollapseMathTables();
+  htwbLineupResetPitch();
+  htwbLineupResetSubstitutes();
+
+  if (htwbLineupBuildLineupButton) {
+    htwbLineupBuildLineupButton.disabled =
+      false;
+  }
+
+  htwbLineupSetStatus(
+    "Ready. Click Build Lineup to load current Hattrick data."
+  );
+}
 
 function htwbLineupSetupTeamSelectionListener() {
   window.addEventListener(
@@ -5464,21 +5814,8 @@ function htwbLineupSetupTeamSelectionListener() {
         return;
       }
 
-      if (
-        String(
-          htwbLineupTeamId
-        ) ===
-        String(
-          htwbLineupLoadedTeamId
-        )
-      ) {
-        return;
-      }
-
-      htwbLineupLoadTeam(
-        String(
-          htwbLineupTeamId
-        )
+      htwbLineupPrepareSelectedTeam(
+        String(htwbLineupTeamId)
       );
     }
   );
@@ -5531,7 +5868,7 @@ function htwbLineupInitializeLineupBuilder() {
   let htwbLineupAttempts =
     0;
 
-  const htwbLineupTryLoad =
+  const htwbLineupTryPrepare =
     () => {
       htwbLineupAttempts +=
         1;
@@ -5539,10 +5876,8 @@ function htwbLineupInitializeLineupBuilder() {
       const htwbLineupTeamId =
         htwbLineupGetSelectedTeamId();
 
-      if (
-        htwbLineupTeamId
-      ) {
-        htwbLineupLoadTeam(
+      if (htwbLineupTeamId) {
+        htwbLineupPrepareSelectedTeam(
           htwbLineupTeamId
         );
 
@@ -5552,9 +5887,7 @@ function htwbLineupInitializeLineupBuilder() {
       return false;
     };
 
-  if (
-    htwbLineupTryLoad()
-  ) {
+  if (htwbLineupTryPrepare()) {
     return;
   }
 
@@ -5562,16 +5895,14 @@ function htwbLineupInitializeLineupBuilder() {
     setInterval(
       () => {
         if (
-          htwbLineupTryLoad() ||
+          htwbLineupTryPrepare() ||
           htwbLineupAttempts >= 20
         ) {
           clearInterval(
             htwbLineupTimer
           );
 
-          if (
-            !htwbLineupLoadedTeamId
-          ) {
+          if (!htwbLineupLoadedTeamId) {
             htwbLineupSetStatus(
               "Select your Hattrick team first.",
               "error"

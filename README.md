@@ -1,6 +1,6 @@
 # HT Wiki Builder
 
-HT Wiki Builder is a read-only CHPP manager assistant for building HT Wiki content and lineup analysis from authorized Hattrick data.
+HT Wiki Builder is a read-only Hattrick manager assistant for building HT Wiki content and lineup analysis from authorized CHPP data.
 
 ## Project naming conventions
 
@@ -49,11 +49,6 @@ The lineup API includes each player's `Experience` and `Leadership` values from 
 ## Secondary-team lineup support
 
 Every team-scoped CHPP request used by the Lineup Builder must receive the currently selected `TeamID`. In particular, the training request uses CHPP training v2.2 and passes `teamID`, so formation experience is loaded for the selected primary or secondary senior team rather than falling back to the account's default team.
-## External Hattrick links
-
-Use the recruitment URL `https://www.hattrick.org/?inviteRef=TS7E2C` only for links whose purpose is to invite a new manager, such as **Join Hattrick**, **Get a team**, or **New to Hattrick**. Keep ordinary Hattrick navigation, CHPP authorization, team/player/match links, and HT Wiki links on their normal direct URLs. Recruitment links should be clearly identified because successful recruitment may earn the site creator Hattrick reward points.
-
-
 
 ## Lineup training and formation recommendation
 
@@ -86,8 +81,12 @@ Behind the scenes, every supported training type is paired with every CHPP-track
 - 5-3-2
 - 3-4-3
 - 5-4-1
+- 4-4-2
+- 2-5-3
+- 5-2-3
+- 5-5-0
 
-With 10 training types and 6 formations, the normal optimizer evaluates **60 training/formation combinations**. No formation is pre-excluded because of utilization and there is no formation-experience threshold.
+With 10 training types and 10 formations, the normal optimizer evaluates **100 training/formation combinations**. No formation is pre-excluded because of utilization and there is no formation-experience threshold.
 
 For each training/formation pair:
 
@@ -112,9 +111,15 @@ This single formula lets all three priorities compete mathematically every time:
 The overall winning combination supplies both initial dropdown selections, but **Training is displayed first**.
 
 - The Training table shows only training-side information: training type, trained skill, ideal weekly trainees, ideal average, and status. Formation choice and combination scoring remain visible in the Formation section.
-- Changing **Training** clears any formation override and selects the lowest-scoring formation among the six combinations for that chosen training type.
+- Changing **Training** clears any formation override and selects the lowest-scoring formation among the ten combinations for that chosen training type.
 - Changing **Formation** keeps the selected training type fixed and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
 - Clicking **Build Lineup** again clears both overrides and returns to the current overall lowest-scoring training/formation combination.
+
+### Weekly training continuity
+
+The selected training type for the first training match is saved locally by TeamID and upcoming training date. When the next match is the second training match of that same week, the builder inherits that saved training type instead of allowing the optimizer to switch the weekly plan and retroactively waste first-match training slots.
+
+If the first match was not planned in the same browser, the builder falls back to the current `TrainingType` already returned by the CHPP training file. The dropdown remains editable for intentional overrides. If a saved first-match plan and the current Hattrick training setting differ, the page shows that mismatch beside the training selector.
 
 
 ### Static asset versioning
@@ -138,12 +143,12 @@ The main index separates the application into two product groups:
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
 - **Manager Tools:** Lineup Planner, Roster Usefulness.
 
-The Team Page Builder, Lineup Planner, and Roster Usefulness tool are active; the other Wiki Builder cards are presented as coming soon.
+The Team Page Builder and Lineup Planner are active. Roster Usefulness is on hold until the application has the additional CHPP access it needs; the other Wiki Builder cards are presented as coming soon.
 
 
 ## Roster Usefulness
 
-The Roster Usefulness tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
+Roster Usefulness is currently on hold pending additional CHPP access. When enabled, the tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
 
 The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v1.3 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
 
