@@ -1,3 +1,5 @@
+import { HTWB_VERSIONS } from "../../versions.js";
+
 function htwbApiRosterEnc(htwbApiRosterValue) {
   return encodeURIComponent(String(htwbApiRosterValue))
     .replace(/!/g, "%21")
@@ -356,7 +358,7 @@ async function htwbApiRosterChppFetch(
           Authorization:
             htwbApiRosterAuthorization,
           "User-Agent":
-            "HT Wiki Builder/0.1"
+            `HT Wiki Builder/${HTWB_VERSIONS.app}`
         }
       }
     );

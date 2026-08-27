@@ -1,3 +1,5 @@
+import { HTWB_VERSIONS } from "../../versions.js";
+
 const HTWB_API_TEAM_MAX_ARCHIVE_PAGES = 36;
 const HTWB_API_TEAM_ARCHIVE_PAGE_SIZE = 50;
 const HTWB_API_TEAM_COMPETITIVE_MATCH_TYPES = new Set([1, 2, 3, 7]);
@@ -239,7 +241,7 @@ async function htwbApiTeamChppFetch(htwbApiTeamContext, htwbApiTeamQuery) {
       method: "GET",
       headers: {
         Authorization: htwbApiTeamAuthorization,
-        "User-Agent": "HT Wiki Builder/0.1"
+        "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
       }
     }
   );

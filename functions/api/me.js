@@ -1,3 +1,5 @@
+import { HTWB_VERSIONS } from "../../versions.js";
+
 function htwbApiMeEnc(htwbApiMeValue) {
   return encodeURIComponent(htwbApiMeValue)
     .replace(/!/g, "%21")
@@ -194,7 +196,7 @@ export async function onRequestGet(htwbApiMeContext) {
     method: "GET",
     headers: {
       Authorization: htwbApiMeAuthorization,
-      "User-Agent": "HT Wiki Builder/0.1"
+      "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
     }
   });
 

@@ -1,3 +1,5 @@
+import { HTWB_VERSIONS } from "../../versions.js";
+
 function htwbAuthLoginEnc(htwbAuthLoginValue) {
   return encodeURIComponent(htwbAuthLoginValue)
     .replace(/!/g, "%21")
@@ -70,7 +72,7 @@ export async function onRequestGet(htwbAuthLoginContext) {
     method: "GET",
     headers: {
       Authorization: htwbAuthLoginAuthorization,
-      "User-Agent": "HT Wiki Builder/0.1"
+      "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
     }
   });
 

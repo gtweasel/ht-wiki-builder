@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=20260827-1">
+  <link rel="stylesheet" href="/styles.css?v=0.1.0">
 </head>
 <body>
   <header class="site-header">
@@ -31,7 +31,7 @@
   <main class="builder-page">
     <div class="builder-page-inner">
       <div class="builder-heading">
-        <div><div class="eyebrow">Wiki Builders</div><h1>Team Page Builder</h1></div>
+        <div><div class="eyebrow">Wiki Builders</div><div class="builder-title-line"><h1>Team Page Builder</h1><span class="page-version" data-htwb-version="team"></span></div></div>
         <a class="button button-outline-dark" href="/">Back to tools</a>
       </div>
 
@@ -122,7 +122,7 @@
 
   <footer class="site-footer">
     <div class="footer-inner">
-      <div><strong>HT Wiki Builder</strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
+      <div><strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
       <div class="footer-links">
         <a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a>
         <a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a>
@@ -131,7 +131,8 @@
     <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
   </footer>
 
-  <script src="/app.js?v=20260825-2"></script>
-  <script src="/team.js?v=20260827-1"></script>
+  <script type="module" src="/versions.js?v=0.1.0"></script>
+  <script src="/app.js?v=0.1.0"></script>
+  <script src="/team.js?v=0.1.0"></script>
 </body>
 </html>

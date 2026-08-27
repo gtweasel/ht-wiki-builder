@@ -2,10 +2,33 @@
 
 HT Wiki Builder is a read-only Hattrick manager assistant for building HT Wiki content and lineup analysis from authorized CHPP data.
 
+## Versioning
+
+`versions.js` is the single source of truth for product versions. This package is the first formally versioned snapshot, so each existing pre-release product starts at `0.1.0`; earlier unnumbered development ZIPs are not assigned retroactive version numbers.
+
+Current versions:
+
+- HT Wiki Builder: `0.1.0`
+- Team Page Builder: `0.1.0`
+- Lineup Builder: `0.1.0`
+- Roster Usefulness: `0.1.0`
+
+Version numbers follow these rules:
+
+- `0.x.0`: new feature or meaningful behavior change while the product is still in development.
+- `0.x.y`: bug fix or correction to already-established behavior.
+- `1.0.0`: first stable release, used only when the intended core workflow is considered stable.
+- `1.x.0`: backward-compatible feature after the stable release.
+- `1.x.y`: bug fix after the stable release.
+- `2.0.0` and later major increments: breaking redesign, removed/reinterpreted established behavior, or incompatible data/workflow change.
+
+The overall application and each existing tool are versioned independently. A tool change does not advance an unrelated tool. There are no build numbers. Coming-soon tools receive their first version only when an implementation exists.
+
 ## Project naming conventions
 
 The project uses file-scoped identifier prefixes so browser scripts and Cloudflare Functions cannot accidentally reuse the same JavaScript variable or helper name.
 
+- `versions.js`: `HTWB_VERSIONS` and shared version rendering
 - `app.js`: `htwbApp...` / `HTWB_APP_...`
 - `team.js`: `htwbTeam...` / `HTWB_TEAM_...`
 - `lineup.js`: `htwbLineup...` / `HTWB_LINEUP_...`
@@ -120,16 +143,22 @@ The overall winning combination supplies both initial dropdown selections, but *
 - Changing **Formation** keeps the selected training type fixed and immediately rebuilds player eligibility, ratings, starting XI, captain, set pieces, substitutes, exclusions, and diagnostics.
 - Clicking **Build Lineup** again clears both overrides and returns to the current overall lowest-scoring training/formation combination.
 
-### Weekly training continuity
+### Upcoming match selection and weekly training continuity
 
-The selected training type for the first training match is saved locally by TeamID and upcoming training date. When the next match is the second training match of that same week, the builder inherits that saved training type instead of allowing the optimizer to switch the weekly plan and retroactively waste first-match training slots.
+The Match section deliberately uses two user actions. **Load Upcoming Matches** makes a lightweight request for the owned team's fixture list, sorts every returned upcoming fixture by kickoff time, and preselects the next training-eligible match even when a non-training tournament fixture occurs earlier. Changing the dropdown only changes the selected fixture and clears any old lineup result; it does not download player/training data or build a lineup. **Build Lineup** then loads the full roster/training data for the selected fixture and runs the appropriate recommendation model.
+
+Training-eligible fixtures are classified using the global Hattrick-time schedule split: Friday 06:00 through Monday 18:00 is the first training-match window, and Monday 18:00 through Friday 06:00 is the second. The two windows are exactly 84 hours each. Non-training tournament/special fixtures are outside the weekly training-position logic and use the competitive lineup priorities.
+
+The selected training type for the first training match is saved locally by TeamID and the Friday 06:00 Hattrick-time training-cycle key. When a selected fixture is the second training match of that same cycle, the builder inherits that saved training type instead of allowing the optimizer to switch the weekly plan and retroactively waste first-match training slots.
 
 If the first match was not planned in the same browser, the builder falls back to the current `TrainingType` already returned by the CHPP training file. The dropdown remains editable for intentional overrides. If a saved first-match plan and the current Hattrick training setting differ, the page shows that mismatch beside the training selector.
 
 
 ### Static asset versioning
 
-The HTML pages append a deployment version query to shared CSS/JavaScript files. This prevents a browser or CDN cache from pairing a newly deployed HTML page with an older `app.js`, `team.js`, or `lineup.js`. The Lineup Builder also initializes immediately when the DOM is already ready and surfaces initialization errors in the page status area instead of remaining silently on `Waiting for team data.`
+The HTML pages append the current semantic version to shared CSS/JavaScript asset URLs. This prevents a browser or CDN cache from pairing newly deployed HTML with older scripts while keeping cache identifiers tied to real product versions rather than arbitrary build numbers. `versions.js` also renders the overall application version and the relevant tool version in the user interface. The CHPP User-Agent uses the same overall application version.
+
+The Lineup Builder initializes immediately when the DOM is already ready and surfaces initialization errors in the page status area instead of remaining silently on `Waiting for team data.`
 
 ## Team Page Builder
 

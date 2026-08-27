@@ -23,7 +23,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=20260826-6">
+  <link rel="stylesheet" href="/styles.css?v=0.1.0">
 </head>
 
 <body>
@@ -70,7 +70,10 @@
       <div class="builder-heading">
         <div>
           <div class="eyebrow">Manager Tool</div>
-          <h1>Roster Usefulness</h1>
+          <div class="builder-title-line">
+            <h1>Roster Usefulness</h1>
+            <span class="page-version" data-htwb-version="roster"></span>
+          </div>
         </div>
 
         <a class="button button-outline-dark" href="/">
@@ -130,7 +133,7 @@
   <footer class="site-footer">
     <div class="footer-inner">
       <div>
-        <strong>HT Wiki Builder</strong>
+        <strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong>
         <span>Free. Read-only. Built for the Hattrick community.</span>
       </div>
 
@@ -158,6 +161,7 @@
     </div>
   </footer>
 
-  <script src="/app.js?v=20260825-2"></script>
+  <script type="module" src="/versions.js?v=0.1.0"></script>
+  <script src="/app.js?v=0.1.0"></script>
 </body>
 </html>

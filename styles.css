@@ -1608,3 +1608,45 @@ select {
   border: 1px solid var(--gray-200);
   border-radius: 7px;
 }
+
+/* =========================================================
+   VERSION LABELS
+   ========================================================= */
+
+.builder-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.page-version,
+.tool-version,
+.version-label,
+.footer-version {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.page-version {
+  font-size: 0.82rem;
+  color: rgba(28, 38, 47, 0.58);
+}
+
+.tool-version {
+  margin-top: -0.3rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.75rem;
+  color: rgba(28, 38, 47, 0.58);
+}
+
+.version-label,
+.footer-version {
+  font-size: 0.72em;
+  opacity: 0.68;
+}
+
+.lineup-load-matches-actions {
+  margin-bottom: 1rem;
+}

@@ -26,7 +26,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=20260826-6">
+  <link rel="stylesheet" href="/styles.css?v=0.1.0">
 </head>
 
 <body>
@@ -97,9 +97,12 @@
             HT Wiki Builder
           </div>
 
-          <h1>
-            Lineup Builder
-          </h1>
+          <div class="builder-title-line">
+            <h1>
+              Lineup Builder
+            </h1>
+            <span class="page-version" data-htwb-version="lineup"></span>
+          </div>
         </div>
 
         <a
@@ -181,8 +184,8 @@
               </h2>
 
               <p>
-                Load the next match and calculate the recommended
-                lineup from current Hattrick data.
+                Load upcoming fixtures, select the match you want to plan,
+                then calculate the recommended lineup from current Hattrick data.
               </p>
             </div>
 
@@ -195,6 +198,20 @@
             aria-live="polite"
           >
             Waiting for team data.
+          </div>
+
+
+          <div class="builder-actions lineup-load-matches-actions">
+
+            <button
+              id="lineup-load-matches-button"
+              class="button button-primary"
+              type="button"
+              disabled
+            >
+              Load Upcoming Matches
+            </button>
+
           </div>
 
 
@@ -212,12 +229,12 @@
               disabled
             >
               <option value="">
-                Build lineup to load upcoming matches
+                Load upcoming matches first
               </option>
             </select>
 
             <span class="lineup-choice-note">
-              Fixtures are listed in kickoff order. The next training match is selected automatically.
+              Fixtures are listed in kickoff order. The next training match is preselected automatically, even when an earlier non-training fixture is listed first.
             </span>
           </div>
 
@@ -1384,7 +1401,7 @@
 
       <div>
         <strong>
-          HT Wiki Builder
+          HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span>
         </strong>
 
         <span>
@@ -1423,8 +1440,9 @@
   </footer>
 
 
-  <script src="/app.js?v=20260825-2"></script>
-  <script src="/lineup.js?v=20260827-1"></script>
+  <script type="module" src="/versions.js?v=0.1.0"></script>
+  <script src="/app.js?v=0.1.0"></script>
+  <script src="/lineup.js?v=0.1.0"></script>
 
 </body>
 </html>

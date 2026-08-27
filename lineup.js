@@ -33,6 +33,9 @@
 const htwbLineupStatusElement =
   document.getElementById("lineup-status");
 
+const htwbLineupLoadMatchesButton =
+  document.getElementById("lineup-load-matches-button");
+
 const htwbLineupBuildLineupButton =
   document.getElementById("lineup-build-button");
 
@@ -714,6 +717,8 @@ const HTWB_LINEUP_SUSPENSION_MATCH_TYPES =
    STATE
    ========================================================= */
 
+let htwbLineupFixtureData = null;
+
 let htwbLineupSourceData = null;
 
 let htwbLineupCurrentCalculation = null;
@@ -1143,13 +1148,17 @@ function htwbLineupResolveInheritedTraining(
 
 async function htwbLineupLoadLineupData(
   htwbLineupTeamId,
-  htwbLineupMatchId = ""
+  htwbLineupMatchId = "",
+  htwbLineupMode = ""
 ) {
   const htwbLineupResponse =
     await fetch(
       `/api/lineup?teamId=${encodeURIComponent(htwbLineupTeamId)}` +
       (htwbLineupMatchId
         ? `&matchId=${encodeURIComponent(htwbLineupMatchId)}`
+        : "") +
+      (htwbLineupMode
+        ? `&mode=${encodeURIComponent(htwbLineupMode)}`
         : ""),
       {
         method:
@@ -4255,7 +4264,7 @@ function htwbLineupResetMatchSummary() {
 
   if (htwbLineupMatchSelectElement) {
     htwbLineupMatchSelectElement.innerHTML =
-      '<option value="">Build lineup to load upcoming matches</option>';
+      '<option value="">Load upcoming matches first</option>';
     htwbLineupMatchSelectElement.disabled = true;
   }
 
@@ -5871,7 +5880,7 @@ function htwbLineupCollapseMathTables() {
   }
 }
 
-async function htwbLineupBuildLineup() {
+async function htwbLineupLoadUpcomingMatches() {
   const htwbLineupTeamId =
     htwbLineupGetSelectedTeamId();
 
@@ -5883,26 +5892,151 @@ async function htwbLineupBuildLineup() {
     return;
   }
 
-  htwbLineupFormationOverrideName =
-    "";
+  const htwbLineupRequestedTeamId =
+    String(htwbLineupTeamId);
 
-  htwbLineupTrainingOverrideId =
-    "";
+  htwbLineupLoadedTeamId =
+    htwbLineupRequestedTeamId;
 
-  htwbLineupInheritedTrainingId =
-    "";
+  htwbLineupFixtureData = null;
+  htwbLineupSourceData = null;
+  htwbLineupCurrentCalculation = null;
+  htwbLineupFormationOverrideName = "";
+  htwbLineupTrainingOverrideId = "";
+  htwbLineupInheritedTrainingId = "";
+  htwbLineupInheritedTrainingSource = "";
 
-  htwbLineupInheritedTrainingSource =
-    "";
+  htwbLineupResetMatchSummary();
+  htwbLineupResetChoiceControls();
+  htwbLineupSetResultsVisible(false);
+  htwbLineupCollapseMathTables();
+  htwbLineupResetPitch();
+  htwbLineupResetSubstitutes();
+
+  if (htwbLineupLoadMatchesButton) {
+    htwbLineupLoadMatchesButton.disabled = true;
+  }
+
+  if (htwbLineupBuildLineupButton) {
+    htwbLineupBuildLineupButton.disabled = true;
+  }
+
+  htwbLineupSetStatus(
+    "Loading upcoming matches from Hattrick..."
+  );
+
+  try {
+    const htwbLineupData =
+      await htwbLineupLoadLineupData(
+        htwbLineupRequestedTeamId,
+        "",
+        "matches"
+      );
+
+    if (
+      String(htwbLineupLoadedTeamId) !==
+      htwbLineupRequestedTeamId
+    ) {
+      return;
+    }
+
+    htwbLineupFixtureData =
+      htwbLineupData;
+
+    htwbLineupRenderMatchSummary(
+      htwbLineupFixtureData
+    );
+
+    const htwbLineupHasSelectedMatch =
+      /^\d+$/.test(
+        String(
+          htwbLineupFixtureData
+            ?.upcomingMatch
+            ?.matchId ||
+          ""
+        )
+      );
+
+    if (htwbLineupBuildLineupButton) {
+      htwbLineupBuildLineupButton.disabled =
+        !htwbLineupHasSelectedMatch;
+    }
+
+    htwbLineupSetStatus(
+      htwbLineupHasSelectedMatch
+        ? "Upcoming matches loaded. Select a match, then click Build Lineup."
+        : "No selectable upcoming match was found.",
+      htwbLineupHasSelectedMatch ? "" : "error"
+    );
+  } catch (htwbLineupError) {
+    console.error(
+      "Upcoming match load error:",
+      htwbLineupError
+    );
+
+    htwbLineupFixtureData = null;
+    htwbLineupSourceData = null;
+    htwbLineupCurrentCalculation = null;
+
+    htwbLineupSetStatus(
+      htwbLineupError.message ||
+      "Could not load upcoming matches.",
+      "error"
+    );
+  } finally {
+    if (
+      htwbLineupLoadMatchesButton &&
+      String(htwbLineupLoadedTeamId) ===
+        htwbLineupRequestedTeamId
+    ) {
+      htwbLineupLoadMatchesButton.disabled = false;
+    }
+  }
+}
+
+
+async function htwbLineupBuildLineup() {
+  const htwbLineupTeamId =
+    htwbLineupGetSelectedTeamId();
+
+  const htwbLineupMatchId =
+    String(
+      htwbLineupMatchSelectElement?.value ||
+      htwbLineupFixtureData?.upcomingMatch?.matchId ||
+      ""
+    );
+
+  if (!htwbLineupValidTeamId(htwbLineupTeamId)) {
+    htwbLineupSetStatus(
+      "Select your Hattrick team first.",
+      "error"
+    );
+    return;
+  }
+
+  if (!/^\d+$/.test(htwbLineupMatchId)) {
+    htwbLineupSetStatus(
+      "Load upcoming matches and select a match first.",
+      "error"
+    );
+    return;
+  }
+
+  htwbLineupFormationOverrideName = "";
+  htwbLineupTrainingOverrideId = "";
+  htwbLineupInheritedTrainingId = "";
+  htwbLineupInheritedTrainingSource = "";
 
   htwbLineupCollapseMathTables();
 
   /*
-   * CHPP data downloads are deliberately user-initiated.
-   * Load fresh data only after Build Lineup is clicked.
+   * The fixture list is a lightweight CHPP request. Full roster,
+   * training, formation-experience, and prior-match data is loaded
+   * only after the manager explicitly clicks Build Lineup.
    */
   await htwbLineupLoadTeam(
-    String(htwbLineupTeamId)
+    String(htwbLineupTeamId),
+    htwbLineupMatchId
   );
 
   if (!htwbLineupSourceData) {
@@ -5953,78 +6087,66 @@ async function htwbLineupBuildLineup() {
 }
 
 
-
-async function htwbLineupHandleMatchChange() {
-  if (!htwbLineupMatchSelectElement) {
-    return;
-  }
-
-  const htwbLineupTeamId =
-    htwbLineupGetSelectedTeamId();
-
-  const htwbLineupMatchId =
-    String(htwbLineupMatchSelectElement.value || "");
-
+function htwbLineupHandleMatchChange() {
   if (
-    !htwbLineupValidTeamId(htwbLineupTeamId) ||
-    !/^\d+$/.test(htwbLineupMatchId)
+    !htwbLineupMatchSelectElement ||
+    !htwbLineupFixtureData ||
+    !Array.isArray(
+      htwbLineupFixtureData.upcomingMatches
+    )
   ) {
     return;
   }
 
+  const htwbLineupMatchId =
+    String(
+      htwbLineupMatchSelectElement.value ||
+      ""
+    );
+
+  const htwbLineupSelectedMatch =
+    htwbLineupFixtureData.upcomingMatches.find(
+      htwbLineupMatch =>
+        String(htwbLineupMatch.matchId) ===
+        htwbLineupMatchId
+    );
+
+  if (!htwbLineupSelectedMatch) {
+    if (htwbLineupBuildLineupButton) {
+      htwbLineupBuildLineupButton.disabled = true;
+    }
+    return;
+  }
+
+  htwbLineupFixtureData = {
+    ...htwbLineupFixtureData,
+    upcomingMatch: htwbLineupSelectedMatch
+  };
+
+  htwbLineupSourceData = null;
+  htwbLineupCurrentCalculation = null;
   htwbLineupFormationOverrideName = "";
   htwbLineupTrainingOverrideId = "";
   htwbLineupInheritedTrainingId = "";
   htwbLineupInheritedTrainingSource = "";
 
-  await htwbLineupLoadTeam(
-    String(htwbLineupTeamId),
-    htwbLineupMatchId
+  htwbLineupRenderMatchSummary(
+    htwbLineupFixtureData
   );
 
-  if (!htwbLineupSourceData) {
-    return;
+  htwbLineupResetChoiceControls();
+  htwbLineupSetResultsVisible(false);
+  htwbLineupCollapseMathTables();
+  htwbLineupResetPitch();
+  htwbLineupResetSubstitutes();
+
+  if (htwbLineupBuildLineupButton) {
+    htwbLineupBuildLineupButton.disabled = false;
   }
 
-  const htwbLineupInheritedTraining =
-    htwbLineupResolveInheritedTraining(
-      htwbLineupSourceData
-    );
-
-  htwbLineupInheritedTrainingId =
-    htwbLineupInheritedTraining.trainingId;
-
-  htwbLineupInheritedTrainingSource =
-    htwbLineupInheritedTraining.source;
-
-  if (
-    htwbLineupSourceData
-      ?.upcomingMatch
-      ?.trainingWeekPosition ===
-      "second" &&
-    !htwbLineupInheritedTrainingId
-  ) {
-    const htwbLineupCurrentTrainingName =
-      String(
-        htwbLineupSourceData
-          ?.currentTraining
-          ?.name ||
-        "the current Hattrick training type"
-      );
-
-    htwbLineupSetStatus(
-      `${htwbLineupCurrentTrainingName} cannot be inherited by the Lineup Builder. Build the first training match with this tool before planning the second match, or use a supported Hattrick training type.`,
-      "error"
-    );
-
-    return;
-  }
-
-  htwbLineupRecalculateLineup();
-
-  if (htwbLineupCurrentCalculation) {
-    htwbLineupSetResultsVisible(true);
-  }
+  htwbLineupSetStatus(
+    "Match selected. Click Build Lineup when you are ready."
+  );
 }
 
 
@@ -6146,7 +6268,6 @@ async function htwbLineupLoadTeam(
     "Loading lineup data from Hattrick..."
   );
 
-  htwbLineupResetMatchSummary();
   htwbLineupResetChoiceControls();
 
   htwbLineupSetResultsVisible(
@@ -6154,6 +6275,10 @@ async function htwbLineupLoadTeam(
   );
 
   htwbLineupCollapseMathTables();
+
+  if (htwbLineupLoadMatchesButton) {
+    htwbLineupLoadMatchesButton.disabled = true;
+  }
 
   if (
     htwbLineupBuildLineupButton
@@ -6187,9 +6312,20 @@ async function htwbLineupLoadTeam(
     htwbLineupSourceData =
       htwbLineupData;
 
+    htwbLineupFixtureData = {
+      teamId: htwbLineupData.teamId,
+      teamName: htwbLineupData.teamName,
+      upcomingMatches: htwbLineupData.upcomingMatches,
+      upcomingMatch: htwbLineupData.upcomingMatch
+    };
+
     htwbLineupRenderMatchSummary(
       htwbLineupSourceData
     );
+
+    if (htwbLineupLoadMatchesButton) {
+      htwbLineupLoadMatchesButton.disabled = false;
+    }
 
     if (
       htwbLineupBuildLineupButton
@@ -6209,11 +6345,17 @@ async function htwbLineupLoadTeam(
     htwbLineupCurrentCalculation =
       null;
 
+    if (htwbLineupLoadMatchesButton) {
+      htwbLineupLoadMatchesButton.disabled = false;
+    }
+
     if (
       htwbLineupBuildLineupButton
     ) {
       htwbLineupBuildLineupButton.disabled =
-        false;
+        !/^\d+$/.test(
+          String(htwbLineupMatchSelectElement?.value || "")
+        );
     }
 
     htwbLineupSetStatus(
@@ -6239,6 +6381,9 @@ function htwbLineupPrepareSelectedTeam(
   htwbLineupLoadedTeamId =
     String(htwbLineupTeamId);
 
+  htwbLineupFixtureData =
+    null;
+
   htwbLineupSourceData =
     null;
 
@@ -6258,13 +6403,17 @@ function htwbLineupPrepareSelectedTeam(
   htwbLineupResetPitch();
   htwbLineupResetSubstitutes();
 
+  if (htwbLineupLoadMatchesButton) {
+    htwbLineupLoadMatchesButton.disabled = false;
+  }
+
   if (htwbLineupBuildLineupButton) {
     htwbLineupBuildLineupButton.disabled =
-      false;
+      true;
   }
 
   htwbLineupSetStatus(
-    "Ready. Click Build Lineup to load current Hattrick data."
+    "Ready. Click Load Upcoming Matches."
   );
 }
 
@@ -6303,6 +6452,15 @@ function htwbLineupInitializeLineupBuilder() {
   );
 
   htwbLineupCollapseMathTables();
+
+  if (htwbLineupLoadMatchesButton) {
+    htwbLineupLoadMatchesButton.disabled = true;
+
+    htwbLineupLoadMatchesButton.addEventListener(
+      "click",
+      htwbLineupLoadUpcomingMatches
+    );
+  }
 
   if (
     htwbLineupBuildLineupButton
@@ -6424,6 +6582,10 @@ function htwbLineupStartLineupBuilder() {
         : "Lineup Builder could not start.",
       "error"
     );
+
+    if (htwbLineupLoadMatchesButton) {
+      htwbLineupLoadMatchesButton.disabled = true;
+    }
 
     if (
       htwbLineupBuildLineupButton

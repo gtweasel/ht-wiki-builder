@@ -1,3 +1,5 @@
+import { HTWB_VERSIONS } from "../../versions.js";
+
 function htwbApiLineupEnc(htwbApiLineupValue) {
   return encodeURIComponent(String(htwbApiLineupValue))
     .replace(/!/g, "%21")
@@ -242,7 +244,7 @@ async function htwbApiLineupChppFetch(htwbApiLineupContext, htwbApiLineupQuery) 
       method: "GET",
       headers: {
         Authorization: htwbApiLineupAuthorization,
-        "User-Agent": "HT Wiki Builder/0.1"
+        "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
       }
     }
   );
@@ -1463,6 +1465,11 @@ export async function onRequestGet(
       "matchId"
     );
 
+  const htwbApiLineupMode =
+    htwbApiLineupUrl.searchParams.get(
+      "mode"
+    ) || "";
+
   if (
     !htwbApiLineupRequestedTeamId ||
     !/^\d+$/.test(
@@ -1505,6 +1512,108 @@ export async function onRequestGet(
         htwbApiLineupTeamDetailsXml,
         htwbApiLineupRequestedTeamId
       );
+
+    /*
+     * The match picker is intentionally lightweight. Loading the
+     * fixture list should not also download players, training, world
+     * details, or a prior match lineup. Those are requested only after
+     * the manager selects a fixture and clicks Build Lineup.
+     */
+    if (htwbApiLineupMode === "matches") {
+      const htwbApiLineupMatchesXml =
+        await htwbApiLineupChppFetch(
+          htwbApiLineupContext,
+          {
+            file: "matches",
+            version: "2.2",
+            actionType: "view",
+            teamID: htwbApiLineupRequestedTeamId
+          }
+        );
+
+      const htwbApiLineupMatches =
+        htwbApiLineupParseMatches(
+          htwbApiLineupMatchesXml
+        );
+
+      const htwbApiLineupUpcomingMatches =
+        htwbApiLineupMatches
+          .filter(
+            htwbApiLineupMatch =>
+              htwbApiLineupMatch.status ===
+              "UPCOMING"
+          )
+          .sort(
+            (htwbApiLineupA, htwbApiLineupB) =>
+              htwbApiLineupA.matchDateMs -
+              htwbApiLineupB.matchDateMs
+          );
+
+      if (!htwbApiLineupUpcomingMatches.length) {
+        throw htwbApiLineupMakeError(
+          "No upcoming match was found.",
+          404
+        );
+      }
+
+      for (
+        const htwbApiLineupMatch
+        of htwbApiLineupUpcomingMatches
+      ) {
+        htwbApiLineupMatch.trainingWeekPosition =
+          htwbApiLineupDetermineTrainingWeekPosition(
+            htwbApiLineupMatch
+          );
+      }
+
+      const htwbApiLineupDefaultMatch =
+        htwbApiLineupUpcomingMatches.find(
+          htwbApiLineupMatch =>
+            htwbApiLineupMatch.trainingWeekPosition !==
+            "none"
+        ) ||
+        htwbApiLineupUpcomingMatches[0];
+
+      return Response.json(
+        {
+          teamId: htwbApiLineupTeam.teamId,
+          teamName: htwbApiLineupTeam.teamName,
+
+          upcomingMatches:
+            htwbApiLineupUpcomingMatches.map(
+              htwbApiLineupMatch => ({
+                matchId: htwbApiLineupMatch.matchId,
+                matchType: htwbApiLineupMatch.matchType,
+                matchDate: htwbApiLineupMatch.matchDate,
+                homeTeamId: htwbApiLineupMatch.homeTeamId,
+                homeTeamName: htwbApiLineupMatch.homeTeamName,
+                awayTeamId: htwbApiLineupMatch.awayTeamId,
+                awayTeamName: htwbApiLineupMatch.awayTeamName,
+                trainingWeekPosition:
+                  htwbApiLineupMatch.trainingWeekPosition
+              })
+            ),
+
+          upcomingMatch: {
+            matchId: htwbApiLineupDefaultMatch.matchId,
+            matchType: htwbApiLineupDefaultMatch.matchType,
+            matchDate: htwbApiLineupDefaultMatch.matchDate,
+            status: htwbApiLineupDefaultMatch.status,
+            homeTeamId: htwbApiLineupDefaultMatch.homeTeamId,
+            homeTeamName: htwbApiLineupDefaultMatch.homeTeamName,
+            awayTeamId: htwbApiLineupDefaultMatch.awayTeamId,
+            awayTeamName: htwbApiLineupDefaultMatch.awayTeamName,
+            trainingWeekPosition:
+              htwbApiLineupDefaultMatch.trainingWeekPosition
+          }
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store"
+          }
+        }
+      );
+    }
 
     // CHPP asks applications to download XML files one at a time.
     // Keep these requests deliberately sequential rather than parallel.
