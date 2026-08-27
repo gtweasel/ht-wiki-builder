@@ -137,6 +137,10 @@ The Team Page Builder is intentionally limited to senior teams managed by the lo
 
 The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `arenadetails`, `leaguedetails`, `playerdetails`, `economy`, `players`, and `matchesarchive`. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
 
+After team data is loaded, the article builder presents every supported article section as a checkbox. Sections with usable data start selected; sections without usable data remain visible but disabled. Users may select any combination of available sections and create one article output in the standard article order. Section-specific controls live inside their parent section.
+
+The Intro section contains the optional HT-Wiki username, team logo, home/away/third kit images, and current-season page link. The logo is generated at 210px. One or two selected kit images are generated at 120px each; three selected kit images are generated at 80px each. A lone selected kit is centered. CHPP supplies only the home and alternate dress, so the third-kit image is a manual opt-in using the `TeamID_third.png` filename convention. The current-season link and third kit are off by default. Season-by-season page links are an optional control inside the Season-by-Season Results section.
+
 The team API must return only data that is used for the public-facing wiki article. In particular, even though authenticated CHPP responses can expose finances, TSI, salary, skills, form, injuries, and other manager-only data, the Team Page Builder does not include those values in its JSON response.
 
 Historical club-record claims are generated only when `matchesarchive` is complete for the current manager's tenure. Archive requests are sequential and capped so a very long history degrades to a partial source status rather than producing unverified "all-time" claims.
