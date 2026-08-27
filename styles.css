@@ -1600,3 +1600,11 @@ select {
     grid-template-columns: 1fr;
   }
 }
+
+.lineup-match-picker {
+  margin-top: 20px;
+  padding: 13px 14px;
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+  border-radius: 7px;
+}

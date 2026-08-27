@@ -36,6 +36,9 @@ const htwbLineupStatusElement =
 const htwbLineupBuildLineupButton =
   document.getElementById("lineup-build-button");
 
+const htwbLineupMatchSelectElement =
+  document.getElementById("lineup-match-select");
+
 const htwbLineupTeamNameElement =
   document.getElementById("lineup-summary-team-name");
 
@@ -664,7 +667,12 @@ const HTWB_LINEUP_HIGH_FORM_MATCH_TYPES =
     1,
     2,
     3,
-    7
+    7,
+    50,
+    51,
+    61,
+    62,
+    80
   ]);
 
 
@@ -719,6 +727,8 @@ let htwbLineupTrainingOverrideId = "";
 let htwbLineupInheritedTrainingId = "";
 
 let htwbLineupInheritedTrainingSource = "";
+
+let htwbLineupSelectedMatchId = "";
 
 
 /* =========================================================
@@ -921,6 +931,56 @@ function htwbLineupGetSelectedTeamId() {
    WEEKLY TRAINING PLAN
    ========================================================= */
 
+function htwbLineupGetTrainingCycleKey(
+  htwbLineupMatchDate
+) {
+  const htwbLineupMatch =
+    String(htwbLineupMatchDate || "")
+      .trim()
+      .match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?/
+      );
+
+  if (!htwbLineupMatch) {
+    return "";
+  }
+
+  const htwbLineupDate = new Date(
+    Date.UTC(
+      Number(htwbLineupMatch[1]),
+      Number(htwbLineupMatch[2]) - 1,
+      Number(htwbLineupMatch[3]),
+      Number(htwbLineupMatch[4]),
+      Number(htwbLineupMatch[5])
+    )
+  );
+
+  const htwbLineupMondayBasedDay =
+    (htwbLineupDate.getUTCDay() + 6) % 7;
+
+  let htwbLineupDaysBackToFriday =
+    (htwbLineupMondayBasedDay - 4 + 7) % 7;
+
+  const htwbLineupMinutesToday =
+    (htwbLineupDate.getUTCHours() * 60) +
+    htwbLineupDate.getUTCMinutes();
+
+  if (
+    htwbLineupMondayBasedDay === 4 &&
+    htwbLineupMinutesToday < 6 * 60
+  ) {
+    htwbLineupDaysBackToFriday = 7;
+  }
+
+  htwbLineupDate.setUTCDate(
+    htwbLineupDate.getUTCDate() -
+    htwbLineupDaysBackToFriday
+  );
+
+  return htwbLineupDate.toISOString().slice(0, 10);
+}
+
+
 function htwbLineupGetWeeklyTrainingStorageKey(
   htwbLineupData
 ) {
@@ -931,12 +991,9 @@ function htwbLineupGetWeeklyTrainingStorageKey(
     );
 
   const htwbLineupTrainingDate =
-    String(
-      htwbLineupData?.nextTrainingDate ||
-      ""
+    htwbLineupGetTrainingCycleKey(
+      htwbLineupData?.upcomingMatch?.matchDate
     )
-      .trim()
-      .slice(0, 10)
       .replace(/[^0-9]/g, "");
 
   if (
@@ -1085,11 +1142,15 @@ function htwbLineupResolveInheritedTraining(
    ========================================================= */
 
 async function htwbLineupLoadLineupData(
-  htwbLineupTeamId
+  htwbLineupTeamId,
+  htwbLineupMatchId = ""
 ) {
   const htwbLineupResponse =
     await fetch(
-      `/api/lineup?teamId=${encodeURIComponent(htwbLineupTeamId)}`,
+      `/api/lineup?teamId=${encodeURIComponent(htwbLineupTeamId)}` +
+      (htwbLineupMatchId
+        ? `&matchId=${encodeURIComponent(htwbLineupMatchId)}`
+        : ""),
       {
         method:
           "GET",
@@ -1475,7 +1536,9 @@ function htwbLineupGetFormationExperienceFactor(
   if (
     HTWB_LINEUP_LOW_FORM_MATCH_TYPES.has(
       htwbLineupMatchType
-    )
+    ) &&
+    htwbLineupUpcomingMatch?.trainingWeekPosition !==
+      "none"
   ) {
     return (
       htwbLineupSafeExperience /
@@ -1483,8 +1546,14 @@ function htwbLineupGetFormationExperienceFactor(
     );
   }
 
-  throw new Error(
-    `Unsupported MatchType ${htwbLineupMatchType} for formation-experience priority.`
+  /*
+   * Non-training tournament / special matches use the competitive
+   * priority: strongest formation experience wins. This also keeps
+   * future CHPP match types usable instead of rejecting them.
+   */
+  return (
+    (13 - htwbLineupSafeExperience) /
+    10
   );
 }
 
@@ -2400,7 +2469,9 @@ function htwbLineupGetFormFactor(
   if (
     HTWB_LINEUP_LOW_FORM_MATCH_TYPES.has(
       htwbLineupMatchType
-    )
+    ) &&
+    htwbLineupUpcomingMatch?.trainingWeekPosition !==
+      "none"
   ) {
     return (
       (10 - htwbLineupForm) /
@@ -2408,8 +2479,13 @@ function htwbLineupGetFormFactor(
     );
   }
 
-  throw new Error(
-    `Unsupported MatchType ${htwbLineupMatchType} for form priority.`
+  /*
+   * Non-training tournament / special matches use competitive form
+   * priority: higher form wins. Unknown future match types do too.
+   */
+  return (
+    htwbLineupForm /
+    10
   );
 }
 
@@ -4019,7 +4095,22 @@ function htwbLineupGetMatchTypeLabel(
       "International Friendly",
 
     9:
-      "International Friendly - Cup Rules"
+      "International Friendly - Cup Rules",
+
+    50:
+      "Tournament - League",
+
+    51:
+      "Tournament - Playoff",
+
+    61:
+      "Single Match",
+
+    62:
+      "Ladder Match",
+
+    80:
+      "Preparation Match"
   };
 
   return (
@@ -4072,7 +4163,102 @@ function htwbLineupGetTrainingWeekLabel(
    MATCH DISPLAY
    ========================================================= */
 
+function htwbLineupFormatMatchChoiceDate(
+  htwbLineupMatchDate
+) {
+  const htwbLineupMatch =
+    String(htwbLineupMatchDate || "")
+      .trim()
+      .match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})/
+      );
+
+  if (!htwbLineupMatch) {
+    return String(htwbLineupMatchDate || "");
+  }
+
+  const htwbLineupMonths = [
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+  ];
+
+  return (
+    `${htwbLineupMonths[Number(htwbLineupMatch[2]) - 1]} ` +
+    `${Number(htwbLineupMatch[3])} ${htwbLineupMatch[4]}:${htwbLineupMatch[5]}`
+  );
+}
+
+
+function htwbLineupRenderMatchChoices(
+  htwbLineupData
+) {
+  if (!htwbLineupMatchSelectElement) {
+    return;
+  }
+
+  const htwbLineupMatches =
+    Array.isArray(htwbLineupData?.upcomingMatches)
+      ? htwbLineupData.upcomingMatches
+      : [];
+
+  if (!htwbLineupMatches.length) {
+    htwbLineupMatchSelectElement.innerHTML =
+      '<option value="">No upcoming matches found</option>';
+    htwbLineupMatchSelectElement.disabled = true;
+    return;
+  }
+
+  htwbLineupMatchSelectElement.innerHTML =
+    htwbLineupMatches
+      .map(htwbLineupMatch => {
+        const htwbLineupMatchName =
+          htwbLineupMatch.homeTeamName &&
+          htwbLineupMatch.awayTeamName
+            ? `${htwbLineupMatch.homeTeamName} vs ${htwbLineupMatch.awayTeamName}`
+            : `Match ${htwbLineupMatch.matchId}`;
+
+        const htwbLineupPositionLabel =
+          htwbLineupGetTrainingWeekLabel(
+            htwbLineupMatch.trainingWeekPosition
+          );
+
+        const htwbLineupLabel = [
+          htwbLineupFormatMatchChoiceDate(
+            htwbLineupMatch.matchDate
+          ),
+          htwbLineupMatchName,
+          htwbLineupGetMatchTypeLabel(
+            htwbLineupMatch.matchType
+          ),
+          htwbLineupPositionLabel
+        ].join(" - ");
+
+        return (
+          `<option value="${htwbLineupEscapeHtml(htwbLineupMatch.matchId)}">` +
+          `${htwbLineupEscapeHtml(htwbLineupLabel)}</option>`
+        );
+      })
+      .join("");
+
+  htwbLineupSelectedMatchId =
+    String(htwbLineupData?.upcomingMatch?.matchId || "");
+
+  htwbLineupMatchSelectElement.value =
+    htwbLineupSelectedMatchId;
+
+  htwbLineupMatchSelectElement.disabled = false;
+}
+
+
 function htwbLineupResetMatchSummary() {
+  htwbLineupSelectedMatchId = "";
+
+  if (htwbLineupMatchSelectElement) {
+    htwbLineupMatchSelectElement.innerHTML =
+      '<option value="">Build lineup to load upcoming matches</option>';
+    htwbLineupMatchSelectElement.disabled = true;
+  }
+
   for (
     const htwbLineupElement
     of [
@@ -4093,6 +4279,10 @@ function htwbLineupResetMatchSummary() {
 function htwbLineupRenderMatchSummary(
   htwbLineupData
 ) {
+  htwbLineupRenderMatchChoices(
+    htwbLineupData
+  );
+
   const htwbLineupMatch =
     htwbLineupData.upcomingMatch ||
     {};
@@ -5764,6 +5954,80 @@ async function htwbLineupBuildLineup() {
 
 
 
+async function htwbLineupHandleMatchChange() {
+  if (!htwbLineupMatchSelectElement) {
+    return;
+  }
+
+  const htwbLineupTeamId =
+    htwbLineupGetSelectedTeamId();
+
+  const htwbLineupMatchId =
+    String(htwbLineupMatchSelectElement.value || "");
+
+  if (
+    !htwbLineupValidTeamId(htwbLineupTeamId) ||
+    !/^\d+$/.test(htwbLineupMatchId)
+  ) {
+    return;
+  }
+
+  htwbLineupFormationOverrideName = "";
+  htwbLineupTrainingOverrideId = "";
+  htwbLineupInheritedTrainingId = "";
+  htwbLineupInheritedTrainingSource = "";
+
+  await htwbLineupLoadTeam(
+    String(htwbLineupTeamId),
+    htwbLineupMatchId
+  );
+
+  if (!htwbLineupSourceData) {
+    return;
+  }
+
+  const htwbLineupInheritedTraining =
+    htwbLineupResolveInheritedTraining(
+      htwbLineupSourceData
+    );
+
+  htwbLineupInheritedTrainingId =
+    htwbLineupInheritedTraining.trainingId;
+
+  htwbLineupInheritedTrainingSource =
+    htwbLineupInheritedTraining.source;
+
+  if (
+    htwbLineupSourceData
+      ?.upcomingMatch
+      ?.trainingWeekPosition ===
+      "second" &&
+    !htwbLineupInheritedTrainingId
+  ) {
+    const htwbLineupCurrentTrainingName =
+      String(
+        htwbLineupSourceData
+          ?.currentTraining
+          ?.name ||
+        "the current Hattrick training type"
+      );
+
+    htwbLineupSetStatus(
+      `${htwbLineupCurrentTrainingName} cannot be inherited by the Lineup Builder. Build the first training match with this tool before planning the second match, or use a supported Hattrick training type.`,
+      "error"
+    );
+
+    return;
+  }
+
+  htwbLineupRecalculateLineup();
+
+  if (htwbLineupCurrentCalculation) {
+    htwbLineupSetResultsVisible(true);
+  }
+}
+
+
 function htwbLineupHandleFormationChange() {
   if (
     !htwbLineupCurrentCalculation ||
@@ -5838,7 +6102,8 @@ function htwbLineupHandleTrainingChange() {
    ========================================================= */
 
 async function htwbLineupLoadTeam(
-  htwbLineupTeamId
+  htwbLineupTeamId,
+  htwbLineupMatchId = ""
 ) {
   if (
     !htwbLineupValidTeamId(
@@ -5904,7 +6169,8 @@ async function htwbLineupLoadTeam(
   try {
     const htwbLineupData =
       await htwbLineupLoadLineupData(
-        htwbLineupLoadedTeamId
+        htwbLineupLoadedTeamId,
+        htwbLineupMatchId
       );
 
     if (
@@ -6047,6 +6313,13 @@ function htwbLineupInitializeLineupBuilder() {
     htwbLineupBuildLineupButton.addEventListener(
       "click",
       htwbLineupBuildLineup
+    );
+  }
+
+  if (htwbLineupMatchSelectElement) {
+    htwbLineupMatchSelectElement.addEventListener(
+      "change",
+      htwbLineupHandleMatchChange
     );
   }
 

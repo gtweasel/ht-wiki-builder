@@ -1039,9 +1039,88 @@ const HTWB_API_LINEUP_TRAINING_MATCH_TYPES =
     9
   ]);
 
+/*
+ * Senior-team training matches fall into two global Hattrick
+ * schedule windows. The currently published schedule places the
+ * first (weekend) matches from Saturday morning through Sunday
+ * night and the second (midweek) matches from Tuesday afternoon
+ * through Wednesday night.
+ *
+ * Use cutoffs halfway through the unused gaps so small future
+ * schedule expansions do not require another code change:
+ *
+ *   First / weekend:  Friday 06:00 -> Monday 18:00
+ *   Second / midweek: Monday 18:00 -> Friday 06:00
+ *
+ * CHPP date strings use Hattrick wall-clock time. Read the date
+ * components directly instead of letting the Cloudflare runtime
+ * reinterpret an offset-less timestamp in its own timezone.
+ */
+const HTWB_API_LINEUP_FIRST_WINDOW_START_MINUTE =
+  (4 * 24 * 60) + (6 * 60);
+
+const HTWB_API_LINEUP_SECOND_WINDOW_START_MINUTE =
+  (18 * 60);
+
+function htwbApiLineupGetHattrickWeekMinute(
+  htwbApiLineupMatchDate
+) {
+  const htwbApiLineupMatch =
+    String(htwbApiLineupMatchDate || "")
+      .trim()
+      .match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?/
+      );
+
+  if (!htwbApiLineupMatch) {
+    return null;
+  }
+
+  const htwbApiLineupYear =
+    Number(htwbApiLineupMatch[1]);
+  const htwbApiLineupMonth =
+    Number(htwbApiLineupMatch[2]);
+  const htwbApiLineupDay =
+    Number(htwbApiLineupMatch[3]);
+  const htwbApiLineupHour =
+    Number(htwbApiLineupMatch[4]);
+  const htwbApiLineupMinute =
+    Number(htwbApiLineupMatch[5]);
+
+  const htwbApiLineupDate =
+    new Date(
+      Date.UTC(
+        htwbApiLineupYear,
+        htwbApiLineupMonth - 1,
+        htwbApiLineupDay
+      )
+    );
+
+  if (
+    !Number.isFinite(htwbApiLineupDate.getTime()) ||
+    htwbApiLineupHour < 0 ||
+    htwbApiLineupHour > 23 ||
+    htwbApiLineupMinute < 0 ||
+    htwbApiLineupMinute > 59
+  ) {
+    return null;
+  }
+
+  const htwbApiLineupSundayBasedDay =
+    htwbApiLineupDate.getUTCDay();
+
+  const htwbApiLineupMondayBasedDay =
+    (htwbApiLineupSundayBasedDay + 6) % 7;
+
+  return (
+    (htwbApiLineupMondayBasedDay * 24 * 60) +
+    (htwbApiLineupHour * 60) +
+    htwbApiLineupMinute
+  );
+}
+
 function htwbApiLineupDetermineTrainingWeekPosition(
-  htwbApiLineupUpcomingMatch,
-  htwbApiLineupNextTrainingDate
+  htwbApiLineupUpcomingMatch
 ) {
   if (
     !HTWB_API_LINEUP_TRAINING_MATCH_TYPES.has(
@@ -1051,27 +1130,82 @@ function htwbApiLineupDetermineTrainingWeekPosition(
     return "none";
   }
 
-  const htwbApiLineupTrainingDateMs =
-    htwbApiLineupParseHattrickDate(
-      htwbApiLineupNextTrainingDate
+  const htwbApiLineupWeekMinute =
+    htwbApiLineupGetHattrickWeekMinute(
+      htwbApiLineupUpcomingMatch.matchDate
     );
 
-  if (
-    htwbApiLineupTrainingDateMs === null
-  ) {
+  if (htwbApiLineupWeekMinute === null) {
     throw htwbApiLineupMakeError(
-      "Could not determine the next Hattrick training date."
+      "Could not determine the Hattrick match schedule window."
     );
   }
 
   if (
-    htwbApiLineupUpcomingMatch.matchDateMs <
-    htwbApiLineupTrainingDateMs
+    htwbApiLineupWeekMinute >=
+      HTWB_API_LINEUP_FIRST_WINDOW_START_MINUTE ||
+    htwbApiLineupWeekMinute <
+      HTWB_API_LINEUP_SECOND_WINDOW_START_MINUTE
   ) {
-    return "second";
+    return "first";
   }
 
-  return "first";
+  return "second";
+}
+
+
+function htwbApiLineupGetTrainingCycleKey(
+  htwbApiLineupMatchDate
+) {
+  const htwbApiLineupMatch =
+    String(htwbApiLineupMatchDate || "")
+      .trim()
+      .match(
+        /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?/
+      );
+
+  if (!htwbApiLineupMatch) {
+    return "";
+  }
+
+  const htwbApiLineupDate = new Date(
+    Date.UTC(
+      Number(htwbApiLineupMatch[1]),
+      Number(htwbApiLineupMatch[2]) - 1,
+      Number(htwbApiLineupMatch[3]),
+      Number(htwbApiLineupMatch[4]),
+      Number(htwbApiLineupMatch[5])
+    )
+  );
+
+  if (!Number.isFinite(htwbApiLineupDate.getTime())) {
+    return "";
+  }
+
+  const htwbApiLineupMondayBasedDay =
+    (htwbApiLineupDate.getUTCDay() + 6) % 7;
+
+  let htwbApiLineupDaysBackToFriday =
+    (htwbApiLineupMondayBasedDay - 4 + 7) % 7;
+
+  const htwbApiLineupMinutesToday =
+    (htwbApiLineupDate.getUTCHours() * 60) +
+    htwbApiLineupDate.getUTCMinutes();
+
+  if (
+    htwbApiLineupMondayBasedDay === 4 &&
+    htwbApiLineupMinutesToday < 6 * 60
+  ) {
+    htwbApiLineupDaysBackToFriday = 7;
+  }
+
+  htwbApiLineupDate.setUTCDate(
+    htwbApiLineupDate.getUTCDate() -
+    htwbApiLineupDaysBackToFriday
+  );
+  htwbApiLineupDate.setUTCHours(6, 0, 0, 0);
+
+  return htwbApiLineupDate.toISOString().slice(0, 10);
 }
 
 
@@ -1083,6 +1217,11 @@ function htwbApiLineupGetPreviousTrainingMatch(
   htwbApiLineupMatches,
   htwbApiLineupUpcomingMatch
 ) {
+  const htwbApiLineupCycleKey =
+    htwbApiLineupGetTrainingCycleKey(
+      htwbApiLineupUpcomingMatch.matchDate
+    );
+
   const htwbApiLineupPrevious =
     htwbApiLineupMatches
       .filter(
@@ -1100,6 +1239,18 @@ function htwbApiLineupGetPreviousTrainingMatch(
           HTWB_API_LINEUP_TRAINING_MATCH_TYPES.has(
             htwbApiLineupMatch.matchType
           )
+      )
+      .filter(
+        htwbApiLineupMatch =>
+          htwbApiLineupDetermineTrainingWeekPosition(
+            htwbApiLineupMatch
+          ) === "first"
+      )
+      .filter(
+        htwbApiLineupMatch =>
+          htwbApiLineupGetTrainingCycleKey(
+            htwbApiLineupMatch.matchDate
+          ) === htwbApiLineupCycleKey
       )
       .sort(
         (htwbApiLineupA, htwbApiLineupB) =>
@@ -1307,6 +1458,11 @@ export async function onRequestGet(
       "teamId"
     );
 
+  const htwbApiLineupRequestedMatchId =
+    htwbApiLineupUrl.searchParams.get(
+      "matchId"
+    );
+
   if (
     !htwbApiLineupRequestedTeamId ||
     !/^\d+$/.test(
@@ -1463,10 +1619,65 @@ export async function onRequestGet(
         htwbApiLineupMatchesXml
       );
 
-    const htwbApiLineupUpcomingMatch =
-      htwbApiLineupGetUpcomingMatch(
-        htwbApiLineupMatches
+    const htwbApiLineupUpcomingMatches =
+      htwbApiLineupMatches
+        .filter(
+          htwbApiLineupMatch =>
+            htwbApiLineupMatch.status ===
+            "UPCOMING"
+        )
+        .sort(
+          (htwbApiLineupA, htwbApiLineupB) =>
+            htwbApiLineupA.matchDateMs -
+            htwbApiLineupB.matchDateMs
+        );
+
+    if (!htwbApiLineupUpcomingMatches.length) {
+      throw htwbApiLineupMakeError(
+        "No upcoming match was found.",
+        404
       );
+    }
+
+    for (
+      const htwbApiLineupMatch
+      of htwbApiLineupUpcomingMatches
+    ) {
+      htwbApiLineupMatch.trainingWeekPosition =
+        htwbApiLineupDetermineTrainingWeekPosition(
+          htwbApiLineupMatch
+        );
+    }
+
+    const htwbApiLineupRequestedMatch =
+      /^\d+$/.test(
+        String(htwbApiLineupRequestedMatchId || "")
+      )
+        ? htwbApiLineupUpcomingMatches.find(
+            htwbApiLineupMatch =>
+              String(htwbApiLineupMatch.matchId) ===
+              String(htwbApiLineupRequestedMatchId)
+          )
+        : null;
+
+    if (
+      htwbApiLineupRequestedMatchId &&
+      !htwbApiLineupRequestedMatch
+    ) {
+      throw htwbApiLineupMakeError(
+        "The selected upcoming match could not be found.",
+        404
+      );
+    }
+
+    const htwbApiLineupUpcomingMatch =
+      htwbApiLineupRequestedMatch ||
+      htwbApiLineupUpcomingMatches.find(
+        htwbApiLineupMatch =>
+          htwbApiLineupMatch.trainingWeekPosition !==
+          "none"
+      ) ||
+      htwbApiLineupUpcomingMatches[0];
 
     const htwbApiLineupLeagueSchedule =
       htwbApiLineupFindLeagueSchedule(
@@ -1479,12 +1690,6 @@ export async function onRequestGet(
         "Could not find the team's league training schedule."
       );
     }
-
-    htwbApiLineupUpcomingMatch.trainingWeekPosition =
-      htwbApiLineupDetermineTrainingWeekPosition(
-        htwbApiLineupUpcomingMatch,
-        htwbApiLineupLeagueSchedule.trainingDate
-      );
 
     let htwbApiLineupPreviousTrainingMatch = {
       matchId: null,
@@ -1504,63 +1709,59 @@ export async function onRequestGet(
           htwbApiLineupUpcomingMatch
         );
 
-      if (!htwbApiLineupPreviousMatch) {
-        throw htwbApiLineupMakeError(
-          "Could not find the first training match of the current week."
-        );
+      if (htwbApiLineupPreviousMatch) {
+        const htwbApiLineupMatchLineupXml =
+          await htwbApiLineupChppFetch(
+            htwbApiLineupContext,
+            {
+              file:
+                "matchlineup",
+
+              version:
+                "1.1",
+
+              actionType:
+                "view",
+
+              matchID:
+                htwbApiLineupPreviousMatch.matchId,
+
+              teamID:
+                htwbApiLineupRequestedTeamId
+            }
+          );
+
+        const htwbApiLineupPreviousAppearanceData =
+          htwbApiLineupParsePreviousAppearances(
+            htwbApiLineupMatchLineupXml,
+            htwbApiLineupRequestedTeamId
+          );
+
+        htwbApiLineupPreviousTrainingMatch = {
+          matchId:
+            htwbApiLineupPreviousMatch.matchId,
+
+          matchDate:
+            htwbApiLineupPreviousMatch.matchDate,
+
+          matchType:
+            htwbApiLineupPreviousMatch.matchType,
+
+          homeTeamName:
+            htwbApiLineupPreviousMatch.homeTeamName,
+
+          awayTeamName:
+            htwbApiLineupPreviousMatch.awayTeamName,
+
+          appearances:
+            htwbApiLineupPreviousAppearanceData
+              .appearances,
+
+          unresolvedAppearances:
+            htwbApiLineupPreviousAppearanceData
+              .unresolvedAppearances
+        };
       }
-
-      const htwbApiLineupMatchLineupXml =
-        await htwbApiLineupChppFetch(
-          htwbApiLineupContext,
-          {
-            file:
-              "matchlineup",
-
-            version:
-              "1.1",
-
-            actionType:
-              "view",
-
-            matchID:
-              htwbApiLineupPreviousMatch.matchId,
-
-            teamID:
-              htwbApiLineupRequestedTeamId
-          }
-        );
-
-      const htwbApiLineupPreviousAppearanceData =
-        htwbApiLineupParsePreviousAppearances(
-          htwbApiLineupMatchLineupXml,
-          htwbApiLineupRequestedTeamId
-        );
-
-      htwbApiLineupPreviousTrainingMatch = {
-        matchId:
-          htwbApiLineupPreviousMatch.matchId,
-
-        matchDate:
-          htwbApiLineupPreviousMatch.matchDate,
-
-        matchType:
-          htwbApiLineupPreviousMatch.matchType,
-
-        homeTeamName:
-          htwbApiLineupPreviousMatch.homeTeamName,
-
-        awayTeamName:
-          htwbApiLineupPreviousMatch.awayTeamName,
-
-        appearances:
-          htwbApiLineupPreviousAppearanceData
-            .appearances,
-
-        unresolvedAppearances:
-          htwbApiLineupPreviousAppearanceData
-            .unresolvedAppearances
-      };
     }
 
     return Response.json(
@@ -1585,6 +1786,21 @@ export async function onRequestGet(
 
         nextTrainingDate:
           htwbApiLineupLeagueSchedule.trainingDate,
+
+        upcomingMatches:
+          htwbApiLineupUpcomingMatches.map(
+            htwbApiLineupMatch => ({
+              matchId: htwbApiLineupMatch.matchId,
+              matchType: htwbApiLineupMatch.matchType,
+              matchDate: htwbApiLineupMatch.matchDate,
+              homeTeamId: htwbApiLineupMatch.homeTeamId,
+              homeTeamName: htwbApiLineupMatch.homeTeamName,
+              awayTeamId: htwbApiLineupMatch.awayTeamId,
+              awayTeamName: htwbApiLineupMatch.awayTeamName,
+              trainingWeekPosition:
+                htwbApiLineupMatch.trainingWeekPosition
+            })
+          ),
 
         upcomingMatch: {
           matchId:
