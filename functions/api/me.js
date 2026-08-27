@@ -83,6 +83,17 @@ function htwbApiMeXmlValueAny(htwbApiMeXml, htwbApiMeTags) {
   return "";
 }
 
+function htwbApiMeXmlContainer(htwbApiMeXml, htwbApiMeTag) {
+  const htwbApiMePattern = new RegExp(
+    `<${htwbApiMeTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiMeTag}>`,
+    "i"
+  );
+
+  const htwbApiMeMatch = htwbApiMeXml.match(htwbApiMePattern);
+
+  return htwbApiMeMatch ? htwbApiMeMatch[1] : "";
+}
+
 function htwbApiMeGetTeams(htwbApiMeXml) {
   const htwbApiMeTeamsMatch = htwbApiMeXml.match(
     /<Teams(?:\s[^>]*)?>([\s\S]*?)<\/Teams>/i
@@ -112,38 +123,21 @@ function htwbApiMeGetTeams(htwbApiMeXml) {
         teamName: htwbApiMeXmlValue(
           htwbApiMeTeamXml,
           "TeamName"
-        )
+        ),
+        logoUrl: ""
       };
     })
     .filter(htwbApiMeTeam => htwbApiMeTeam.teamId && htwbApiMeTeam.teamName);
 }
 
-export async function onRequestGet(htwbApiMeContext) {
-  const htwbApiMeAccessToken =
-    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_token");
-
-  const htwbApiMeAccessSecret =
-    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_secret");
-
-  if (!htwbApiMeAccessToken || !htwbApiMeAccessSecret) {
-    return Response.json(
-      { error: "Not logged in" },
-      {
-        status: 401,
-        headers: {
-          "Cache-Control": "no-store"
-        }
-      }
-    );
-  }
-
+async function htwbApiMeChppFetch(
+  htwbApiMeContext,
+  htwbApiMeAccessToken,
+  htwbApiMeAccessSecret,
+  htwbApiMeQuery
+) {
   const htwbApiMeEndpoint =
     "https://chpp.hattrick.org/chppxml.ashx";
-
-  const htwbApiMeQuery = {
-    file: "managercompendium",
-    version: "1.7"
-  };
 
   const htwbApiMeOauth = {
     oauth_consumer_key:
@@ -177,7 +171,10 @@ export async function onRequestGet(htwbApiMeContext) {
     `${htwbApiMeEnc(htwbApiMeContext.env.CHPP_CONSUMER_SECRET)}&${htwbApiMeEnc(htwbApiMeAccessSecret)}`;
 
   htwbApiMeOauth.oauth_signature =
-    await htwbApiMeHmacSha1(htwbApiMeSigningKey, htwbApiMeSignatureBase);
+    await htwbApiMeHmacSha1(
+      htwbApiMeSigningKey,
+      htwbApiMeSignatureBase
+    );
 
   const htwbApiMeAuthorization =
     "OAuth " +
@@ -189,24 +186,117 @@ export async function onRequestGet(htwbApiMeContext) {
       )
       .join(", ");
 
-  const htwbApiMeRequestUrl =
-    `${htwbApiMeEndpoint}?file=managercompendium&version=1.7`;
+  const htwbApiMeRequestQuery =
+    Object.keys(htwbApiMeQuery)
+      .map(
+        htwbApiMeKey =>
+          `${encodeURIComponent(htwbApiMeKey)}=${encodeURIComponent(htwbApiMeQuery[htwbApiMeKey])}`
+      )
+      .join("&");
 
-  const htwbApiMeResponse = await fetch(htwbApiMeRequestUrl, {
-    method: "GET",
-    headers: {
-      Authorization: htwbApiMeAuthorization,
-      "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
+  const htwbApiMeResponse = await fetch(
+    `${htwbApiMeEndpoint}?${htwbApiMeRequestQuery}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: htwbApiMeAuthorization,
+        "User-Agent": `HT Wiki Builder/${HTWB_VERSIONS.app}`
+      }
     }
-  });
+  );
 
   const htwbApiMeXml = await htwbApiMeResponse.text();
 
   if (!htwbApiMeResponse.ok) {
+    const htwbApiMeError = new Error(
+      `CHPP request failed with ${htwbApiMeResponse.status}`
+    );
+    htwbApiMeError.status = htwbApiMeResponse.status;
+    throw htwbApiMeError;
+  }
+
+  return htwbApiMeXml;
+}
+
+async function htwbApiMeAddTeamLogos(
+  htwbApiMeContext,
+  htwbApiMeAccessToken,
+  htwbApiMeAccessSecret,
+  htwbApiMeTeams
+) {
+  return Promise.all(
+    htwbApiMeTeams.map(async htwbApiMeTeam => {
+      try {
+        const htwbApiMeTeamDetailsXml = await htwbApiMeChppFetch(
+          htwbApiMeContext,
+          htwbApiMeAccessToken,
+          htwbApiMeAccessSecret,
+          {
+            file: "teamdetails",
+            version: "1.7",
+            actionType: "view",
+            teamID: htwbApiMeTeam.teamId
+          }
+        );
+
+        const htwbApiMeTeamXml =
+          htwbApiMeXmlContainer(htwbApiMeTeamDetailsXml, "Team");
+
+        return {
+          ...htwbApiMeTeam,
+          logoUrl:
+            htwbApiMeXmlValue(htwbApiMeTeamXml, "LogoURL") ||
+            htwbApiMeXmlValue(htwbApiMeTeamDetailsXml, "LogoURL") ||
+            ""
+        };
+      } catch (htwbApiMeLogoError) {
+        console.warn(
+          `Could not load logo for TeamID ${htwbApiMeTeam.teamId}:`,
+          htwbApiMeLogoError
+        );
+
+        return htwbApiMeTeam;
+      }
+    })
+  );
+}
+
+export async function onRequestGet(htwbApiMeContext) {
+  const htwbApiMeAccessToken =
+    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_token");
+
+  const htwbApiMeAccessSecret =
+    htwbApiMeGetCookie(htwbApiMeContext.request, "chpp_access_secret");
+
+  if (!htwbApiMeAccessToken || !htwbApiMeAccessSecret) {
+    return Response.json(
+      { error: "Not logged in" },
+      {
+        status: 401,
+        headers: {
+          "Cache-Control": "no-store"
+        }
+      }
+    );
+  }
+
+  let htwbApiMeXml;
+
+  try {
+    htwbApiMeXml = await htwbApiMeChppFetch(
+      htwbApiMeContext,
+      htwbApiMeAccessToken,
+      htwbApiMeAccessSecret,
+      {
+        file: "managercompendium",
+        version: "1.7"
+      }
+    );
+  } catch (htwbApiMeError) {
     return Response.json(
       {
         error: "CHPP request failed",
-        status: htwbApiMeResponse.status
+        status: htwbApiMeError.status || 502
       },
       {
         status: 502,
@@ -217,7 +307,13 @@ export async function onRequestGet(htwbApiMeContext) {
     );
   }
 
-  const htwbApiMeTeams = htwbApiMeGetTeams(htwbApiMeXml);
+  const htwbApiMeBaseTeams = htwbApiMeGetTeams(htwbApiMeXml);
+  const htwbApiMeTeams = await htwbApiMeAddTeamLogos(
+    htwbApiMeContext,
+    htwbApiMeAccessToken,
+    htwbApiMeAccessSecret,
+    htwbApiMeBaseTeams
+  );
 
   const htwbApiMeData = {
     managerName:
@@ -226,7 +322,9 @@ export async function onRequestGet(htwbApiMeContext) {
     teamId:
       htwbApiMeTeams.length ? htwbApiMeTeams[0].teamId : "",
     teamName:
-      htwbApiMeTeams.length ? htwbApiMeTeams[0].teamName : ""
+      htwbApiMeTeams.length ? htwbApiMeTeams[0].teamName : "",
+    logoUrl:
+      htwbApiMeTeams.length ? htwbApiMeTeams[0].logoUrl : ""
   };
 
   return Response.json(

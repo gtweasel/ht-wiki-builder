@@ -10,17 +10,61 @@ const htwbAppConnectedPanel = document.getElementById("connected-panel");
 const htwbAppTeamName = document.getElementById("team-name");
 const htwbAppManagerName = document.getElementById("manager-name");
 const htwbAppTeamId = document.getElementById("team-id");
+const htwbAppTeamLogo = document.getElementById("team-logo");
 
 const HTWB_APP_TEAM_STORAGE_KEY = "htwb_selected_team_id";
 
 let htwbAppAccountData = null;
 let htwbAppSelectedTeam = null;
 
+function htwbAppSafeLogoUrl(htwbAppValue) {
+  const htwbAppRawValue = String(htwbAppValue || "").trim();
+
+  if (!htwbAppRawValue) {
+    return "";
+  }
+
+  try {
+    const htwbAppUrl = new URL(htwbAppRawValue, window.location.origin);
+
+    if (htwbAppUrl.protocol !== "https:" && htwbAppUrl.protocol !== "http:") {
+      return "";
+    }
+
+    return htwbAppUrl.href;
+  } catch {
+    return "";
+  }
+}
+
+function htwbAppRenderTeamLogo(htwbAppTeam) {
+  if (!htwbAppTeamLogo) {
+    return;
+  }
+
+  htwbAppTeamLogo.hidden = true;
+  htwbAppTeamLogo.removeAttribute("src");
+  htwbAppTeamLogo.alt = "";
+
+  const htwbAppLogoUrl = htwbAppSafeLogoUrl(htwbAppTeam?.logoUrl);
+
+  if (!htwbAppLogoUrl) {
+    return;
+  }
+
+  htwbAppTeamLogo.src = htwbAppLogoUrl;
+  htwbAppTeamLogo.alt = htwbAppTeam?.teamName
+    ? `${htwbAppTeam.teamName} logo`
+    : "Team logo";
+  htwbAppTeamLogo.hidden = false;
+}
+
 function htwbAppShowLoggedOut() {
   htwbAppAccountData = null;
   htwbAppSelectedTeam = null;
 
   htwbAppUserStatus.textContent = "Not connected";
+  htwbAppRenderTeamLogo(null);
 
   htwbAppHeaderLogin.hidden = false;
   htwbAppHeaderLogout.hidden = true;
@@ -80,6 +124,7 @@ function htwbAppRenderSelectedTeam(htwbAppTeam) {
     htwbAppTeamName.textContent = "No managed team found";
     htwbAppTeamId.textContent = "";
     htwbAppUserStatus.textContent = "Connected";
+    htwbAppRenderTeamLogo(null);
     return;
   }
 
@@ -90,13 +135,16 @@ function htwbAppRenderSelectedTeam(htwbAppTeam) {
     new CustomEvent("htwb:team-selected", {
       detail: {
         teamId: htwbAppTeam.teamId,
-        teamName: htwbAppTeam.teamName
+        teamName: htwbAppTeam.teamName,
+        logoUrl: htwbAppTeam.logoUrl || ""
       }
     })
   );
 
   htwbAppTeamName.textContent =
     htwbAppTeam.teamName || "Hattrick team";
+
+  htwbAppRenderTeamLogo(htwbAppTeam);
 
   htwbAppTeamId.textContent =
     htwbAppTeam.teamId
@@ -248,5 +296,13 @@ window.HTWikiBuilder = {
       : [];
   }
 };
+
+if (htwbAppTeamLogo) {
+  htwbAppTeamLogo.addEventListener("error", () => {
+    htwbAppTeamLogo.hidden = true;
+    htwbAppTeamLogo.removeAttribute("src");
+    htwbAppTeamLogo.alt = "";
+  });
+}
 
 htwbAppLoadUser();

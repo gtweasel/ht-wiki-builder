@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css?v=0.1.0">
+  <link rel="stylesheet" href="/styles.css?v=0.1.1">
 </head>
 <body>
   <header class="site-header">
@@ -44,8 +44,13 @@
       <div id="connected-panel" class="builder-account" hidden>
         <div>
           <span class="builder-account-label">Connected to Hattrick</span>
-          <strong id="team-name">Loading team...</strong>
-          <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+          <div class="connected-team-identity">
+            <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+            <div>
+              <strong id="team-name">Loading team...</strong>
+              <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -131,8 +136,8 @@
     <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
   </footer>
 
-  <script type="module" src="/versions.js?v=0.1.0"></script>
-  <script src="/app.js?v=0.1.0"></script>
-  <script src="/team.js?v=0.1.0"></script>
+  <script type="module" src="/versions.js?v=0.1.1"></script>
+  <script src="/app.js?v=0.1.1"></script>
+  <script src="/team.js?v=0.1.1"></script>
 </body>
 </html>

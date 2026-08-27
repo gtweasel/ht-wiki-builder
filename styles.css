@@ -259,6 +259,29 @@ select {
   text-transform: uppercase;
 }
 
+.connected-team-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.connected-team-identity > div {
+  min-width: 0;
+}
+
+.connected-team-logo {
+  width: auto;
+  height: 48px;
+  max-width: 90px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+.connected-team-logo[hidden] {
+  display: none;
+}
+
 .connected-team-name {
   margin-top: 4px;
   font-family: "Barlow Condensed", sans-serif;
