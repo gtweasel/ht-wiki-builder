@@ -51,7 +51,7 @@ Cloudflare Pages Functions must export the framework handler name `onRequestGet`
 
 All pages use `/styles.css` as the single visual source of truth. Page-specific layout should use the existing blue, gold, gray, red, and green design tokens declared in `:root`; avoid inline `<style>` blocks and one-off color values in page HTML.
 
-Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/me` enriches only the logged-in manager's own managed-team list with those logo URLs. When present, the active team's logo is shown at a fixed 48px height with proportional width capped at 90px, immediately left of the team name and Manager/TeamID lines. When a team has no supplied logo, the image is removed entirely and the text returns to the original alignment with no reserved blank space.
+Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/me` enriches only the logged-in manager's own managed-team list with those logo URLs. When present, the active team's logo is shown at a fixed 54px height with proportional width capped at 90px, vertically centered beside the team name and Manager/TeamID lines. When a team has no supplied logo, the image is removed entirely and the text returns to the original alignment with no reserved blank space.
 
 ## Lineup substitute selection
 

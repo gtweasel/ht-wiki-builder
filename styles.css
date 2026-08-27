@@ -272,10 +272,11 @@ select {
 
 .connected-team-logo {
   width: auto;
-  height: 48px;
+  height: 54px;
   max-width: 90px;
   flex: 0 0 auto;
   object-fit: contain;
+  transform: translateY(2px);
 }
 
 .connected-team-logo[hidden] {
