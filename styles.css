@@ -262,7 +262,7 @@ select {
 .connected-team-identity {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 8px;
   min-width: 0;
 }
 
@@ -272,7 +272,7 @@ select {
 
 .connected-team-logo {
   width: auto;
-  height: 60px;
+  height: 56px;
   max-width: 90px;
   flex: 0 0 auto;
   object-fit: contain;
