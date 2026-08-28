@@ -1128,12 +1128,27 @@ select {
   font-size: 11px;
 }
 
-.lineup-position.training-slot {
-  border: 3px solid var(--gold);
+.lineup-position.training-slot,
+.lineup-position.partial-training-slot {
+  position: relative;
 }
 
-.lineup-position.partial-training-slot {
-  border: 3px dashed var(--gold);
+.lineup-position.training-slot::after,
+.lineup-position.partial-training-slot::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 5px;
+  pointer-events: none;
+  box-shadow: 0 0 0 2px var(--white);
+}
+
+.lineup-position.training-slot::after {
+  border: 2px solid var(--gold);
+}
+
+.lineup-position.partial-training-slot::after {
+  border: 2px dashed var(--gold);
 }
 
 .lineup-legend {
@@ -1178,7 +1193,11 @@ select {
 
 .lineup-substitutes {
   margin-top: 24px;
-  padding: 24px 20px;
+}
+
+.lineup-substitutes-panel {
+  margin-top: 14px;
+  padding: 14px 16px 16px;
   background: var(--lineup-blue-muted);
   border: 1px solid var(--gray-300);
   border-radius: 9px;
@@ -1204,7 +1223,7 @@ select {
   display: grid;
   grid-template-columns: repeat(7, minmax(100px, 1fr));
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .lineup-substitute-position {
@@ -1213,15 +1232,6 @@ select {
 
 .lineup-substitute-grid-secondary {
   margin-top: 10px;
-}
-
-.lineup-substitute-grid-primary .lineup-position-name {
-  margin-bottom: 10px;
-  color: #000;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
 }
 
 .lineup-substitute-grid-secondary .lineup-position-name {
@@ -1237,7 +1247,11 @@ select {
 
 .lineup-penalty-section {
   margin-top: 28px;
-  padding: 24px 20px;
+}
+
+.lineup-penalty-panel {
+  margin-top: 14px;
+  padding: 14px 16px 16px;
   background: var(--lineup-blue-muted);
   border: 1px solid var(--gray-300);
   border-radius: 9px;
@@ -1262,7 +1276,7 @@ select {
 .lineup-penalty-grid {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .lineup-penalty-grid-five {
@@ -1279,6 +1293,7 @@ select {
 
 .lineup-penalty-grid-six {
   grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin-top: 10px;
 }
 
 .lineup-penalty-card {
