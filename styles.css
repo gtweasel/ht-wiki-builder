@@ -1221,13 +1221,15 @@ select {
 
 .lineup-substitute-grid {
   display: grid;
-  grid-template-columns: repeat(7, minmax(100px, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 10px;
   margin-top: 0;
 }
 
 .lineup-substitute-position {
+  min-width: 0;
   min-height: 96px;
+  box-sizing: border-box;
 }
 
 .lineup-substitute-grid-secondary {
