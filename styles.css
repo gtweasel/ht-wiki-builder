@@ -5,6 +5,7 @@
   --blue-700: #15549b;
   --blue-600: #1e6bc1;
   --blue-100: #e9f2fb;
+  --lineup-blue-muted: #a8b9cb;
   --gold: #f4c430;
   --gold-dark: #d3a714;
   --white: #ffffff;
@@ -1051,7 +1052,7 @@ select {
 .lineup-pitch {
   margin-top: 24px;
   padding: 30px 20px;
-  background: var(--blue-100);
+  background: var(--lineup-blue-muted);
   border: 1px solid var(--gray-300);
   border-radius: 9px;
 }
@@ -1203,28 +1204,21 @@ select {
 }
 
 .lineup-substitute-position {
-  min-height: 172px;
+  position: relative;
+  min-height: 96px;
 }
 
-.lineup-substitute-choice {
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  min-height: 58px;
-  padding-top: 4px;
+.lineup-substitute-grid-secondary {
+  margin-top: 10px;
 }
 
-.lineup-substitute-choice-second {
-  margin-top: 7px;
-  padding-top: 9px;
-  border-top: 1px solid var(--gray-200);
-}
-
-.lineup-substitute-tier {
+.lineup-substitute-tier-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
   display: inline-flex;
-  width: 19px;
-  height: 19px;
-  flex: 0 0 19px;
+  width: 20px;
+  height: 20px;
   align-items: center;
   justify-content: center;
   border-radius: 50%;
@@ -1234,11 +1228,6 @@ select {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
-}
-
-.lineup-substitute-choice-content {
-  min-width: 0;
-  flex: 1;
 }
 
 
