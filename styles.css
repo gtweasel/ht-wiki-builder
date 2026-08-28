@@ -459,7 +459,7 @@ select {
 .tool-card p {
   margin: 0;
   color: var(--gray-600);
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .tool-card-action {
@@ -1329,13 +1329,14 @@ select {
 .lineup-penalty-name {
   display: block;
   color: var(--blue-950);
+  font-size: 13px;
   font-weight: 700;
   overflow-wrap: anywhere;
 }
 
 .lineup-penalty-detail {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   color: var(--gray-600);
   font-size: 11px;
   line-height: 1.35;
