@@ -1208,7 +1208,6 @@ select {
 }
 
 .lineup-substitute-position {
-  position: relative;
   min-height: 96px;
 }
 
@@ -1216,27 +1215,19 @@ select {
   margin-top: 10px;
 }
 
+.lineup-substitute-grid-primary .lineup-position-name {
+  margin-bottom: 10px;
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
 .lineup-substitute-grid-secondary .lineup-position-name {
   display: none;
 }
 
-.lineup-substitute-tier-badge {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: inline-flex;
-  width: 20px;
-  height: 20px;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  background: var(--blue-100);
-  color: var(--blue-900);
-  font-family: "Barlow Condensed", sans-serif;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-}
 
 
 .lineup-coach-picks {
