@@ -540,7 +540,10 @@
 
 
             <div class="lineup-summary-item">
-              <span class="lineup-summary-label">
+              <span
+                id="lineup-formation-utilization-label"
+                class="lineup-summary-label"
+              >
                 Training Utilization
               </span>
 
@@ -554,7 +557,10 @@
 
 
             <div class="lineup-summary-item">
-              <span class="lineup-summary-label">
+              <span
+                id="lineup-formation-score-label"
+                class="lineup-summary-label"
+              >
                 Formation Score
               </span>
 
@@ -568,7 +574,10 @@
 
 
             <div class="lineup-summary-item">
-              <span class="lineup-summary-label">
+              <span
+                id="lineup-combination-score-label"
+                class="lineup-summary-label"
+              >
                 Combination Score
               </span>
 
@@ -605,19 +614,31 @@
                       FrmExp
                     </th>
 
-                    <th class="number">
+                    <th
+                      id="lineup-formation-table-utilization-header"
+                      class="number"
+                    >
                       Utilization
                     </th>
 
-                    <th class="number">
+                    <th
+                      id="lineup-formation-table-effect-header"
+                      class="number"
+                    >
                       Effective / Ideal Effect
                     </th>
 
-                    <th class="number">
+                    <th
+                      id="lineup-formation-table-score-header"
+                      class="number"
+                    >
                       Formation Score
                     </th>
 
-                    <th class="number">
+                    <th
+                      id="lineup-formation-table-combination-header"
+                      class="number"
+                    >
                       Combination Score
                     </th>
 
@@ -635,7 +656,10 @@
             </div>
 
 
-            <p class="lineup-note">
+            <p
+              id="lineup-formation-table-note"
+              class="lineup-note"
+            >
               Combination Score = Training Ideal Average x Formation Score /
               Training Speed. Lowest score wins.
             </p>
@@ -681,7 +705,7 @@
 
           <div class="lineup-legend">
 
-            <div class="lineup-legend-item">
+            <div class="lineup-legend-item lineup-legend-training-item">
               <span
                 class="
                   lineup-legend-box
@@ -695,7 +719,7 @@
             </div>
 
 
-            <div class="lineup-legend-item">
+            <div class="lineup-legend-item lineup-legend-training-item">
               <span
                 class="
                   lineup-legend-box
@@ -1064,120 +1088,297 @@
                   GK
                 </div>
 
-                <div
-                  id="lineup-sub-player-gk"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-gk"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-gk"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-gk"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-gk"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-gk"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   CD
                 </div>
 
-                <div
-                  id="lineup-sub-player-de"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-de"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-de"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-de"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-de"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-de"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   WB
                 </div>
 
-                <div
-                  id="lineup-sub-player-wb"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-wb"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-wb"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-wb"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-wb"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-wb"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   IM
                 </div>
 
-                <div
-                  id="lineup-sub-player-im"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-im"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-im"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-im"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-im"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-im"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   FW
                 </div>
 
-                <div
-                  id="lineup-sub-player-fw"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-fw"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-fw"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-fw"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-fw"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-fw"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   WG
                 </div>
 
-                <div
-                  id="lineup-sub-player-wg"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-wg"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-wg"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-wg"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-wg"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-wg"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
-
 
               <div class="lineup-position lineup-substitute-position">
                 <div class="lineup-position-name">
                   Extra
                 </div>
 
-                <div
-                  id="lineup-sub-player-ex"
-                  class="lineup-player-name"
-                ></div>
+                <div class="lineup-substitute-choice">
+                  <span class="lineup-substitute-tier">
+                    1
+                  </span>
 
-                <div
-                  id="lineup-sub-rating-ex"
-                  class="lineup-player-rating"
-                ></div>
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub-player-ex"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub-rating-ex"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
+
+                <div class="lineup-substitute-choice lineup-substitute-choice-second">
+                  <span class="lineup-substitute-tier">
+                    2
+                  </span>
+
+                  <div class="lineup-substitute-choice-content">
+                    <div
+                      id="lineup-sub2-player-ex"
+                      class="lineup-player-name"
+                    ></div>
+
+                    <div
+                      id="lineup-sub2-rating-ex"
+                      class="lineup-player-rating"
+                    ></div>
+                  </div>
+                </div>
               </div>
 
             </div>
+
 
           </div>
 

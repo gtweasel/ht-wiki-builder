@@ -79,7 +79,7 @@ Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/m
 
 Lineup Builder v0.2.0 updates its CHPP dependencies to the current file versions and adds current `matches` metadata to the fixture model. The match parser now retains `SourceSystem` and `MatchContextId`, allowing Hattrick Arena ladder fixtures (`MatchType` 62, `SourceSystem` `htointegrated`) to appear in the normal upcoming-match picker while remaining classified as non-training matches. Senior-team `matches` requests explicitly use `isYouth=false`. The current `players` schema builds display names from `FirstName`, `NickName`, and `LastName`, and current `matchlineup` field positions are resolved from `RoleID` while retaining the older `PositionCode` mapping as a compatibility fallback.
 
-The match picker now shows only kickoff date/time and `Home vs Away`; match type, training-week position, and nonstandard source information are shown in the selected-match summary below it. Full-training lineup positions use a solid gold border and partial-training positions use a dashed gold border. A floating `Back to top` control appears after the page has been scrolled down.
+The match picker shows kickoff date/time, `Home vs Away`, and the match type in parentheses; training-week position and nonstandard source information are shown in the selected-match summary below it. Full-training lineup positions use a solid gold border and partial-training positions use a dashed gold border. The formation area uses a muted pale-blue background. A floating `Back to top` control appears after the page has been scrolled down.
 
 ## Lineup substitute selection
 
@@ -87,7 +87,9 @@ After the starting XI is selected, the Lineup Builder fills seven substitute slo
 
 `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-WG`, `SUB-FW`, `SUB-EX`.
 
-The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-EX` (Hattrick "Extra") uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next substitute slot is calculated. The visible bench is displayed in Hattrick order: `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-FW`, `SUB-WG`, `SUB-EX`; this display order does not change the calculation order.
+The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-EX` (Hattrick "Extra") uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next first-choice substitute slot is calculated. The visible bench is displayed in Hattrick order: `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-FW`, `SUB-WG`, `SUB-EX`; this display order does not change the calculation order.
+
+Each role also shows a second-choice substitute. The second choice is calculated only from the other six first-choice substitutes, using the same position formula for that role. Second-choice assignments are independent, so the same player may be reused as the second choice for multiple different roles.
 
 
 ## Captain and set-pieces selection
@@ -177,7 +179,7 @@ The overall winning combination supplies both initial dropdown selections, but *
 
 The Match section deliberately uses two user actions. **Load Upcoming Matches** makes a lightweight request for the owned team's fixture list, sorts every returned upcoming fixture by kickoff time, and preselects the next training-eligible match even when a non-training tournament fixture occurs earlier. Changing the dropdown only changes the selected fixture and clears any old lineup result; it does not download player/training data or build a lineup. **Build Lineup** then loads the full roster/training data for the selected fixture and runs the appropriate recommendation model.
 
-Training-eligible fixtures are classified using the global Hattrick-time schedule split: Friday 06:00 through Monday 18:00 is the first training-match window, and Monday 18:00 through Friday 06:00 is the second. The two windows are exactly 84 hours each. Non-training tournament/special fixtures are outside the weekly training-position logic and use the competitive lineup priorities.
+Training-eligible fixtures are classified using the global Hattrick-time schedule split: Friday 06:00 through Monday 18:00 is the first training-match window, and Monday 18:00 through Friday 06:00 is the second. The two windows are exactly 84 hours each. Non-training fixtures are outside the weekly training-position logic. For those matches the training type is ignored completely: the builder evaluates every legal formation and symmetrical layout and selects the highest-total-rating starting XI. Formation experience is only a tiebreaker when XI ratings are equal.
 
 The selected training type for the first training match is saved locally by TeamID and the Friday 06:00 Hattrick-time training-cycle key. When a selected fixture is the second training match of that same cycle, the builder inherits that saved training type instead of allowing the optimizer to switch the weekly plan and retroactively waste first-match training slots.
 

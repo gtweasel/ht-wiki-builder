@@ -1051,7 +1051,7 @@ select {
 .lineup-pitch {
   margin-top: 24px;
   padding: 30px 20px;
-  background: var(--gray-50);
+  background: var(--blue-100);
   border: 1px solid var(--gray-300);
   border-radius: 9px;
 }
@@ -1203,7 +1203,42 @@ select {
 }
 
 .lineup-substitute-position {
-  min-height: 96px;
+  min-height: 172px;
+}
+
+.lineup-substitute-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  min-height: 58px;
+  padding-top: 4px;
+}
+
+.lineup-substitute-choice-second {
+  margin-top: 7px;
+  padding-top: 9px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.lineup-substitute-tier {
+  display: inline-flex;
+  width: 19px;
+  height: 19px;
+  flex: 0 0 19px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--blue-100);
+  color: var(--blue-900);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.lineup-substitute-choice-content {
+  min-width: 0;
+  flex: 1;
 }
 
 
