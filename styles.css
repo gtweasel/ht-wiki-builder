@@ -1331,7 +1331,9 @@ select {
   color: var(--blue-950);
   font-size: 13px;
   font-weight: 700;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: none;
 }
 
 .lineup-penalty-detail {
