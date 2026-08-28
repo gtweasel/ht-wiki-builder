@@ -4265,11 +4265,16 @@ function htwbLineupRenderMatchChoices(
             ? `${htwbLineupMatch.homeTeamName} vs ${htwbLineupMatch.awayTeamName}`
             : `Match ${htwbLineupMatch.matchId}`;
 
+        const htwbLineupMatchTypeLabel =
+          htwbLineupGetMatchTypeLabel(
+            htwbLineupMatch.matchType
+          );
+
         const htwbLineupLabel = [
           htwbLineupFormatMatchChoiceDate(
             htwbLineupMatch.matchDate
           ),
-          htwbLineupMatchName
+          `${htwbLineupMatchName} (${htwbLineupMatchTypeLabel})`
         ].join(" — ");
 
         return (
