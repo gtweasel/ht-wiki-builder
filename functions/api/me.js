@@ -1,4 +1,5 @@
 import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
 function htwbApiMeEnc(htwbApiMeValue) {
   return encodeURIComponent(htwbApiMeValue)
@@ -92,6 +93,17 @@ function htwbApiMeXmlContainer(htwbApiMeXml, htwbApiMeTag) {
   const htwbApiMeMatch = htwbApiMeXml.match(htwbApiMePattern);
 
   return htwbApiMeMatch ? htwbApiMeMatch[1] : "";
+}
+
+function htwbApiMeXmlContainers(htwbApiMeXml, htwbApiMeTag) {
+  const htwbApiMePattern = new RegExp(
+    `<${htwbApiMeTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiMeTag}>`,
+    "gi"
+  );
+
+  return [
+    ...String(htwbApiMeXml || "").matchAll(htwbApiMePattern)
+  ].map(htwbApiMeMatch => htwbApiMeMatch[1]);
 }
 
 function htwbApiMeGetTeams(htwbApiMeXml) {
@@ -233,14 +245,18 @@ async function htwbApiMeAddTeamLogos(
           htwbApiMeAccessSecret,
           {
             file: "teamdetails",
-            version: "1.7",
+            version: HTWB_CHPP_VERSIONS.teamdetails,
             actionType: "view",
             teamID: htwbApiMeTeam.teamId
           }
         );
 
         const htwbApiMeTeamXml =
-          htwbApiMeXmlContainer(htwbApiMeTeamDetailsXml, "Team");
+          htwbApiMeXmlContainers(htwbApiMeTeamDetailsXml, "Team").find(
+            htwbApiMeCandidateTeamXml =>
+              String(htwbApiMeXmlValue(htwbApiMeCandidateTeamXml, "TeamID")) ===
+              String(htwbApiMeTeam.teamId)
+          ) || "";
 
         return {
           ...htwbApiMeTeam,
@@ -289,7 +305,7 @@ export async function onRequestGet(htwbApiMeContext) {
       htwbApiMeAccessSecret,
       {
         file: "managercompendium",
-        version: "1.7"
+        version: HTWB_CHPP_VERSIONS.managercompendium
       }
     );
   } catch (htwbApiMeError) {

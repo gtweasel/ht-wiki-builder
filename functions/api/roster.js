@@ -1,4 +1,5 @@
 import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
 function htwbApiRosterEnc(htwbApiRosterValue) {
   return encodeURIComponent(String(htwbApiRosterValue))
@@ -392,10 +393,18 @@ function htwbApiRosterParseTeamDetails(
     );
 
   const htwbApiRosterTeamXml =
-    htwbApiRosterXmlContainer(
+    htwbApiRosterXmlContainers(
       htwbApiRosterTeamDetailsXml,
       "Team"
-    );
+    ).find(
+      htwbApiRosterCandidateTeamXml =>
+        String(
+          htwbApiRosterXmlValue(
+            htwbApiRosterCandidateTeamXml,
+            "TeamID"
+          )
+        ) === String(htwbApiRosterRequestedTeamId)
+    ) || "";
 
   if (!htwbApiRosterTeamXml) {
     throw htwbApiRosterMakeError(
@@ -785,7 +794,7 @@ export async function onRequestGet(
         htwbApiRosterContext,
         {
           file: "teamdetails",
-          version: "1.7",
+          version: HTWB_CHPP_VERSIONS.teamdetails,
           teamID:
             htwbApiRosterRequestedTeamId
         }
@@ -802,7 +811,7 @@ export async function onRequestGet(
         htwbApiRosterContext,
         {
           file: "players",
-          version: "1.3",
+          version: HTWB_CHPP_VERSIONS.players,
           actionType: "view",
           teamID:
             htwbApiRosterRequestedTeamId

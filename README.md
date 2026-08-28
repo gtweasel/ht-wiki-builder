@@ -10,7 +10,7 @@ Current versions:
 
 - HT Wiki Builder: `0.1.1`
 - Team Page Builder: `0.1.1`
-- Lineup Builder: `0.1.1`
+- Lineup Builder: `0.2.0`
 - Roster Usefulness: `0.1.1`
 
 Version numbers follow these rules:
@@ -29,6 +29,7 @@ The overall application and each existing tool are versioned independently. A to
 The project uses file-scoped identifier prefixes so browser scripts and Cloudflare Functions cannot accidentally reuse the same JavaScript variable or helper name.
 
 - `versions.js`: `HTWB_VERSIONS` and shared version rendering
+- `chpp-versions.js`: `HTWB_CHPP_VERSIONS`, the centralized CHPP file-version registry
 - `app.js`: `htwbApp...` / `HTWB_APP_...`
 - `team.js`: `htwbTeam...` / `HTWB_TEAM_...`
 - `lineup.js`: `htwbLineup...` / `HTWB_LINEUP_...`
@@ -45,6 +46,27 @@ HTML IDs and CSS classes use lowercase kebab-case. Shared IDs such as `user-stat
 
 CHPP field names, JSON response property names, local-storage keys, OAuth parameter names, and other external data-contract keys are not renamed just to match JavaScript identifiers.
 
+## CHPP file versions
+
+All CHPP file-version numbers used by the application are centralized in `chpp-versions.js`. The current request set is:
+
+| CHPP file | Version | Used by |
+| --- | ---: | --- |
+| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Lineup Builder, Roster Usefulness |
+| `matches` | `2.9` | Lineup Builder |
+| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Usefulness |
+| `training` | `2.2` | Lineup Builder |
+| `worlddetails` | `2.0` | Team Page Builder, Lineup Builder |
+| `matchlineup` | `2.1` | Lineup Builder |
+| `matchesarchive` | `1.5` | Team Page Builder |
+| `arenadetails` | `1.7` | Team Page Builder |
+| `leaguedetails` | `1.6` | Team Page Builder |
+| `club` | `1.5` | Team Page Builder |
+| `economy` | `1.4` | Team Page Builder |
+| `managercompendium` | `1.7` | account/team discovery |
+
+CHPP schema upgrades are treated as shared compatibility maintenance unless they change a tool's user-facing behavior. The Lineup Builder's move to `matches` v2.9 is a user-facing change because it adds the current match metadata needed to recognize Hattrick Arena fixtures.
+
 Cloudflare Pages Functions must export the framework handler name `onRequestGet`. That required export name is the only JavaScript declaration intentionally repeated across function files.
 
 ## Visual conventions
@@ -52,6 +74,12 @@ Cloudflare Pages Functions must export the framework handler name `onRequestGet`
 All pages use `/styles.css` as the single visual source of truth. Page-specific layout should use the existing blue, gold, gray, red, and green design tokens declared in `:root`; avoid inline `<style>` blocks and one-off color values in page HTML.
 
 Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/me` enriches only the logged-in manager's own managed-team list with those logo URLs. When present, the active team's logo is shown at a fixed 54px height with proportional width capped at 90px and a 12px gap to the text, vertically centered beside the team name and Manager/TeamID lines. When a team has no supplied logo, the image is removed entirely and the text returns to the original alignment with no reserved blank space.
+
+## Lineup Builder v0.2.0
+
+Lineup Builder v0.2.0 updates its CHPP dependencies to the current file versions and adds current `matches` metadata to the fixture model. The match parser now retains `SourceSystem` and `MatchContextId`, allowing Hattrick Arena ladder fixtures (`MatchType` 62, `SourceSystem` `htointegrated`) to appear in the normal upcoming-match picker while remaining classified as non-training matches. Senior-team `matches` requests explicitly use `isYouth=false`. The current `players` schema builds display names from `FirstName`, `NickName`, and `LastName`, and current `matchlineup` field positions are resolved from `RoleID` while retaining the older `PositionCode` mapping as a compatibility fallback.
+
+The match picker now shows only kickoff date/time and `Home vs Away`; match type, training-week position, and nonstandard source information are shown in the selected-match summary below it. Full-training lineup positions use a solid gold border and partial-training positions use a dashed gold border. A floating `Back to top` control appears after the page has been scrolled down.
 
 ## Lineup substitute selection
 
@@ -166,7 +194,7 @@ The Lineup Builder initializes immediately when the DOM is already ready and sur
 
 The Team Page Builder is intentionally limited to senior teams managed by the logged-in Hattrick user. The browser only offers the user's managed-team selector, and `/api/team` independently verifies ownership before returning article data.
 
-The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `arenadetails`, `leaguedetails`, `playerdetails`, `economy`, `players`, and `matchesarchive`. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
+The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `players`, `arenadetails`, `leaguedetails`, `club`, and `economy`. Archive support uses `matchesarchive` when enabled by the builder workflow. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
 
 After team data is loaded, the article builder presents every supported article section as a checkbox. Sections with usable data start selected; sections without usable data remain visible but disabled. Users may select any combination of available sections and create one article output in the standard article order. Section-specific controls live inside their parent section.
 
@@ -190,7 +218,7 @@ The Team Page Builder and Lineup Planner are active. Roster Usefulness is on hol
 
 Roster Usefulness is currently on hold pending additional CHPP access. When enabled, the tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
 
-The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v1.3 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
+The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v2.8 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
 
 `Unused Days = today - max(Arrival Date, Last Match Date)`
 

@@ -242,11 +242,12 @@ function buildSquad(data) {
 function buildStaff(data) {
   const staff = Array.isArray(data.staff) ? data.staff : [];
   if (!data.coach?.name && !staff.length) return "";
-  const lines = ["== Team staff ==", "", '{| class="wikitable"', "! Role !! Name / Count"];
+  const lines = ["== Team staff ==", "", '{| class="wikitable"', "! Role !! Name / Level"];
   if (data.coach?.name) lines.push("|-", `| Head coach || ${wikiText(data.coach.name)}`);
   for (const person of staff) {
-    if (!person?.role || !hasValue(person.count)) continue;
-    lines.push("|-", `| ${wikiText(person.role)} || ${formatNumber(person.count)}`);
+    const value = hasValue(person?.level) ? person.level : person?.count;
+    if (!person?.role || !hasValue(value)) continue;
+    lines.push("|-", `| ${wikiText(person.role)} || ${formatNumber(value)}`);
   }
   lines.push("|}");
   return lines.join("\n");
@@ -312,7 +313,7 @@ const sectionDefinitions = [
   { key: "arena", label: "Arena", description: "Home arena and available seating capacity details.", unavailable: "No arena data available", available: data => Boolean(buildArena(data)), build: buildArena },
   { key: "supporters", label: "Supporters", description: "Fan club name and size when available.", unavailable: "No supporter data available", available: data => Boolean(buildSupporters(data)), build: buildSupporters },
   { key: "squad", label: "Current Squad", description: "Current player list and available public match statistics.", unavailable: "No squad data available", available: data => Boolean(buildSquad(data)), build: buildSquad },
-  { key: "staff", label: "Team Staff", description: "Head coach and available specialist staff counts.", unavailable: "No staff data available", available: data => Boolean(buildStaff(data)), build: buildStaff },
+  { key: "staff", label: "Team Staff", description: "Head coach and available specialist staff levels.", unavailable: "No staff data available", available: data => Boolean(buildStaff(data)), build: buildStaff },
   { key: "honours", label: data => honoursLabel(data), description: "Available competition honors earned by the club.", unavailable: "No honors data available", available: data => Boolean(buildHonours(data)), build: buildHonours },
   { key: "season-results", label: "Season-by-Season Results", description: "Available historical league and cup results by season.", unavailable: "No season results available", available: data => Boolean(buildSeasonResults(data)), build: buildSeasonResults, options: "season-results" },
   { key: "hall-of-fame", label: "Hall of Fame", description: "Hall of Fame players associated with the club.", unavailable: "No Hall of Fame data available", available: data => Boolean(buildHallOfFame(data)), build: buildHallOfFame },

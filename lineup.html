@@ -26,7 +26,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=0.1.1&amp;rev=logo-54-12">
+  <link rel="stylesheet" href="/styles.css?v=0.2.0&amp;rev=logo-54-12">
 </head>
 
 <body>
@@ -302,6 +302,24 @@
 
               <span
                 id="lineup-summary-training-week-position"
+                class="lineup-summary-value"
+              >
+                -
+              </span>
+            </div>
+
+
+            <div
+              id="lineup-summary-source-item"
+              class="lineup-summary-item"
+              hidden
+            >
+              <span class="lineup-summary-label">
+                Source
+              </span>
+
+              <span
+                id="lineup-summary-source"
                 class="lineup-summary-value"
               >
                 -
@@ -1407,6 +1425,17 @@
   </main>
 
 
+  <button
+    id="lineup-back-to-top"
+    class="lineup-back-to-top"
+    type="button"
+    aria-label="Back to top"
+    hidden
+  >
+    ↑ Back to top
+  </button>
+
+
   <footer class="site-footer">
 
     <div class="footer-inner">
@@ -1452,9 +1481,9 @@
   </footer>
 
 
-  <script type="module" src="/versions.js?v=0.1.1"></script>
+  <script type="module" src="/versions.js?v=0.2.0"></script>
   <script src="/app.js?v=0.1.1"></script>
-  <script src="/lineup.js?v=0.1.1"></script>
+  <script src="/lineup.js?v=0.2.0"></script>
 
 </body>
 </html>

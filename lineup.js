@@ -56,6 +56,21 @@ const htwbLineupTrainingWeekPositionElement =
     "lineup-summary-training-week-position"
   );
 
+const htwbLineupSourceItemElement =
+  document.getElementById(
+    "lineup-summary-source-item"
+  );
+
+const htwbLineupSourceElement =
+  document.getElementById(
+    "lineup-summary-source"
+  );
+
+const htwbLineupBackToTopElement =
+  document.getElementById(
+    "lineup-back-to-top"
+  );
+
 const htwbLineupSelectedFormationElement =
   document.getElementById(
     "lineup-selected-formation"
@@ -4134,6 +4149,30 @@ function htwbLineupGetMatchTypeLabel(
 }
 
 
+function htwbLineupGetSourceSystemLabel(
+  htwbLineupSourceSystem
+) {
+  const htwbLineupSource =
+    String(htwbLineupSourceSystem || "")
+      .trim()
+      .toLowerCase();
+
+  if (htwbLineupSource === "htointegrated") {
+    return "Hattrick Arena";
+  }
+
+  if (htwbLineupSource === "youth") {
+    return "Hattrick Youth";
+  }
+
+  if (htwbLineupSource === "hattrick") {
+    return "Hattrick";
+  }
+
+  return htwbLineupSourceSystem || "";
+}
+
+
 function htwbLineupGetTrainingWeekLabel(
   htwbLineupValue
 ) {
@@ -4226,21 +4265,12 @@ function htwbLineupRenderMatchChoices(
             ? `${htwbLineupMatch.homeTeamName} vs ${htwbLineupMatch.awayTeamName}`
             : `Match ${htwbLineupMatch.matchId}`;
 
-        const htwbLineupPositionLabel =
-          htwbLineupGetTrainingWeekLabel(
-            htwbLineupMatch.trainingWeekPosition
-          );
-
         const htwbLineupLabel = [
           htwbLineupFormatMatchChoiceDate(
             htwbLineupMatch.matchDate
           ),
-          htwbLineupMatchName,
-          htwbLineupGetMatchTypeLabel(
-            htwbLineupMatch.matchType
-          ),
-          htwbLineupPositionLabel
-        ].join(" - ");
+          htwbLineupMatchName
+        ].join(" — ");
 
         return (
           `<option value="${htwbLineupEscapeHtml(htwbLineupMatch.matchId)}">` +
@@ -4274,13 +4304,18 @@ function htwbLineupResetMatchSummary() {
       htwbLineupTeamNameElement,
       htwbLineupMatchNameElement,
       htwbLineupMatchTypeElement,
-      htwbLineupTrainingWeekPositionElement
+      htwbLineupTrainingWeekPositionElement,
+      htwbLineupSourceElement
     ]
   ) {
     if (htwbLineupElement) {
       htwbLineupElement.textContent =
         "-";
     }
+  }
+
+  if (htwbLineupSourceItemElement) {
+    htwbLineupSourceItemElement.hidden = true;
   }
 }
 
@@ -4335,6 +4370,29 @@ function htwbLineupRenderMatchSummary(
       htwbLineupGetTrainingWeekLabel(
         htwbLineupMatch.trainingWeekPosition
       );
+  }
+
+  const htwbLineupSourceSystem =
+    String(htwbLineupMatch.sourceSystem || "")
+      .trim()
+      .toLowerCase();
+
+  const htwbLineupShowSource =
+    Boolean(htwbLineupSourceSystem) &&
+    htwbLineupSourceSystem !== "hattrick";
+
+  if (htwbLineupSourceItemElement) {
+    htwbLineupSourceItemElement.hidden =
+      !htwbLineupShowSource;
+  }
+
+  if (htwbLineupSourceElement) {
+    htwbLineupSourceElement.textContent =
+      htwbLineupShowSource
+        ? htwbLineupGetSourceSystemLabel(
+            htwbLineupMatch.sourceSystem
+          )
+        : "-";
   }
 }
 
@@ -6443,10 +6501,50 @@ function htwbLineupSetupTeamSelectionListener() {
 
 
 /* =========================================================
+   BACK TO TOP
+   ========================================================= */
+
+function htwbLineupUpdateBackToTopVisibility() {
+  if (!htwbLineupBackToTopElement) {
+    return;
+  }
+
+  htwbLineupBackToTopElement.hidden =
+    window.scrollY < 600;
+}
+
+function htwbLineupSetupBackToTop() {
+  if (!htwbLineupBackToTopElement) {
+    return;
+  }
+
+  htwbLineupBackToTopElement.addEventListener(
+    "click",
+    () => {
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
+  );
+
+  window.addEventListener(
+    "scroll",
+    htwbLineupUpdateBackToTopVisibility,
+    { passive: true }
+  );
+
+  htwbLineupUpdateBackToTopVisibility();
+}
+
+
+/* =========================================================
    INITIALIZE
    ========================================================= */
 
 function htwbLineupInitializeLineupBuilder() {
+  htwbLineupSetupBackToTop();
+
   htwbLineupSetResultsVisible(
     false
   );

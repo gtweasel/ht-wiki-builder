@@ -1128,11 +1128,11 @@ select {
 }
 
 .lineup-position.training-slot {
-  border: 3px solid var(--blue-700);
+  border: 3px solid var(--gold);
 }
 
 .lineup-position.partial-training-slot {
-  border: 3px dashed var(--gold-dark);
+  border: 3px dashed var(--gold);
 }
 
 .lineup-legend {
@@ -1159,11 +1159,11 @@ select {
 }
 
 .lineup-legend-box-full {
-  border: 3px solid var(--blue-700);
+  border: 3px solid var(--gold);
 }
 
 .lineup-legend-box-partial {
-  border: 3px dashed var(--gold-dark);
+  border: 3px dashed var(--gold);
 }
 
 .lineup-legend-box-unused {
@@ -1631,6 +1631,39 @@ select {
   background: var(--gray-50);
   border: 1px solid var(--gray-200);
   border-radius: 7px;
+}
+
+.lineup-back-to-top {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 60;
+  min-height: 42px;
+  padding: 9px 14px;
+  background: var(--gold);
+  color: var(--blue-950);
+  border: 2px solid var(--blue-950);
+  border-radius: 999px;
+  box-shadow: var(--shadow);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lineup-back-to-top:hover {
+  background: var(--gold-dark);
+}
+
+.lineup-back-to-top:focus-visible {
+  outline: 3px solid rgba(244, 196, 48, 0.38);
+  outline-offset: 2px;
+}
+
+@media (max-width: 800px) {
+  .lineup-back-to-top {
+    right: 14px;
+    bottom: 14px;
+  }
 }
 
 /* =========================================================
