@@ -1137,18 +1137,18 @@ select {
 .lineup-position.partial-training-slot::after {
   content: "";
   position: absolute;
-  inset: 5px;
+  inset: 3px;
   border-radius: 5px;
   pointer-events: none;
   box-shadow: 0 0 0 2px var(--white);
 }
 
 .lineup-position.training-slot::after {
-  border: 2px solid var(--gold);
+  border: 3px solid var(--gold);
 }
 
 .lineup-position.partial-training-slot::after {
-  border: 2px dashed var(--gold);
+  border: 3px dashed var(--gold);
 }
 
 .lineup-legend {
