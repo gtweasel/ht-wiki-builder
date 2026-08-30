@@ -656,11 +656,11 @@ const HTWB_LINEUP_TRAINING_TYPES = [
     name: "Scoring and Set Pieces",
     skill: "scoring",
     skillLabel: "Scoring",
-    requiredPlayers: 20,
-    idealEffectPerMatch: 10,
+    requiredPlayers: 22,
+    idealEffectPerMatch: 11,
     tiePriority: 11,
     trainingEfficiency: 0.571,
-    fullRoles: ["DEFENDER", "IM", "WG", "FW"],
+    fullRoles: ["GK", "DEFENDER", "IM", "WG", "FW"],
     partialRoles: [],
     partialRoleWeights: {}
   }
