@@ -860,7 +860,7 @@ function htwbLineupFormatPlayerName(
     ).trim();
 
   return htwbLineupPlayerNumber
-    ? `${htwbLineupPlayerNumber} ${htwbLineupPlayerName}`
+    ? `${htwbLineupPlayerNumber}. ${htwbLineupPlayerName}`
     : htwbLineupPlayerName;
 }
 
