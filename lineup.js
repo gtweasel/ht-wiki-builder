@@ -6090,7 +6090,7 @@ function htwbLineupRenderLineup(
 
       const htwbLineupTrainingEffect =
         htwbLineupGetTrainingEffectForSlot(
-          htwbLineupResult.trainingResult.training,
+          htwbLineupResult.selectedTraining,
           htwbLineupSlot
         );
 
