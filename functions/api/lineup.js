@@ -495,6 +495,23 @@ function htwbApiLineupParsePlayers(
             htwbApiLineupPlayerXml
           ),
 
+        number:
+          (() => {
+            const htwbApiLineupPlayerNumber =
+              htwbApiLineupXmlValue(
+                htwbApiLineupPlayerXml,
+                "PlayerNumber"
+              );
+
+            return (
+              htwbApiLineupPlayerNumber &&
+              htwbApiLineupPlayerNumber !==
+                "100"
+            )
+              ? htwbApiLineupPlayerNumber
+              : "";
+          })(),
+
         age:
           htwbApiLineupXmlNumber(
             htwbApiLineupPlayerXml,

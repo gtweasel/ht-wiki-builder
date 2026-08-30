@@ -841,6 +841,30 @@ function htwbLineupPercent(htwbLineupValue) {
 }
 
 
+function htwbLineupFormatPlayerName(
+  htwbLineupPlayer,
+  htwbLineupFallback = "OPEN"
+) {
+  const htwbLineupPlayerName =
+    String(
+      htwbLineupPlayer?.name || ""
+    ).trim();
+
+  if (!htwbLineupPlayerName) {
+    return htwbLineupFallback;
+  }
+
+  const htwbLineupPlayerNumber =
+    String(
+      htwbLineupPlayer?.number || ""
+    ).trim();
+
+  return htwbLineupPlayerNumber
+    ? `${htwbLineupPlayerNumber} ${htwbLineupPlayerName}`
+    : htwbLineupPlayerName;
+}
+
+
 /* =========================================================
    STATUS
    ========================================================= */
@@ -6048,6 +6072,44 @@ function htwbLineupRenderLineup(
       htwbLineupStrengthOnly;
   }
 
+  if (!htwbLineupStrengthOnly) {
+    for (
+      const htwbLineupSlot
+      of HTWB_LINEUP_POSITION_ORDER
+    ) {
+      const htwbLineupSlotElement =
+        document.getElementById(
+          `lineup-slot-${htwbLineupSlot.toLowerCase()}`
+        );
+
+      if (
+        !htwbLineupSlotElement
+      ) {
+        continue;
+      }
+
+      const htwbLineupTrainingEffect =
+        htwbLineupGetTrainingEffectForSlot(
+          htwbLineupResult.trainingResult.training,
+          htwbLineupSlot
+        );
+
+      if (
+        htwbLineupTrainingEffect >= 1
+      ) {
+        htwbLineupSlotElement.classList.add(
+          "training-slot"
+        );
+      } else if (
+        htwbLineupTrainingEffect > 0
+      ) {
+        htwbLineupSlotElement.classList.add(
+          "partial-training-slot"
+        );
+      }
+    }
+  }
+
   for (
     const htwbLineupSlot
     of htwbLineupLineupResult.slotLayout
@@ -6076,32 +6138,6 @@ function htwbLineupRenderLineup(
     htwbLineupSlotElement.classList.remove(
       "hidden"
     );
-
-    const htwbLineupCategory =
-      htwbLineupGetSelectionCategory(
-        htwbLineupSlot,
-        htwbLineupLineupResult.order
-      );
-
-    if (
-      !htwbLineupStrengthOnly &&
-      htwbLineupCategory ===
-        "full"
-    ) {
-      htwbLineupSlotElement.classList.add(
-        "training-slot"
-      );
-    }
-
-    if (
-      !htwbLineupStrengthOnly &&
-      htwbLineupCategory ===
-        "partial"
-    ) {
-      htwbLineupSlotElement.classList.add(
-        "partial-training-slot"
-      );
-    }
 
     const htwbLineupPlayer =
       htwbLineupLineupResult
@@ -6133,7 +6169,9 @@ function htwbLineupRenderLineup(
       htwbLineupPlayerElement
     ) {
       htwbLineupPlayerElement.textContent =
-        htwbLineupPlayer.name;
+        htwbLineupFormatPlayerName(
+          htwbLineupPlayer
+        );
     }
 
     if (
@@ -6225,9 +6263,9 @@ function htwbLineupRenderSubstitutes(
           htwbLineupSubstitutePlayerElement
         ) {
           htwbLineupSubstitutePlayerElement.textContent =
-            htwbLineupSubstitutePlayer
-              ?.name ||
-            "OPEN";
+            htwbLineupFormatPlayerName(
+              htwbLineupSubstitutePlayer
+            );
         }
 
         if (
@@ -6283,8 +6321,9 @@ function htwbLineupRenderMatchRoles(
     htwbLineupCaptainNameElement
   ) {
     htwbLineupCaptainNameElement.textContent =
-      htwbLineupCaptain?.player?.name ||
-      "OPEN";
+      htwbLineupFormatPlayerName(
+        htwbLineupCaptain?.player
+      );
   }
 
   if (
@@ -6317,8 +6356,9 @@ function htwbLineupRenderMatchRoles(
     htwbLineupSetPiecesNameElement
   ) {
     htwbLineupSetPiecesNameElement.textContent =
-      htwbLineupSetPieces?.player?.name ||
-      "OPEN";
+      htwbLineupFormatPlayerName(
+        htwbLineupSetPieces?.player
+      );
   }
 
   if (
@@ -6408,8 +6448,9 @@ function htwbLineupRenderPenaltyTakers(
 
                 <span class="lineup-penalty-name">
                   ${htwbLineupEscapeHtml(
-                    htwbLineupPlayer.name ||
-                    "OPEN"
+                    htwbLineupFormatPlayerName(
+                      htwbLineupPlayer
+                    )
                   )}
                 </span>
 
@@ -6480,7 +6521,10 @@ function htwbLineupRenderExcludedPlayers(
           <tr>
             <td>
               ${htwbLineupEscapeHtml(
-                htwbLineupItem.player.name
+                htwbLineupFormatPlayerName(
+                  htwbLineupItem.player,
+                  ""
+                )
               )}
             </td>
 
@@ -6552,7 +6596,10 @@ function htwbLineupRenderEligiblePlayers(
           <tr>
             <td>
               ${htwbLineupEscapeHtml(
-                htwbLineupPlayer.name
+                htwbLineupFormatPlayerName(
+                  htwbLineupPlayer,
+                  ""
+                )
               )}
             </td>
 
@@ -6691,9 +6738,9 @@ function htwbLineupRenderSelectionOrder(
             -
 
             ${htwbLineupEscapeHtml(
-              htwbLineupSelection.player
-                ?.name ||
-              "OPEN"
+              htwbLineupFormatPlayerName(
+                htwbLineupSelection.player
+              )
             )}
 
             (${htwbLineupEscapeHtml(
@@ -6724,9 +6771,9 @@ function htwbLineupRenderSelectionOrder(
             -
 
             ${htwbLineupEscapeHtml(
-              htwbLineupSubstituteSelection.player
-                ?.name ||
-              "OPEN"
+              htwbLineupFormatPlayerName(
+                htwbLineupSubstituteSelection.player
+              )
             )}
 
             (Substitute)
