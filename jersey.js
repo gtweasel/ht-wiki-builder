@@ -349,6 +349,32 @@ function htwbJerseyReassignAll(htwbJerseyPlayers) {
   };
 }
 
+
+function htwbJerseyCurrentNumberSort(htwbJerseyPlayers) {
+  return [...htwbJerseyPlayers].sort(
+    (htwbJerseyA, htwbJerseyB) => {
+      const htwbJerseyANumber =
+        htwbJerseyValidNumber(htwbJerseyA.number)
+          ? Number(htwbJerseyA.number)
+          : Number.POSITIVE_INFINITY;
+
+      const htwbJerseyBNumber =
+        htwbJerseyValidNumber(htwbJerseyB.number)
+          ? Number(htwbJerseyB.number)
+          : Number.POSITIVE_INFINITY;
+
+      if (htwbJerseyANumber !== htwbJerseyBNumber) {
+        return htwbJerseyANumber - htwbJerseyBNumber;
+      }
+
+      return (
+        Number(htwbJerseyA.playerId) -
+        Number(htwbJerseyB.playerId)
+      );
+    }
+  );
+}
+
 function htwbJerseySelectedMode() {
   return (
     document.querySelector(
@@ -446,7 +472,7 @@ function htwbJerseyRenderReset(htwbJerseyResult) {
     htwbJerseyChangeEmpty.hidden = false;
   }
 
-  for (const htwbJerseyPlayer of htwbJerseyResult.changed) {
+  for (const htwbJerseyPlayer of htwbJerseyCurrentNumberSort(htwbJerseyResult.changed)) {
     const htwbJerseyRow =
       document.createElement("tr");
 
@@ -476,7 +502,7 @@ function htwbJerseyRenderReset(htwbJerseyResult) {
     htwbJerseyUnchangedEmpty.hidden = false;
   }
 
-  for (const htwbJerseyPlayer of htwbJerseyResult.unchanged) {
+  for (const htwbJerseyPlayer of htwbJerseyCurrentNumberSort(htwbJerseyResult.unchanged)) {
     const htwbJerseyItem =
       document.createElement("li");
 
