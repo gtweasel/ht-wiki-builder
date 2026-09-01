@@ -1633,12 +1633,83 @@ select {
   margin-top: 22px;
 }
 
-.roster-table .roster-rank,
+.roster-table {
+  table-layout: fixed;
+}
+
+.roster-table th,
+.roster-table td {
+  padding: 9px 7px;
+  font-size: 12px;
+}
+
+.roster-table th {
+  font-size: 11px;
+}
+
+.roster-table .roster-player-column {
+  width: 25%;
+}
+
+.roster-table th:nth-child(2),
+.roster-table td:nth-child(2) {
+  width: 9%;
+}
+
+.roster-table th:nth-child(3),
+.roster-table td:nth-child(3),
+.roster-table th:nth-child(4),
+.roster-table td:nth-child(4) {
+  width: 14%;
+}
+
+.roster-table th:nth-child(5),
+.roster-table td:nth-child(5) {
+  width: 8%;
+}
+
+.roster-table th:nth-child(6),
+.roster-table td:nth-child(6) {
+  width: 10%;
+}
+
+.roster-table th:nth-child(7),
+.roster-table td:nth-child(7) {
+  width: 12%;
+}
+
+.roster-table th:nth-child(8),
+.roster-table td:nth-child(8) {
+  width: 8%;
+}
+
+.roster-table td:first-child {
+  white-space: normal;
+}
+
 .roster-table .roster-usefulness-score {
   color: var(--blue-950);
   font-family: "Barlow Condensed", sans-serif;
   font-size: 18px;
   font-weight: 700;
+}
+
+
+@media (max-width: 720px) {
+  .roster-table {
+    min-width: 720px;
+    table-layout: auto;
+  }
+
+  .roster-table th,
+  .roster-table td {
+    padding: 9px 8px;
+    white-space: nowrap;
+  }
+
+  .roster-table td:first-child {
+    white-space: nowrap;
+  }
 }
 
 .roster-player-name {

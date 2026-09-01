@@ -554,6 +554,22 @@ function htwbApiRosterPlayerName(
     .trim();
 }
 
+function htwbApiRosterIsNeverPlayedDate(
+  htwbApiRosterDate
+) {
+  const htwbApiRosterNormalizedDate =
+    String(htwbApiRosterDate || "").trim();
+
+  return (
+    /^1901-01-01(?:[ T].*)?$/i.test(
+      htwbApiRosterNormalizedDate
+    ) ||
+    /^0001-01-01(?:[ T].*)?$/i.test(
+      htwbApiRosterNormalizedDate
+    )
+  );
+}
+
 function htwbApiRosterParseLastMatch(
   htwbApiRosterPlayerXml
 ) {
@@ -593,15 +609,45 @@ function htwbApiRosterParseLastMatch(
       "Date"
     );
 
+  const htwbApiRosterHasMatchId =
+    htwbApiRosterLastMatchId !== null &&
+    htwbApiRosterLastMatchId > 0;
+
+  const htwbApiRosterNeverPlayed =
+    !htwbApiRosterHasMatchId &&
+    (
+      !htwbApiRosterLastMatchDate ||
+      htwbApiRosterIsNeverPlayedDate(
+        htwbApiRosterLastMatchDate
+      )
+    );
+
+  if (htwbApiRosterNeverPlayed) {
+    return {
+      known: true,
+      id: null,
+      date: ""
+    };
+  }
+
+  if (
+    !htwbApiRosterHasMatchId ||
+    !htwbApiRosterLastMatchDate ||
+    htwbApiRosterIsNeverPlayedDate(
+      htwbApiRosterLastMatchDate
+    )
+  ) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
   return {
     known: true,
-    id:
-      htwbApiRosterLastMatchId !== null &&
-      htwbApiRosterLastMatchId > 0
-        ? htwbApiRosterLastMatchId
-        : null,
-    date:
-      htwbApiRosterLastMatchDate || ""
+    id: htwbApiRosterLastMatchId,
+    date: htwbApiRosterLastMatchDate
   };
 }
 
@@ -667,6 +713,23 @@ function htwbApiRosterParsePlayers(
             htwbApiRosterPlayerName(
               htwbApiRosterPlayerXml
             ),
+
+          number:
+            (() => {
+              const htwbApiRosterPlayerNumber =
+                htwbApiRosterXmlValue(
+                  htwbApiRosterPlayerXml,
+                  "PlayerNumber"
+                );
+
+              return (
+                htwbApiRosterPlayerNumber &&
+                htwbApiRosterPlayerNumber !==
+                  "100"
+              )
+                ? htwbApiRosterPlayerNumber
+                : "";
+            })(),
 
           age:
             htwbApiRosterXmlNumber(

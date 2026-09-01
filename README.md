@@ -219,9 +219,9 @@ The Team Page Builder, Lineup Planner, and Roster Evaluator are active; the othe
 
 ## Roster Evaluator
 
-Roster Evaluator ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
+Roster Evaluator lists every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ordering. The results table shows Player, Age, Last Match, Arrival, Unused, Skill Value, Projected Value, and Overall; intermediate Current/Potential usefulness components remain internal to the calculation. When a player has a jersey number, the display follows the shared `#. Player Name` convention; CHPP `PlayerNumber` value `100` is treated as no assigned number.
 
-The endpoint primarily uses the owned-team `teamdetails` and `players` CHPP files. Players v2.8 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and normally the player's `LastMatch`. If `LastMatch` is omitted, the endpoint falls back to Player Details v3.2 with match info for only the affected players so the evaluator never silently treats missing match data as if a player had never played.
+The endpoint primarily uses the owned-team `teamdetails` and `players` CHPP files. Players v2.8 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and normally the player's `LastMatch`. If `LastMatch` is omitted, the endpoint falls back to Player Details v3.2 with match info for only the affected players so the evaluator never silently treats missing match data as if a player had never played. A zero/missing match ID paired with CHPP's placeholder date (`1901-01-01` or `0001-01-01`) is treated as **never played**: no artificial last-match date is displayed, and the arrival date is used for inactivity.
 
 `Unused Days = today - max(Arrival Date, Last Match Date)`
 

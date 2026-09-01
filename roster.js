@@ -814,9 +814,19 @@ function htwbRosterRenderPlayerName(
   const htwbRosterName =
     document.createElement("span");
 
-  htwbRosterName.textContent =
+  const htwbRosterPlayerName =
     htwbRosterPlayer.name ||
     `Player ${htwbRosterPlayer.playerId}`;
+
+  const htwbRosterPlayerNumber =
+    String(
+      htwbRosterPlayer.number || ""
+    ).trim();
+
+  htwbRosterName.textContent =
+    htwbRosterPlayerNumber
+      ? `${htwbRosterPlayerNumber}. ${htwbRosterPlayerName}`
+      : htwbRosterPlayerName;
 
   htwbRosterNameWrap.appendChild(
     htwbRosterName
@@ -858,15 +868,9 @@ function htwbRosterRenderRanking(
     "";
 
   htwbRosterRanking.players.forEach(
-    (htwbRosterPlayer, htwbRosterIndex) => {
+    htwbRosterPlayer => {
       const htwbRosterRow =
         document.createElement("tr");
-
-      htwbRosterAppendCell(
-        htwbRosterRow,
-        htwbRosterIndex + 1,
-        "number roster-rank"
-      );
 
       htwbRosterRenderPlayerName(
         htwbRosterRow,
@@ -918,24 +922,6 @@ function htwbRosterRenderRanking(
         htwbRosterRow,
         htwbRosterFormatNumber(
           htwbRosterPlayer.projectedValue,
-          0
-        ),
-        "number"
-      );
-
-      htwbRosterAppendCell(
-        htwbRosterRow,
-        htwbRosterFormatNumber(
-          htwbRosterPlayer.currentUsefulness,
-          0
-        ),
-        "number"
-      );
-
-      htwbRosterAppendCell(
-        htwbRosterRow,
-        htwbRosterFormatNumber(
-          htwbRosterPlayer.potentialUsefulness,
           0
         ),
         "number"
