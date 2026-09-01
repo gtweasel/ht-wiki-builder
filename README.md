@@ -10,8 +10,8 @@ Current versions:
 
 - HT Wiki Builder: `0.1.1`
 - Team Page Builder: `0.1.1`
-- Lineup Builder: `0.1.1`
-- Roster Usefulness: `0.1.1`
+- Lineup Builder: `0.2.1`
+- Roster Evaluator: `0.2.1`
 
 Version numbers follow these rules:
 
@@ -29,6 +29,7 @@ The overall application and each existing tool are versioned independently. A to
 The project uses file-scoped identifier prefixes so browser scripts and Cloudflare Functions cannot accidentally reuse the same JavaScript variable or helper name.
 
 - `versions.js`: `HTWB_VERSIONS` and shared version rendering
+- `chpp-versions.js`: `HTWB_CHPP_VERSIONS`, the centralized CHPP file-version registry
 - `app.js`: `htwbApp...` / `HTWB_APP_...`
 - `team.js`: `htwbTeam...` / `HTWB_TEAM_...`
 - `lineup.js`: `htwbLineup...` / `HTWB_LINEUP_...`
@@ -45,6 +46,28 @@ HTML IDs and CSS classes use lowercase kebab-case. Shared IDs such as `user-stat
 
 CHPP field names, JSON response property names, local-storage keys, OAuth parameter names, and other external data-contract keys are not renamed just to match JavaScript identifiers.
 
+## CHPP file versions
+
+All CHPP file-version numbers used by the application are centralized in `chpp-versions.js`. The current request set is:
+
+| CHPP file | Version | Used by |
+| --- | ---: | --- |
+| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Lineup Builder, Roster Evaluator |
+| `matches` | `2.9` | Lineup Builder |
+| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Evaluator |
+| `playerdetails` | `3.2` | Roster Evaluator fallback for missing last-match data |
+| `training` | `2.2` | Lineup Builder |
+| `worlddetails` | `2.0` | Team Page Builder, Lineup Builder |
+| `matchlineup` | `2.1` | Lineup Builder |
+| `matchesarchive` | `1.5` | Team Page Builder |
+| `arenadetails` | `1.7` | Team Page Builder |
+| `leaguedetails` | `1.6` | Team Page Builder |
+| `club` | `1.5` | Team Page Builder |
+| `economy` | `1.4` | Team Page Builder |
+| `managercompendium` | `1.7` | account/team discovery |
+
+CHPP schema upgrades are treated as shared compatibility maintenance unless they change a tool's user-facing behavior. The Lineup Builder's move to `matches` v2.9 is a user-facing change because it adds the current match metadata needed to recognize Hattrick Arena fixtures.
+
 Cloudflare Pages Functions must export the framework handler name `onRequestGet`. That required export name is the only JavaScript declaration intentionally repeated across function files.
 
 ## Visual conventions
@@ -53,13 +76,21 @@ All pages use `/styles.css` as the single visual source of truth. Page-specific 
 
 Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/me` enriches only the logged-in manager's own managed-team list with those logo URLs. When present, the active team's logo is shown at a fixed 54px height with proportional width capped at 90px and a 12px gap to the text, vertically centered beside the team name and Manager/TeamID lines. When a team has no supplied logo, the image is removed entirely and the text returns to the original alignment with no reserved blank space.
 
+## Lineup Builder v0.2.1
+
+Lineup Builder v0.2.1 updates its CHPP dependencies to the current file versions and adds current `matches` metadata to the fixture model. The match parser now retains `SourceSystem` and `MatchContextId`, allowing Hattrick Arena ladder fixtures (`MatchType` 62, `SourceSystem` `htointegrated`) to appear in the normal upcoming-match picker while remaining classified as non-training matches. Senior-team `matches` requests explicitly use `isYouth=false`. The current `players` schema builds display names from `FirstName`, `NickName`, and `LastName`, and current `matchlineup` field positions are resolved from `RoleID` while retaining the older `PositionCode` mapping as a compatibility fallback.
+
+The match picker shows kickoff date/time, `Home vs Away`, and the match type in parentheses; training-week position and nonstandard source information are shown in the selected-match summary below it. Full-training lineup positions use a solid gold border and partial-training positions use a dashed gold border. The formation area uses a muted pale-blue background. A floating `Back to top` control appears after the page has been scrolled down.
+
 ## Lineup substitute selection
 
 After the starting XI is selected, the Lineup Builder fills seven substitute slots from the remaining eligible players in this fixed greedy order:
 
 `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-WG`, `SUB-FW`, `SUB-EX`.
 
-The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-EX` (Hattrick "Extra") uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next substitute slot is calculated. The visible bench is displayed in Hattrick order: `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-FW`, `SUB-WG`, `SUB-EX`; this display order does not change the calculation order.
+The first six slots use the same final position-rating formulas used by the starting lineup. `SUB-DE` uses the central-defender (`CD`) rating. `SUB-EX` (Hattrick "Extra") uses the arithmetic mean of the player's final `GK`, `CD`, `WB`, `IM`, `WG`, and `FW` ratings. A selected substitute is removed from the available pool before the next first-choice substitute slot is calculated. The visible bench is displayed in Hattrick order: `SUB-GK`, `SUB-DE`, `SUB-WB`, `SUB-IM`, `SUB-FW`, `SUB-WG`, `SUB-EX`; this display order does not change the calculation order.
+
+Each role also shows a second-choice substitute. The second choice is calculated only from the other six first-choice substitutes, using the same position formula for that role. Second-choice assignments are independent, so the same player may be reused as the second choice for multiple different roles.
 
 
 ## Captain and set-pieces selection
@@ -149,7 +180,7 @@ The overall winning combination supplies both initial dropdown selections, but *
 
 The Match section deliberately uses two user actions. **Load Upcoming Matches** makes a lightweight request for the owned team's fixture list, sorts every returned upcoming fixture by kickoff time, and preselects the next training-eligible match even when a non-training tournament fixture occurs earlier. Changing the dropdown only changes the selected fixture and clears any old lineup result; it does not download player/training data or build a lineup. **Build Lineup** then loads the full roster/training data for the selected fixture and runs the appropriate recommendation model.
 
-Training-eligible fixtures are classified using the global Hattrick-time schedule split: Friday 06:00 through Monday 18:00 is the first training-match window, and Monday 18:00 through Friday 06:00 is the second. The two windows are exactly 84 hours each. Non-training tournament/special fixtures are outside the weekly training-position logic and use the competitive lineup priorities.
+Training-eligible fixtures are classified using the global Hattrick-time schedule split: Friday 06:00 through Monday 18:00 is the first training-match window, and Monday 18:00 through Friday 06:00 is the second. The two windows are exactly 84 hours each. Non-training fixtures are outside the weekly training-position logic. For those matches the training type is ignored completely: the builder evaluates every legal formation and symmetrical layout and selects the highest-total-rating starting XI. Formation experience is only a tiebreaker when XI ratings are equal.
 
 The selected training type for the first training match is saved locally by TeamID and the Friday 06:00 Hattrick-time training-cycle key. When a selected fixture is the second training match of that same cycle, the builder inherits that saved training type instead of allowing the optimizer to switch the weekly plan and retroactively waste first-match training slots.
 
@@ -166,7 +197,7 @@ The Lineup Builder initializes immediately when the DOM is already ready and sur
 
 The Team Page Builder is intentionally limited to senior teams managed by the logged-in Hattrick user. The browser only offers the user's managed-team selector, and `/api/team` independently verifies ownership before returning article data.
 
-The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `arenadetails`, `leaguedetails`, `playerdetails`, `economy`, `players`, and `matchesarchive`. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
+The builder follows a fetch-broadly, publish-selectively model. `teamdetails` is required; additional article data is requested from `worlddetails`, `players`, `arenadetails`, `leaguedetails`, `club`, and `economy`. Archive support uses `matchesarchive` when enabled by the builder workflow. Optional failures do not prevent the page from being generated. Empty infobox parameters, squad columns, and article sections are omitted automatically.
 
 After team data is loaded, the article builder presents every supported article section as a checkbox. Sections with usable data start selected; sections without usable data remain visible but disabled. Users may select any combination of available sections and create one article output in the standard article order. Section-specific controls live inside their parent section.
 
@@ -181,29 +212,33 @@ Historical club-record claims are generated only when `matchesarchive` is comple
 The main index separates the application into two product groups:
 
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
-- **Manager Tools:** Lineup Planner, Roster Usefulness.
+- **Manager Tools:** Lineup Planner, Roster Evaluator.
 
-The Team Page Builder and Lineup Planner are active. Roster Usefulness is on hold until the application has the additional CHPP access it needs; the other Wiki Builder cards are presented as coming soon.
+The Team Page Builder, Lineup Planner, and Roster Evaluator are active; the other Wiki Builder cards are presented as coming soon.
 
 
-## Roster Usefulness
+## Roster Evaluator
 
-Roster Usefulness is currently on hold pending additional CHPP access. When enabled, the tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
+Roster Evaluator ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
 
-The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v1.3 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
+The endpoint primarily uses the owned-team `teamdetails` and `players` CHPP files. Players v2.8 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and normally the player's `LastMatch`. If `LastMatch` is omitted, the endpoint falls back to Player Details v3.2 with match info for only the affected players so the evaluator never silently treats missing match data as if a player had never played.
 
 `Unused Days = today - max(Arrival Date, Last Match Date)`
 
-Current Value is the sum of seven continuous fitted skill curves (keeper, defending, playmaking, winger, passing, scoring, and set pieces):
+Skill Value is estimated from the sum of seven continuous fitted skill curves (keeper, defending, playmaking, winger, passing, scoring, and set pieces):
 
 `SkillValue(x) = A * (exp(K * x) - 1) + C * x`
 
-The coefficients are fitted to the established HTMS skill-value progression, but the roster score is intentionally its own system rather than HTMS.
+The coefficients are fitted to the established skill-value progression so the evaluator can use continuous skill values.
 
-Development Potential uses exact age (`years + AgeDays / 112`) and a continuous cubic fit to the established age progression, shifted so age 30 is zero. Future development is clamped to zero for players age 30 and older; current skill value is never reduced merely because a player is older.
+Projected Value is Skill Value plus Development Potential. Development Potential uses exact age (`years + AgeDays / 112`) and a continuous cubic fit to the established age progression, shifted so age 30 is zero. Future development is clamped to zero for players age 30 and older; Skill Value is never reduced merely because a player is older.
 
 `Usage = 2 ^ (-Unused Days / 28)`
 
-`Usefulness = (Current Value * Usage) + (Development Potential * Usage ^ 2)`
+`Current Usefulness = Skill Value * Usage`
+
+`Potential Usefulness = (Projected Value - Skill Value) * Usage ^ 2`
+
+`Overall Usefulness = Current Usefulness + Potential Usefulness`
 
 The usage term therefore has a 28-day half-life while unused development opportunity has an effective 14-day half-life. Injury status, form, salary, TSI, and total roster size do not affect the score.

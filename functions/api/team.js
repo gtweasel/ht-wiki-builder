@@ -1,4 +1,5 @@
 import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
 const HTWB_API_TEAM_MAX_ARCHIVE_PAGES = 36;
 const HTWB_API_TEAM_ARCHIVE_PAGE_SIZE = 50;
@@ -387,6 +388,33 @@ function htwbApiTeamParseLeagueStats(
   return {};
 }
 
+function htwbApiTeamPlayerName(
+  htwbApiTeamPlayerXml
+) {
+  const htwbApiTeamLegacyPlayerName =
+    htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerName");
+
+  if (htwbApiTeamLegacyPlayerName) {
+    return htwbApiTeamLegacyPlayerName;
+  }
+
+  const htwbApiTeamFirstName =
+    htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "FirstName");
+  const htwbApiTeamNickName =
+    htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "NickName");
+  const htwbApiTeamLastName =
+    htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "LastName");
+
+  return [
+    htwbApiTeamFirstName,
+    htwbApiTeamNickName ? `"${htwbApiTeamNickName}"` : "",
+    htwbApiTeamLastName
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
 function htwbApiTeamParsePlayers(
   htwbApiTeamPlayersXml,
   htwbApiTeamRequestedTeamId,
@@ -422,7 +450,7 @@ function htwbApiTeamParsePlayers(
 
     return {
       playerId: htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerID"),
-      name: htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerName"),
+      name: htwbApiTeamPlayerName(htwbApiTeamPlayerXml),
       number: (() => {
         const htwbApiTeamPlayerNumber = htwbApiTeamAvailableValue(
           htwbApiTeamXmlValue(htwbApiTeamPlayerXml, "PlayerNumber")
@@ -596,7 +624,7 @@ async function htwbApiTeamLoadArchive(
         htwbApiTeamContext,
         {
           file: "matchesarchive",
-          version: "1.0",
+          version: HTWB_CHPP_VERSIONS.matchesarchive,
           actionType: "view",
           teamID: htwbApiTeamTeamId,
           FirstMatchDate: htwbApiTeamFirstMatchDate,
@@ -820,6 +848,7 @@ export async function onRequestGet(htwbApiTeamContext) {
   try {
     const htwbApiTeamSources = {
       teamDetails: "available",
+      players: "unavailable",
       worldDetails: "unavailable",
       arenaDetails: "unavailable",
       leagueDetails: "unavailable",
@@ -831,7 +860,7 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamContext,
       {
         file: "teamdetails",
-        version: "1.7",
+        version: HTWB_CHPP_VERSIONS.teamdetails,
         actionType: "view",
         teamID: htwbApiTeamRequestedTeamId
       }
@@ -840,7 +869,11 @@ export async function onRequestGet(htwbApiTeamContext) {
     const htwbApiTeamUserXml =
       htwbApiTeamXmlContainer(htwbApiTeamTeamDetailsXml, "User");
     const htwbApiTeamTeamXml =
-      htwbApiTeamXmlContainer(htwbApiTeamTeamDetailsXml, "Team");
+      htwbApiTeamXmlContainers(htwbApiTeamTeamDetailsXml, "Team").find(
+        htwbApiTeamCandidateTeamXml =>
+          String(htwbApiTeamXmlValue(htwbApiTeamCandidateTeamXml, "TeamID")) ===
+          String(htwbApiTeamRequestedTeamId)
+      ) || "";
 
     if (!htwbApiTeamTeamXml) {
       return Response.json(
@@ -911,7 +944,7 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamContext,
       {
         file: "worlddetails",
-        version: "1.2",
+        version: HTWB_CHPP_VERSIONS.worlddetails,
         actionType: "leagues"
       },
       "worldDetails",
@@ -923,12 +956,35 @@ export async function onRequestGet(htwbApiTeamContext) {
     const htwbApiTeamTeamWorldLeague =
       htwbApiTeamWorldLookup.byLeagueId.get(String(htwbApiTeamLeagueId));
 
+    const htwbApiTeamPlayersXml = await htwbApiTeamOptionalChppFetch(
+      htwbApiTeamContext,
+      {
+        file: "players",
+        version: HTWB_CHPP_VERSIONS.players,
+        actionType: "view",
+        teamID: htwbApiTeamRequestedTeamId
+      },
+      "players",
+      htwbApiTeamSources
+    );
+
+    const htwbApiTeamSquad = htwbApiTeamParsePlayers(
+      htwbApiTeamPlayersXml,
+      htwbApiTeamRequestedTeamId,
+      htwbApiTeamWorldLookup
+    );
+    const htwbApiTeamCoachName =
+      htwbApiTeamSquad.find(
+        htwbApiTeamPlayer =>
+          String(htwbApiTeamPlayer.playerId) === String(htwbApiTeamCoachId)
+      )?.name || htwbApiTeamXmlValue(htwbApiTeamTrainerXml, "PlayerName");
+
     const htwbApiTeamArenaDetailsXml = htwbApiTeamArenaId
       ? await htwbApiTeamOptionalChppFetch(
           htwbApiTeamContext,
           {
             file: "arenadetails",
-            version: "1.2",
+            version: HTWB_CHPP_VERSIONS.arenadetails,
             actionType: "view",
             arenaID: htwbApiTeamArenaId
           },
@@ -942,7 +998,7 @@ export async function onRequestGet(htwbApiTeamContext) {
           htwbApiTeamContext,
           {
             file: "leaguedetails",
-            version: "1.1",
+            version: HTWB_CHPP_VERSIONS.leaguedetails,
             actionType: "view",
             leagueLevelUnitID: htwbApiTeamLeagueLevelUnitId
           },
@@ -955,7 +1011,7 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamContext,
       {
         file: "club",
-        version: "1.0",
+        version: HTWB_CHPP_VERSIONS.club,
         actionType: "view"
       },
       "club",
@@ -966,7 +1022,7 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamContext,
       {
         file: "economy",
-        version: "1.0",
+        version: HTWB_CHPP_VERSIONS.economy,
         actionType: "view"
       },
       "economy",
@@ -984,29 +1040,58 @@ export async function onRequestGet(htwbApiTeamContext) {
 
     const htwbApiTeamClubTeamXml =
       htwbApiTeamXmlContainer(htwbApiTeamClubXml, "Team");
-    const htwbApiTeamSpecialistsXml =
-      htwbApiTeamXmlContainer(htwbApiTeamClubTeamXml, "Specialists");
+    const htwbApiTeamStaffXml =
+      htwbApiTeamXmlContainer(htwbApiTeamClubTeamXml, "Staff");
     const htwbApiTeamStaff = [];
     const htwbApiTeamStaffFields = [
-      ["Keeper trainer", "KeeperTrainers"],
-      ["Assistant trainer", "AssistantTrainers"],
-      ["Psychologist", "Psychologists"],
-      ["Press spokesman", "PressSpokesmen"],
-      ["Economist", "Economists"],
-      ["Physiotherapist", "Physiotherapists"],
-      ["Doctor", "Doctors"]
+      ["Assistant trainer", "AssistantTrainerLevels"],
+      ["Financial director", "FinancialDirectorLevels"],
+      ["Form coach", "FormCoachLevels"],
+      ["Medic", "MedicLevels"],
+      ["Spokesperson", "SpokespersonLevels"],
+      ["Sport psychologist", "SportPsychologistLevels"],
+      ["Tactical assistant", "TacticalAssistantLevels"]
     ];
 
     for (const [htwbApiTeamRole, htwbApiTeamTag] of htwbApiTeamStaffFields) {
-      const htwbApiTeamCount = Number(
-        htwbApiTeamXmlValue(htwbApiTeamSpecialistsXml, htwbApiTeamTag)
+      const htwbApiTeamLevel = Number(
+        htwbApiTeamXmlValue(htwbApiTeamStaffXml, htwbApiTeamTag)
       );
 
-      if (Number.isFinite(htwbApiTeamCount) && htwbApiTeamCount > 0) {
+      if (Number.isFinite(htwbApiTeamLevel) && htwbApiTeamLevel > 0) {
         htwbApiTeamStaff.push({
           role: htwbApiTeamRole,
-          count: htwbApiTeamCount
+          level: htwbApiTeamLevel
         });
+      }
+    }
+
+    // Keep a legacy fallback so the builder remains tolerant if CHPP returns
+    // an older club payload while caches or deployments are rolling over.
+    if (!htwbApiTeamStaff.length) {
+      const htwbApiTeamSpecialistsXml =
+        htwbApiTeamXmlContainer(htwbApiTeamClubTeamXml, "Specialists");
+      const htwbApiTeamLegacyStaffFields = [
+        ["Keeper trainer", "KeeperTrainers"],
+        ["Assistant trainer", "AssistantTrainers"],
+        ["Psychologist", "Psychologists"],
+        ["Press spokesman", "PressSpokesmen"],
+        ["Economist", "Economists"],
+        ["Physiotherapist", "Physiotherapists"],
+        ["Doctor", "Doctors"]
+      ];
+
+      for (const [htwbApiTeamRole, htwbApiTeamTag] of htwbApiTeamLegacyStaffFields) {
+        const htwbApiTeamCount = Number(
+          htwbApiTeamXmlValue(htwbApiTeamSpecialistsXml, htwbApiTeamTag)
+        );
+
+        if (Number.isFinite(htwbApiTeamCount) && htwbApiTeamCount > 0) {
+          htwbApiTeamStaff.push({
+            role: htwbApiTeamRole,
+            level: htwbApiTeamCount
+          });
+        }
       }
     }
 
@@ -1014,7 +1099,8 @@ export async function onRequestGet(htwbApiTeamContext) {
       htwbApiTeamXmlContainer(htwbApiTeamEconomyXml, "Team");
     const htwbApiTeamEconomyTeamId =
       htwbApiTeamXmlValue(htwbApiTeamEconomyTeamXml, "TeamID");
-    let htwbApiTeamFanClubSize = "";
+    let htwbApiTeamFanClubSize =
+      htwbApiTeamXmlValue(htwbApiTeamFanclubXml, "FanclubSize");
 
     if (
       htwbApiTeamEconomyTeamId &&
@@ -1083,7 +1169,7 @@ export async function onRequestGet(htwbApiTeamContext) {
         },
         coach: {
           id: htwbApiTeamCoachId,
-          name: htwbApiTeamXmlValue(htwbApiTeamTrainerXml, "PlayerName"),
+          name: htwbApiTeamCoachName,
           nationality: "",
           type: "",
           skill: ""
@@ -1094,8 +1180,14 @@ export async function onRequestGet(htwbApiTeamContext) {
         },
         logoUrl: htwbApiTeamXmlValue(htwbApiTeamTeamXml, "LogoURL"),
         kits: {
-          home: Boolean(htwbApiTeamXmlValue(htwbApiTeamTeamXml, "Dress")),
-          away: Boolean(htwbApiTeamXmlValue(htwbApiTeamTeamXml, "DressAlternate"))
+          home: Boolean(
+            htwbApiTeamXmlValue(htwbApiTeamTeamXml, "DressURI") ||
+            htwbApiTeamXmlValue(htwbApiTeamTeamXml, "Dress")
+          ),
+          away: Boolean(
+            htwbApiTeamXmlValue(htwbApiTeamTeamXml, "DressAlternateURI") ||
+            htwbApiTeamXmlValue(htwbApiTeamTeamXml, "DressAlternate")
+          )
         },
         homePage: htwbApiTeamXmlValue(htwbApiTeamTeamXml, "HomePage"),
         clubhouse: htwbApiTeamXmlValue(htwbApiTeamTeamXml, "Clubhouse"),

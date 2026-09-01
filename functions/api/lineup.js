@@ -1,4 +1,5 @@
 import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
 function htwbApiLineupEnc(htwbApiLineupValue) {
   return encodeURIComponent(String(htwbApiLineupValue))
@@ -277,10 +278,18 @@ function htwbApiLineupParseTeamDetails(
     );
 
   const htwbApiLineupTeamXml =
-    htwbApiLineupXmlContainer(
+    htwbApiLineupXmlContainers(
       htwbApiLineupTeamDetailsXml,
       "Team"
-    );
+    ).find(
+      htwbApiLineupCandidateTeamXml =>
+        String(
+          htwbApiLineupXmlValue(
+            htwbApiLineupCandidateTeamXml,
+            "TeamID"
+          )
+        ) === String(htwbApiLineupRequestedTeamId)
+    ) || "";
 
   if (!htwbApiLineupTeamXml) {
     throw htwbApiLineupMakeError(
@@ -386,6 +395,49 @@ function htwbApiLineupParseTeamDetails(
    PLAYERS
    ========================================================= */
 
+function htwbApiLineupPlayerName(
+  htwbApiLineupPlayerXml
+) {
+  const htwbApiLineupLegacyPlayerName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupPlayerXml,
+      "PlayerName"
+    );
+
+  if (htwbApiLineupLegacyPlayerName) {
+    return htwbApiLineupLegacyPlayerName;
+  }
+
+  const htwbApiLineupFirstName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupPlayerXml,
+      "FirstName"
+    );
+
+  const htwbApiLineupNickName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupPlayerXml,
+      "NickName"
+    );
+
+  const htwbApiLineupLastName =
+    htwbApiLineupXmlValue(
+      htwbApiLineupPlayerXml,
+      "LastName"
+    );
+
+  return [
+    htwbApiLineupFirstName,
+    htwbApiLineupNickName
+      ? `"${htwbApiLineupNickName}"`
+      : "",
+    htwbApiLineupLastName
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
 function htwbApiLineupParsePlayers(
   htwbApiLineupPlayersXml,
   htwbApiLineupRequestedTeamId
@@ -439,10 +491,26 @@ function htwbApiLineupParsePlayers(
           ),
 
         name:
-          htwbApiLineupXmlValue(
-            htwbApiLineupPlayerXml,
-            "PlayerName"
+          htwbApiLineupPlayerName(
+            htwbApiLineupPlayerXml
           ),
+
+        number:
+          (() => {
+            const htwbApiLineupPlayerNumber =
+              htwbApiLineupXmlValue(
+                htwbApiLineupPlayerXml,
+                "PlayerNumber"
+              );
+
+            return (
+              htwbApiLineupPlayerNumber &&
+              htwbApiLineupPlayerNumber !==
+                "100"
+            )
+              ? htwbApiLineupPlayerNumber
+              : "";
+          })(),
 
         age:
           htwbApiLineupXmlNumber(
@@ -937,6 +1005,18 @@ function htwbApiLineupParseMatch(htwbApiLineupMatchXml) {
         "MatchType"
       ),
 
+    sourceSystem:
+      htwbApiLineupXmlValue(
+        htwbApiLineupMatchXml,
+        "SourceSystem"
+      ).toLowerCase(),
+
+    matchContextId:
+      htwbApiLineupXmlNumber(
+        htwbApiLineupMatchXml,
+        "MatchContextId"
+      ),
+
     matchDate: htwbApiLineupMatchDate,
 
     matchDateMs:
@@ -1302,6 +1382,41 @@ function htwbApiLineupPositionCodeToRole(
   }
 }
 
+function htwbApiLineupMatchRoleIdToRole(
+  htwbApiLineupRoleId
+) {
+  switch (Number(htwbApiLineupRoleId)) {
+    case 100:
+      return "GK";
+
+    case 101:
+    case 105:
+      return "WB";
+
+    case 102:
+    case 103:
+    case 104:
+      return "CD";
+
+    case 106:
+    case 110:
+      return "WG";
+
+    case 107:
+    case 108:
+    case 109:
+      return "IM";
+
+    case 111:
+    case 112:
+    case 113:
+      return "FW";
+
+    default:
+      return null;
+  }
+}
+
 function htwbApiLineupParsePreviousAppearances(
   htwbApiLineupMatchLineupXml,
   htwbApiLineupRequestedTeamId
@@ -1363,10 +1478,9 @@ function htwbApiLineupParsePreviousAppearances(
         "PlayerID"
       );
 
-    const htwbApiLineupPlayerName =
-      htwbApiLineupXmlValue(
-        htwbApiLineupPlayerXml,
-        "PlayerName"
+    const htwbApiLineupPreviousPlayerName =
+      htwbApiLineupPlayerName(
+        htwbApiLineupPlayerXml
       );
 
     const htwbApiLineupRoleId =
@@ -1392,6 +1506,9 @@ function htwbApiLineupParsePreviousAppearances(
     }
 
     const htwbApiLineupRole =
+      htwbApiLineupMatchRoleIdToRole(
+        htwbApiLineupRoleId
+      ) ||
       htwbApiLineupPositionCodeToRole(
         htwbApiLineupPositionCode
       );
@@ -1405,7 +1522,7 @@ function htwbApiLineupParsePreviousAppearances(
 
         htwbApiLineupAppearances.push({
           playerId: htwbApiLineupPlayerId,
-          playerName: htwbApiLineupPlayerName,
+          playerName: htwbApiLineupPreviousPlayerName,
           role: htwbApiLineupRole,
           positionCode: htwbApiLineupPositionCode,
           roleId: htwbApiLineupRoleId
@@ -1428,7 +1545,7 @@ function htwbApiLineupParsePreviousAppearances(
     ) {
       htwbApiLineupUnresolvedAppearances.push({
         playerId: htwbApiLineupPlayerId,
-        playerName: htwbApiLineupPlayerName,
+        playerName: htwbApiLineupPreviousPlayerName,
         roleId: htwbApiLineupRoleId,
         positionCode: htwbApiLineupPositionCode,
         ratingStars: htwbApiLineupRatingStars
@@ -1500,7 +1617,7 @@ export async function onRequestGet(
             "teamdetails",
 
           version:
-            "1.7",
+            HTWB_CHPP_VERSIONS.teamdetails,
 
           teamID:
             htwbApiLineupRequestedTeamId
@@ -1525,8 +1642,9 @@ export async function onRequestGet(
           htwbApiLineupContext,
           {
             file: "matches",
-            version: "2.2",
+            version: HTWB_CHPP_VERSIONS.matches,
             actionType: "view",
+            isYouth: "false",
             teamID: htwbApiLineupRequestedTeamId
           }
         );
@@ -1584,6 +1702,8 @@ export async function onRequestGet(
               htwbApiLineupMatch => ({
                 matchId: htwbApiLineupMatch.matchId,
                 matchType: htwbApiLineupMatch.matchType,
+                sourceSystem: htwbApiLineupMatch.sourceSystem,
+                matchContextId: htwbApiLineupMatch.matchContextId,
                 matchDate: htwbApiLineupMatch.matchDate,
                 homeTeamId: htwbApiLineupMatch.homeTeamId,
                 homeTeamName: htwbApiLineupMatch.homeTeamName,
@@ -1597,6 +1717,8 @@ export async function onRequestGet(
           upcomingMatch: {
             matchId: htwbApiLineupDefaultMatch.matchId,
             matchType: htwbApiLineupDefaultMatch.matchType,
+            sourceSystem: htwbApiLineupDefaultMatch.sourceSystem,
+            matchContextId: htwbApiLineupDefaultMatch.matchContextId,
             matchDate: htwbApiLineupDefaultMatch.matchDate,
             status: htwbApiLineupDefaultMatch.status,
             homeTeamId: htwbApiLineupDefaultMatch.homeTeamId,
@@ -1625,7 +1747,7 @@ export async function onRequestGet(
             "players",
 
           version:
-            "1.3",
+            HTWB_CHPP_VERSIONS.players,
 
           actionType:
             "view",
@@ -1643,7 +1765,7 @@ export async function onRequestGet(
             "training",
 
           version:
-            "2.2",
+            HTWB_CHPP_VERSIONS.training,
 
           actionType:
             "view",
@@ -1661,10 +1783,13 @@ export async function onRequestGet(
             "matches",
 
           version:
-            "2.2",
+            HTWB_CHPP_VERSIONS.matches,
 
           actionType:
             "view",
+
+          isYouth:
+            "false",
 
           teamID:
             htwbApiLineupRequestedTeamId
@@ -1679,7 +1804,7 @@ export async function onRequestGet(
             "worlddetails",
 
           version:
-            "1.2",
+            HTWB_CHPP_VERSIONS.worlddetails,
 
           actionType:
             "leagues"
@@ -1692,12 +1817,19 @@ export async function onRequestGet(
         htwbApiLineupRequestedTeamId
       );
 
-    const htwbApiLineupCoachType =
+    const htwbApiLineupCoachPlayer =
       htwbApiLineupPlayers.find(
         htwbApiLineupPlayer =>
           String(htwbApiLineupPlayer.playerId) ===
           String(htwbApiLineupTeam.coachId)
-      )?.trainerType ?? null;
+      );
+
+    const htwbApiLineupCoachType =
+      htwbApiLineupCoachPlayer?.trainerType ?? null;
+
+    const htwbApiLineupCoachName =
+      htwbApiLineupCoachPlayer?.name ||
+      htwbApiLineupTeam.coachName;
 
     const htwbApiLineupPublicPlayers =
       htwbApiLineupPlayers.map(
@@ -1827,7 +1959,7 @@ export async function onRequestGet(
                 "matchlineup",
 
               version:
-                "1.1",
+                HTWB_CHPP_VERSIONS.matchlineup,
 
               actionType:
                 "view",
@@ -1855,6 +1987,12 @@ export async function onRequestGet(
 
           matchType:
             htwbApiLineupPreviousMatch.matchType,
+
+          sourceSystem:
+            htwbApiLineupPreviousMatch.sourceSystem,
+
+          matchContextId:
+            htwbApiLineupPreviousMatch.matchContextId,
 
           homeTeamName:
             htwbApiLineupPreviousMatch.homeTeamName,
@@ -1888,7 +2026,7 @@ export async function onRequestGet(
           htwbApiLineupTeam.coachId,
 
         coachName:
-          htwbApiLineupTeam.coachName,
+          htwbApiLineupCoachName,
 
         coachType:
           htwbApiLineupCoachType,
@@ -1901,6 +2039,8 @@ export async function onRequestGet(
             htwbApiLineupMatch => ({
               matchId: htwbApiLineupMatch.matchId,
               matchType: htwbApiLineupMatch.matchType,
+              sourceSystem: htwbApiLineupMatch.sourceSystem,
+              matchContextId: htwbApiLineupMatch.matchContextId,
               matchDate: htwbApiLineupMatch.matchDate,
               homeTeamId: htwbApiLineupMatch.homeTeamId,
               homeTeamName: htwbApiLineupMatch.homeTeamName,
@@ -1917,6 +2057,12 @@ export async function onRequestGet(
 
           matchType:
             htwbApiLineupUpcomingMatch.matchType,
+
+          sourceSystem:
+            htwbApiLineupUpcomingMatch.sourceSystem,
+
+          matchContextId:
+            htwbApiLineupUpcomingMatch.matchContextId,
 
           matchDate:
             htwbApiLineupUpcomingMatch.matchDate,

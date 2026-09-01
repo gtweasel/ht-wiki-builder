@@ -1,8 +1,8 @@
 export const HTWB_VERSIONS = Object.freeze({
   app: "0.1.1",
   team: "0.1.1",
-  lineup: "0.1.1",
-  roster: "0.1.1"
+  lineup: "0.2.1",
+  roster: "0.2.1"
 });
 
 function htwbApplyVersions() {

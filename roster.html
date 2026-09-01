@@ -4,11 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>Roster Usefulness - HT Wiki Builder</title>
+  <title>Roster Evaluator - HT Wiki Builder</title>
 
   <meta
     name="description"
-    content="Rank Hattrick players from least useful to most useful using current skills, development runway, and time unused."
+    content="Rank Hattrick players from least useful to most useful using current skill value, projected development, and time unused."
   >
 
   <link rel="icon" href="/favicon.ico" sizes="any">
@@ -23,7 +23,7 @@
     rel="stylesheet"
   >
 
-  <link rel="stylesheet" href="/styles.css?v=0.1.1&amp;rev=logo-54-12">
+  <link rel="stylesheet" href="/styles.css?v=0.2.1">
 </head>
 
 <body>
@@ -71,7 +71,7 @@
         <div>
           <div class="eyebrow">Manager Tool</div>
           <div class="builder-title-line">
-            <h1>Roster Usefulness</h1>
+            <h1>Roster Evaluator</h1>
             <span class="page-version" data-htwb-version="roster"></span>
           </div>
         </div>
@@ -94,10 +94,20 @@
         <div>
           <span class="builder-account-label">Connected to Hattrick</span>
           <div class="connected-team-identity">
-            <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+            <img
+              id="team-logo"
+              class="connected-team-logo"
+              alt=""
+              referrerpolicy="no-referrer"
+              hidden
+            >
+
             <div>
               <strong id="team-name">Loading team...</strong>
-              <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+              <div class="builder-account-details">
+                <span id="manager-name"></span>
+                <span id="team-id"></span>
+              </div>
             </div>
           </div>
         </div>
@@ -109,17 +119,109 @@
         <div class="builder-section-content">
           <div class="builder-section-heading">
             <div>
-              <h2>Additional CHPP Access Required</h2>
+              <h2>Evaluate Roster</h2>
               <p>
-                Roster Usefulness needs player-level CHPP data that is not
-                currently enabled for this application. The tool will be
-                activated after that access is approved.
+                Rank the selected team from least useful to most useful using
+                current skill value, development potential through age 30, and
+                how recently each player has been used.
               </p>
             </div>
           </div>
 
-          <div class="builder-status">
-            This tool is on hold. No roster data will be requested.
+          <div
+            id="roster-status"
+            class="builder-status"
+            aria-live="polite"
+          >
+            Waiting for team data.
+          </div>
+
+          <div class="builder-actions">
+            <button
+              id="roster-rank-button"
+              class="button button-primary"
+              type="button"
+              disabled
+            >
+              Evaluate Roster
+            </button>
+          </div>
+
+          <div class="roster-formula-copy">
+            <p>
+              Unused time starts from the more recent of the player's arrival
+              date or last match. Current skill value is never reduced because of age;
+              players age 30 and older simply receive no additional development
+              potential.
+            </p>
+
+            <div class="roster-formula-block">
+              Usage = 2 ^ (-Unused Days / 28)
+            </div>
+
+            <div class="roster-formula-block">
+              Overall Usefulness = (Skill Value x Usage) + ((Projected Value - Skill Value) x Usage ^ 2)
+            </div>
+
+            <p>
+              Lower overall usefulness ranks first. The evaluator does not set
+              a roster-size target or label players keep, sell, or fire.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="roster-results-section" class="builder-section" hidden>
+        <div class="builder-section-number">02</div>
+
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Roster Ranking</h2>
+              <p>
+                Rank 1 is the least useful player under the evaluator formula.
+                Scroll the table horizontally on smaller screens to review all
+                calculation components.
+              </p>
+            </div>
+          </div>
+
+          <div class="lineup-summary roster-summary">
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Team</span>
+              <span id="roster-summary-team" class="lineup-summary-value">-</span>
+            </div>
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Players</span>
+              <span id="roster-summary-count" class="lineup-summary-value">-</span>
+            </div>
+
+            <div class="lineup-summary-item">
+              <span class="lineup-summary-label">Calculated</span>
+              <span id="roster-summary-date" class="lineup-summary-value">-</span>
+            </div>
+          </div>
+
+          <div class="lineup-table-wrap roster-table-wrap">
+            <table class="lineup-table roster-table">
+              <thead>
+                <tr>
+                  <th scope="col" class="number">Rank</th>
+                  <th scope="col">Player</th>
+                  <th scope="col">Age</th>
+                  <th scope="col">Last Match</th>
+                  <th scope="col">Arrival</th>
+                  <th scope="col" class="number">Unused</th>
+                  <th scope="col" class="number">Skill Value</th>
+                  <th scope="col" class="number">Projected Value</th>
+                  <th scope="col" class="number">Current</th>
+                  <th scope="col" class="number">Potential</th>
+                  <th scope="col" class="number">Overall</th>
+                </tr>
+              </thead>
+              <tbody id="roster-table-body"></tbody>
+            </table>
           </div>
         </div>
       </section>
@@ -157,7 +259,8 @@
     </div>
   </footer>
 
-  <script type="module" src="/versions.js?v=0.1.1"></script>
+  <script type="module" src="/versions.js?v=0.2.1"></script>
   <script src="/app.js?v=0.1.1"></script>
+  <script src="/roster.js?v=0.2.1"></script>
 </body>
 </html>

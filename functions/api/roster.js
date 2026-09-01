@@ -1,4 +1,5 @@
 import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
 function htwbApiRosterEnc(htwbApiRosterValue) {
   return encodeURIComponent(String(htwbApiRosterValue))
@@ -137,6 +138,25 @@ function htwbApiRosterXmlContainer(
   return htwbApiRosterMatch
     ? htwbApiRosterMatch[1]
     : "";
+}
+
+function htwbApiRosterXmlHasTag(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  if (!htwbApiRosterXml) {
+    return false;
+  }
+
+  const htwbApiRosterPattern =
+    new RegExp(
+      `<${htwbApiRosterTag}(?:\\s[^>]*)?\\s*\/?>`,
+      "i"
+    );
+
+  return htwbApiRosterPattern.test(
+    htwbApiRosterXml
+  );
 }
 
 function htwbApiRosterXmlContainers(
@@ -392,10 +412,18 @@ function htwbApiRosterParseTeamDetails(
     );
 
   const htwbApiRosterTeamXml =
-    htwbApiRosterXmlContainer(
+    htwbApiRosterXmlContainers(
       htwbApiRosterTeamDetailsXml,
       "Team"
-    );
+    ).find(
+      htwbApiRosterCandidateTeamXml =>
+        String(
+          htwbApiRosterXmlValue(
+            htwbApiRosterCandidateTeamXml,
+            "TeamID"
+          )
+        ) === String(htwbApiRosterRequestedTeamId)
+    ) || "";
 
   if (!htwbApiRosterTeamXml) {
     throw htwbApiRosterMakeError(
@@ -452,7 +480,7 @@ function htwbApiRosterParseTeamDetails(
 
   if (!htwbApiRosterIsManagedTeam) {
     throw htwbApiRosterMakeError(
-      "Roster Usefulness can only use the logged-in manager's own team.",
+      "Roster Evaluator can only use the logged-in manager's own team.",
       403
     );
   }
@@ -526,6 +554,57 @@ function htwbApiRosterPlayerName(
     .trim();
 }
 
+function htwbApiRosterParseLastMatch(
+  htwbApiRosterPlayerXml
+) {
+  const htwbApiRosterLastMatchKnown =
+    htwbApiRosterXmlHasTag(
+      htwbApiRosterPlayerXml,
+      "LastMatch"
+    );
+
+  if (!htwbApiRosterLastMatchKnown) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  const htwbApiRosterLastMatchXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterPlayerXml,
+      "LastMatch"
+    );
+
+  const htwbApiRosterLastMatchId =
+    htwbApiRosterXmlNumber(
+      htwbApiRosterLastMatchXml,
+      "MatchId"
+    ) ??
+    htwbApiRosterXmlNumber(
+      htwbApiRosterLastMatchXml,
+      "MatchID"
+    );
+
+  const htwbApiRosterLastMatchDate =
+    htwbApiRosterXmlValue(
+      htwbApiRosterLastMatchXml,
+      "Date"
+    );
+
+  return {
+    known: true,
+    id:
+      htwbApiRosterLastMatchId !== null &&
+      htwbApiRosterLastMatchId > 0
+        ? htwbApiRosterLastMatchId
+        : null,
+    date:
+      htwbApiRosterLastMatchDate || ""
+  };
+}
+
 function htwbApiRosterParsePlayers(
   htwbApiRosterPlayersXml,
   htwbApiRosterRequestedTeamId
@@ -572,26 +651,9 @@ function htwbApiRosterParsePlayers(
   const htwbApiRosterPlayers =
     htwbApiRosterPlayerXmlList.map(
       htwbApiRosterPlayerXml => {
-        const htwbApiRosterLastMatchXml =
-          htwbApiRosterXmlContainer(
-            htwbApiRosterPlayerXml,
-            "LastMatch"
-          );
-
-        const htwbApiRosterLastMatchId =
-          htwbApiRosterXmlNumber(
-            htwbApiRosterLastMatchXml,
-            "MatchId"
-          ) ??
-          htwbApiRosterXmlNumber(
-            htwbApiRosterLastMatchXml,
-            "MatchID"
-          );
-
-        const htwbApiRosterLastMatchDate =
-          htwbApiRosterXmlValue(
-            htwbApiRosterLastMatchXml,
-            "Date"
+        const htwbApiRosterLastMatch =
+          htwbApiRosterParseLastMatch(
+            htwbApiRosterPlayerXml
           );
 
         return {
@@ -666,17 +728,14 @@ function htwbApiRosterParsePlayers(
               "SetPiecesSkill"
             ),
 
+          lastMatchKnown:
+            htwbApiRosterLastMatch.known,
+
           lastMatchId:
-            htwbApiRosterLastMatchId &&
-            htwbApiRosterLastMatchId > 0
-              ? htwbApiRosterLastMatchId
-              : null,
+            htwbApiRosterLastMatch.id,
 
           lastMatchDate:
-            htwbApiRosterLastMatchId &&
-            htwbApiRosterLastMatchId > 0
-              ? htwbApiRosterLastMatchDate
-              : ""
+            htwbApiRosterLastMatch.date
         };
       }
     );
@@ -722,6 +781,141 @@ function htwbApiRosterParsePlayers(
 }
 
 
+function htwbApiRosterParsePlayerDetailsLastMatch(
+  htwbApiRosterPlayerDetailsXml,
+  htwbApiRosterExpectedPlayerId
+) {
+  const htwbApiRosterPlayerXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterPlayerDetailsXml,
+      "Player"
+    );
+
+  if (!htwbApiRosterPlayerXml) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  const htwbApiRosterReturnedPlayerId =
+    htwbApiRosterXmlNumber(
+      htwbApiRosterPlayerXml,
+      "PlayerID"
+    );
+
+  if (
+    htwbApiRosterReturnedPlayerId === null ||
+    String(htwbApiRosterReturnedPlayerId) !==
+      String(htwbApiRosterExpectedPlayerId)
+  ) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  return htwbApiRosterParseLastMatch(
+    htwbApiRosterPlayerXml
+  );
+}
+
+async function htwbApiRosterFillMissingLastMatches(
+  htwbApiRosterContext,
+  htwbApiRosterPlayers
+) {
+  const htwbApiRosterMissingPlayers =
+    htwbApiRosterPlayers.filter(
+      htwbApiRosterPlayer =>
+        !htwbApiRosterPlayer.lastMatchKnown
+    );
+
+  if (!htwbApiRosterMissingPlayers.length) {
+    return;
+  }
+
+  let htwbApiRosterNextPlayerIndex = 0;
+
+  async function htwbApiRosterLastMatchWorker() {
+    while (
+      htwbApiRosterNextPlayerIndex <
+      htwbApiRosterMissingPlayers.length
+    ) {
+      const htwbApiRosterPlayer =
+        htwbApiRosterMissingPlayers[
+          htwbApiRosterNextPlayerIndex
+        ];
+
+      htwbApiRosterNextPlayerIndex += 1;
+
+      try {
+        const htwbApiRosterPlayerDetailsXml =
+          await htwbApiRosterChppFetch(
+            htwbApiRosterContext,
+            {
+              file: "playerdetails",
+              version:
+                HTWB_CHPP_VERSIONS.playerdetails,
+              actionType: "view",
+              playerID:
+                String(
+                  htwbApiRosterPlayer.playerId
+                ),
+              includeMatchInfo: "true"
+            }
+          );
+
+        const htwbApiRosterLastMatch =
+          htwbApiRosterParsePlayerDetailsLastMatch(
+            htwbApiRosterPlayerDetailsXml,
+            htwbApiRosterPlayer.playerId
+          );
+
+        if (htwbApiRosterLastMatch.known) {
+          htwbApiRosterPlayer.lastMatchKnown =
+            true;
+          htwbApiRosterPlayer.lastMatchId =
+            htwbApiRosterLastMatch.id;
+          htwbApiRosterPlayer.lastMatchDate =
+            htwbApiRosterLastMatch.date;
+        }
+      } catch (htwbApiRosterError) {
+        console.warn(
+          `Could not load last-match details for player ${htwbApiRosterPlayer.playerId}:`,
+          htwbApiRosterError
+        );
+      }
+    }
+  }
+
+  const htwbApiRosterWorkerCount =
+    Math.min(
+      4,
+      htwbApiRosterMissingPlayers.length
+    );
+
+  await Promise.all(
+    Array.from(
+      { length: htwbApiRosterWorkerCount },
+      () => htwbApiRosterLastMatchWorker()
+    )
+  );
+
+  const htwbApiRosterStillMissing =
+    htwbApiRosterPlayers.filter(
+      htwbApiRosterPlayer =>
+        !htwbApiRosterPlayer.lastMatchKnown
+    );
+
+  if (htwbApiRosterStillMissing.length) {
+    throw htwbApiRosterMakeError(
+      "Hattrick did not return the last-match data needed for an accurate roster evaluation."
+    );
+  }
+}
+
 /* =========================================================
    ENDPOINT
    ========================================================= */
@@ -729,25 +923,6 @@ function htwbApiRosterParsePlayers(
 export async function onRequestGet(
   htwbApiRosterContext
 ) {
-  // Keep the future endpoint inert until the required CHPP player-data
-  // access has been approved for this application.
-  const htwbApiRosterEnabled = false;
-
-  if (!htwbApiRosterEnabled) {
-    return Response.json(
-      {
-        error:
-          "Roster Usefulness is on hold pending additional CHPP access."
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control":
-            "no-store"
-        }
-      }
-    );
-  }
   const htwbApiRosterUrl =
     new URL(
       htwbApiRosterContext.request.url
@@ -785,7 +960,7 @@ export async function onRequestGet(
         htwbApiRosterContext,
         {
           file: "teamdetails",
-          version: "1.7",
+          version: HTWB_CHPP_VERSIONS.teamdetails,
           teamID:
             htwbApiRosterRequestedTeamId
         }
@@ -802,7 +977,7 @@ export async function onRequestGet(
         htwbApiRosterContext,
         {
           file: "players",
-          version: "1.3",
+          version: HTWB_CHPP_VERSIONS.players,
           actionType: "view",
           teamID:
             htwbApiRosterRequestedTeamId
@@ -814,6 +989,11 @@ export async function onRequestGet(
         htwbApiRosterPlayersXml,
         htwbApiRosterRequestedTeamId
       );
+
+    await htwbApiRosterFillMissingLastMatches(
+      htwbApiRosterContext,
+      htwbApiRosterPlayerData.players
+    );
 
     return Response.json(
       {
@@ -842,7 +1022,7 @@ export async function onRequestGet(
     );
   } catch (htwbApiRosterError) {
     console.error(
-      "Roster usefulness API error:",
+      "Roster evaluator API error:",
       htwbApiRosterError
     );
 
