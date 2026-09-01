@@ -461,7 +461,7 @@ function htwbApiRosterParseTeamDetails(
 
   if (!htwbApiRosterIsManagedTeam) {
     throw htwbApiRosterMakeError(
-      "Roster Usefulness can only use the logged-in manager's own team.",
+      "Roster Evaluator can only use the logged-in manager's own team.",
       403
     );
   }
@@ -738,25 +738,6 @@ function htwbApiRosterParsePlayers(
 export async function onRequestGet(
   htwbApiRosterContext
 ) {
-  // Keep the future endpoint inert until the required CHPP player-data
-  // access has been approved for this application.
-  const htwbApiRosterEnabled = false;
-
-  if (!htwbApiRosterEnabled) {
-    return Response.json(
-      {
-        error:
-          "Roster Usefulness is on hold pending additional CHPP access."
-      },
-      {
-        status: 503,
-        headers: {
-          "Cache-Control":
-            "no-store"
-        }
-      }
-    );
-  }
   const htwbApiRosterUrl =
     new URL(
       htwbApiRosterContext.request.url
@@ -851,7 +832,7 @@ export async function onRequestGet(
     );
   } catch (htwbApiRosterError) {
     console.error(
-      "Roster usefulness API error:",
+      "Roster evaluator API error:",
       htwbApiRosterError
     );
 

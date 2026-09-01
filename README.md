@@ -10,8 +10,8 @@ Current versions:
 
 - HT Wiki Builder: `0.1.1`
 - Team Page Builder: `0.1.1`
-- Lineup Builder: `0.2.0`
-- Roster Usefulness: `0.1.1`
+- Lineup Builder: `0.2.1`
+- Roster Evaluator: `0.2.0`
 
 Version numbers follow these rules:
 
@@ -52,9 +52,9 @@ All CHPP file-version numbers used by the application are centralized in `chpp-v
 
 | CHPP file | Version | Used by |
 | --- | ---: | --- |
-| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Lineup Builder, Roster Usefulness |
+| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Lineup Builder, Roster Evaluator |
 | `matches` | `2.9` | Lineup Builder |
-| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Usefulness |
+| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Evaluator |
 | `training` | `2.2` | Lineup Builder |
 | `worlddetails` | `2.0` | Team Page Builder, Lineup Builder |
 | `matchlineup` | `2.1` | Lineup Builder |
@@ -75,9 +75,9 @@ All pages use `/styles.css` as the single visual source of truth. Page-specific 
 
 Connected-team cards use the optional `LogoURL` from CHPP `teamdetails`. `/api/me` enriches only the logged-in manager's own managed-team list with those logo URLs. When present, the active team's logo is shown at a fixed 54px height with proportional width capped at 90px and a 12px gap to the text, vertically centered beside the team name and Manager/TeamID lines. When a team has no supplied logo, the image is removed entirely and the text returns to the original alignment with no reserved blank space.
 
-## Lineup Builder v0.2.0
+## Lineup Builder v0.2.1
 
-Lineup Builder v0.2.0 updates its CHPP dependencies to the current file versions and adds current `matches` metadata to the fixture model. The match parser now retains `SourceSystem` and `MatchContextId`, allowing Hattrick Arena ladder fixtures (`MatchType` 62, `SourceSystem` `htointegrated`) to appear in the normal upcoming-match picker while remaining classified as non-training matches. Senior-team `matches` requests explicitly use `isYouth=false`. The current `players` schema builds display names from `FirstName`, `NickName`, and `LastName`, and current `matchlineup` field positions are resolved from `RoleID` while retaining the older `PositionCode` mapping as a compatibility fallback.
+Lineup Builder v0.2.1 updates its CHPP dependencies to the current file versions and adds current `matches` metadata to the fixture model. The match parser now retains `SourceSystem` and `MatchContextId`, allowing Hattrick Arena ladder fixtures (`MatchType` 62, `SourceSystem` `htointegrated`) to appear in the normal upcoming-match picker while remaining classified as non-training matches. Senior-team `matches` requests explicitly use `isYouth=false`. The current `players` schema builds display names from `FirstName`, `NickName`, and `LastName`, and current `matchlineup` field positions are resolved from `RoleID` while retaining the older `PositionCode` mapping as a compatibility fallback.
 
 The match picker shows kickoff date/time, `Home vs Away`, and the match type in parentheses; training-week position and nonstandard source information are shown in the selected-match summary below it. Full-training lineup positions use a solid gold border and partial-training positions use a dashed gold border. The formation area uses a muted pale-blue background. A floating `Back to top` control appears after the page has been scrolled down.
 
@@ -211,29 +211,33 @@ Historical club-record claims are generated only when `matchesarchive` is comple
 The main index separates the application into two product groups:
 
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
-- **Manager Tools:** Lineup Planner, Roster Usefulness.
+- **Manager Tools:** Lineup Planner, Roster Evaluator.
 
-The Team Page Builder and Lineup Planner are active. Roster Usefulness is on hold until the application has the additional CHPP access it needs; the other Wiki Builder cards are presented as coming soon.
+The Team Page Builder, Lineup Planner, and Roster Evaluator are active; the other Wiki Builder cards are presented as coming soon.
 
 
-## Roster Usefulness
+## Roster Evaluator
 
-Roster Usefulness is currently on hold pending additional CHPP access. When enabled, the tool ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
+Roster Evaluator ranks every current squad member from the lowest score to the highest score. It does not recommend a roster size, choose a cutoff, or label players as keep/sell/fire. The manager decides how to use the ranking.
 
 The endpoint uses only the owned-team `teamdetails` and `players` CHPP files. Players v2.8 supplies the current skills, exact age in Hattrick years and days, `ArrivalDate`, and the player's `LastMatch`, so the tool does not need a separate request for each player or match.
 
 `Unused Days = today - max(Arrival Date, Last Match Date)`
 
-Current Value is the sum of seven continuous fitted skill curves (keeper, defending, playmaking, winger, passing, scoring, and set pieces):
+Current HTMS value is estimated from the sum of seven continuous fitted skill curves (keeper, defending, playmaking, winger, passing, scoring, and set pieces):
 
 `SkillValue(x) = A * (exp(K * x) - 1) + C * x`
 
-The coefficients are fitted to the established HTMS skill-value progression, but the roster score is intentionally its own system rather than HTMS.
+The coefficients are fitted to the established HTMS skill-value progression so the evaluator can use continuous skill values.
 
-Development Potential uses exact age (`years + AgeDays / 112`) and a continuous cubic fit to the established age progression, shifted so age 30 is zero. Future development is clamped to zero for players age 30 and older; current skill value is never reduced merely because a player is older.
+HTMS30 is current HTMS plus Development Potential. Development Potential uses exact age (`years + AgeDays / 112`) and a continuous cubic fit to the established age progression, shifted so age 30 is zero. Future development is clamped to zero for players age 30 and older; current HTMS is never reduced merely because a player is older.
 
 `Usage = 2 ^ (-Unused Days / 28)`
 
-`Usefulness = (Current Value * Usage) + (Development Potential * Usage ^ 2)`
+`Current Usefulness = HTMS * Usage`
+
+`Potential Usefulness = (HTMS30 - HTMS) * Usage ^ 2`
+
+`Overall Usefulness = Current Usefulness + Potential Usefulness`
 
 The usage term therefore has a 28-day half-life while unused development opportunity has an effective 14-day half-life. Injury status, form, salary, TSI, and total roster size do not affect the score.

@@ -389,7 +389,7 @@ function htwbRosterSetSelectedTeamId(
 
   htwbRosterSetStatus(
     htwbRosterSelectedTeamId
-      ? "Ready to rank the selected roster."
+      ? "Ready to evaluate the selected roster."
       : "Waiting for team data."
   );
 }
@@ -433,7 +433,7 @@ async function htwbRosterLoadData(
   if (htwbRosterResponse.status === 403) {
     throw new Error(
       htwbRosterData.error ||
-      "Roster Usefulness can only use your own team."
+      "Roster Evaluator can only use your own team."
     );
   }
 
@@ -640,22 +640,38 @@ function htwbRosterCalculatePlayer(
       HTWB_ROSTER_UNUSED_HALF_LIFE_DAYS
     );
 
-  const htwbRosterUsefulness =
+  const htwbRosterHtms30 =
+    htwbRosterCurrent +
+    htwbRosterDevelopment;
+
+  const htwbRosterCurrentUsefulness =
     htwbRosterCurrent *
-      htwbRosterUsage +
+    htwbRosterUsage;
+
+  const htwbRosterPotentialUsefulness =
     htwbRosterDevelopment *
-      htwbRosterUsage ** 2;
+    htwbRosterUsage ** 2;
+
+  const htwbRosterUsefulness =
+    htwbRosterCurrentUsefulness +
+    htwbRosterPotentialUsefulness;
 
   return {
     ...htwbRosterPlayer,
     currentValue:
       htwbRosterCurrent,
+    htms30:
+      htwbRosterHtms30,
     developmentPotential:
       htwbRosterDevelopment,
     unusedDays:
       htwbRosterUnused.unusedDays,
     usageFactor:
       htwbRosterUsage,
+    currentUsefulness:
+      htwbRosterCurrentUsefulness,
+    potentialUsefulness:
+      htwbRosterPotentialUsefulness,
     usefulness:
       htwbRosterUsefulness,
     isCoach:
@@ -889,7 +905,25 @@ function htwbRosterRenderRanking(
       htwbRosterAppendCell(
         htwbRosterRow,
         htwbRosterFormatNumber(
-          htwbRosterPlayer.developmentPotential,
+          htwbRosterPlayer.htms30,
+          0
+        ),
+        "number"
+      );
+
+      htwbRosterAppendCell(
+        htwbRosterRow,
+        htwbRosterFormatNumber(
+          htwbRosterPlayer.currentUsefulness,
+          0
+        ),
+        "number"
+      );
+
+      htwbRosterAppendCell(
+        htwbRosterRow,
+        htwbRosterFormatNumber(
+          htwbRosterPlayer.potentialUsefulness,
           0
         ),
         "number"
@@ -990,7 +1024,7 @@ async function htwbRosterRankRoster() {
     );
 
     htwbRosterSetStatus(
-      `Ranked ${htwbRosterRanking.players.length} players from least useful to most useful.`,
+      `Evaluated ${htwbRosterRanking.players.length} players from least useful to most useful.`,
       "success"
     );
 
@@ -1002,13 +1036,13 @@ async function htwbRosterRankRoster() {
     );
   } catch (htwbRosterError) {
     console.error(
-      "Roster usefulness error:",
+      "Roster evaluator error:",
       htwbRosterError
     );
 
     htwbRosterSetStatus(
       htwbRosterError.message ||
-      "Could not rank the roster.",
+      "Could not evaluate the roster.",
       "error"
     );
   } finally {
