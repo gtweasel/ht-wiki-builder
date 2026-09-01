@@ -1,49 +1,1123 @@
-import { chppFetch, endpointError, json, requireOwnedTeam, xmlContainer, xmlContainers, xmlNumber, xmlValue } from "../_shared/chpp.js";
+import { HTWB_VERSIONS } from "../../versions.js";
+import { HTWB_CHPP_VERSIONS } from "../../chpp-versions.js";
 
-function playerName(xml) {
-  const full = xmlValue(xml, "PlayerName");
-  if (full) return full;
-  return [xmlValue(xml, "FirstName"), xmlValue(xml, "NickName") ? `"${xmlValue(xml, "NickName")}"` : "", xmlValue(xml, "LastName")].filter(Boolean).join(" ").trim();
+function htwbApiRosterEnc(htwbApiRosterValue) {
+  return encodeURIComponent(String(htwbApiRosterValue))
+    .replace(/!/g, "%21")
+    .replace(/'/g, "%27")
+    .replace(/\(/g, "%28")
+    .replace(/\)/g, "%29")
+    .replace(/\*/g, "%2A");
 }
 
-function parsePlayers(xml, teamId) {
-  const team = xmlContainer(xml, "Team");
-  if (!team || String(xmlValue(team, "TeamID")) !== String(teamId)) throw new Error("Hattrick returned the wrong roster.");
-  const list = xmlContainer(team, "PlayerList");
-  return xmlContainers(list, "Player").map(player => {
-    const last = xmlContainer(player, "LastMatch");
-    const lastMatchId = xmlNumber(last, "MatchID");
+function htwbApiRosterNonce() {
+  return crypto.randomUUID().replace(/-/g, "");
+}
+
+function htwbApiRosterGetCookie(
+  htwbApiRosterRequest,
+  htwbApiRosterName
+) {
+  const htwbApiRosterCookie =
+    htwbApiRosterRequest.headers.get("Cookie") || "";
+
+  for (
+    const htwbApiRosterPart
+    of htwbApiRosterCookie.split(";")
+  ) {
+    const [
+      htwbApiRosterKey,
+      ...htwbApiRosterValue
+    ] =
+      htwbApiRosterPart
+        .trim()
+        .split("=");
+
+    if (htwbApiRosterKey === htwbApiRosterName) {
+      return decodeURIComponent(
+        htwbApiRosterValue.join("=")
+      );
+    }
+  }
+
+  return null;
+}
+
+async function htwbApiRosterHmacSha1(
+  htwbApiRosterKey,
+  htwbApiRosterText
+) {
+  const htwbApiRosterCryptoKey =
+    await crypto.subtle.importKey(
+      "raw",
+      new TextEncoder().encode(
+        htwbApiRosterKey
+      ),
+      {
+        name: "HMAC",
+        hash: "SHA-1"
+      },
+      false,
+      ["sign"]
+    );
+
+  const htwbApiRosterSignature =
+    await crypto.subtle.sign(
+      "HMAC",
+      htwbApiRosterCryptoKey,
+      new TextEncoder().encode(
+        htwbApiRosterText
+      )
+    );
+
+  return btoa(
+    String.fromCharCode(
+      ...new Uint8Array(
+        htwbApiRosterSignature
+      )
+    )
+  );
+}
+
+function htwbApiRosterDecodeXml(htwbApiRosterValue) {
+  return String(htwbApiRosterValue || "")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, "\"")
+    .replace(/&apos;/g, "'");
+}
+
+function htwbApiRosterXmlValue(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  if (!htwbApiRosterXml) {
+    return "";
+  }
+
+  const htwbApiRosterPattern =
+    new RegExp(
+      `<${htwbApiRosterTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiRosterTag}>`,
+      "i"
+    );
+
+  const htwbApiRosterMatch =
+    htwbApiRosterXml.match(
+      htwbApiRosterPattern
+    );
+
+  if (!htwbApiRosterMatch) {
+    return "";
+  }
+
+  return htwbApiRosterDecodeXml(
+    htwbApiRosterMatch[1].trim()
+  );
+}
+
+function htwbApiRosterXmlContainer(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  if (!htwbApiRosterXml) {
+    return "";
+  }
+
+  const htwbApiRosterPattern =
+    new RegExp(
+      `<${htwbApiRosterTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiRosterTag}>`,
+      "i"
+    );
+
+  const htwbApiRosterMatch =
+    htwbApiRosterXml.match(
+      htwbApiRosterPattern
+    );
+
+  return htwbApiRosterMatch
+    ? htwbApiRosterMatch[1]
+    : "";
+}
+
+function htwbApiRosterXmlHasTag(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  if (!htwbApiRosterXml) {
+    return false;
+  }
+
+  const htwbApiRosterPattern =
+    new RegExp(
+      `<${htwbApiRosterTag}(?:\\s[^>]*)?\\s*\/?>`,
+      "i"
+    );
+
+  return htwbApiRosterPattern.test(
+    htwbApiRosterXml
+  );
+}
+
+function htwbApiRosterXmlContainers(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  if (!htwbApiRosterXml) {
+    return [];
+  }
+
+  const htwbApiRosterPattern =
+    new RegExp(
+      `<${htwbApiRosterTag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${htwbApiRosterTag}>`,
+      "gi"
+    );
+
+  return [
+    ...htwbApiRosterXml.matchAll(
+      htwbApiRosterPattern
+    )
+  ].map(
+    htwbApiRosterMatch =>
+      htwbApiRosterMatch[1]
+  );
+}
+
+function htwbApiRosterXmlNumber(
+  htwbApiRosterXml,
+  htwbApiRosterTag
+) {
+  const htwbApiRosterValue =
+    htwbApiRosterXmlValue(
+      htwbApiRosterXml,
+      htwbApiRosterTag
+    );
+
+  if (
+    htwbApiRosterValue === "" ||
+    String(htwbApiRosterValue)
+      .toUpperCase() ===
+      "NOT AVAILABLE"
+  ) {
+    return null;
+  }
+
+  const htwbApiRosterNumber =
+    Number(htwbApiRosterValue);
+
+  return Number.isFinite(htwbApiRosterNumber)
+    ? htwbApiRosterNumber
+    : null;
+}
+
+function htwbApiRosterMakeError(
+  htwbApiRosterMessage,
+  htwbApiRosterStatus = 502
+) {
+  const htwbApiRosterError =
+    new Error(htwbApiRosterMessage);
+
+  htwbApiRosterError.status =
+    htwbApiRosterStatus;
+
+  return htwbApiRosterError;
+}
+
+async function htwbApiRosterChppFetch(
+  htwbApiRosterContext,
+  htwbApiRosterQuery
+) {
+  const htwbApiRosterEndpoint =
+    "https://chpp.hattrick.org/chppxml.ashx";
+
+  const htwbApiRosterAccessToken =
+    htwbApiRosterGetCookie(
+      htwbApiRosterContext.request,
+      "chpp_access_token"
+    );
+
+  const htwbApiRosterAccessSecret =
+    htwbApiRosterGetCookie(
+      htwbApiRosterContext.request,
+      "chpp_access_secret"
+    );
+
+  if (
+    !htwbApiRosterAccessToken ||
+    !htwbApiRosterAccessSecret
+  ) {
+    throw htwbApiRosterMakeError(
+      "Not logged in",
+      401
+    );
+  }
+
+  const htwbApiRosterOauth = {
+    oauth_consumer_key:
+      htwbApiRosterContext.env
+        .CHPP_CONSUMER_KEY,
+
+    oauth_nonce:
+      htwbApiRosterNonce(),
+
+    oauth_signature_method:
+      "HMAC-SHA1",
+
+    oauth_timestamp:
+      Math.floor(
+        Date.now() / 1000
+      ).toString(),
+
+    oauth_token:
+      htwbApiRosterAccessToken,
+
+    oauth_version:
+      "1.0"
+  };
+
+  const htwbApiRosterAllParameters = {
+    ...htwbApiRosterQuery,
+    ...htwbApiRosterOauth
+  };
+
+  const htwbApiRosterParameterString =
+    Object.entries(
+      htwbApiRosterAllParameters
+    )
+      .map(
+        ([
+          htwbApiRosterKey,
+          htwbApiRosterValue
+        ]) => [
+          htwbApiRosterEnc(
+            htwbApiRosterKey
+          ),
+          htwbApiRosterEnc(
+            htwbApiRosterValue
+          )
+        ]
+      )
+      .sort(
+        (htwbApiRosterA, htwbApiRosterB) => {
+          if (
+            htwbApiRosterA[0] ===
+            htwbApiRosterB[0]
+          ) {
+            return htwbApiRosterA[1]
+              .localeCompare(
+                htwbApiRosterB[1]
+              );
+          }
+
+          return htwbApiRosterA[0]
+            .localeCompare(
+              htwbApiRosterB[0]
+            );
+        }
+      )
+      .map(
+        ([
+          htwbApiRosterKey,
+          htwbApiRosterValue
+        ]) =>
+          `${htwbApiRosterKey}=${htwbApiRosterValue}`
+      )
+      .join("&");
+
+  const htwbApiRosterSignatureBase =
+    `GET&${htwbApiRosterEnc(htwbApiRosterEndpoint)}&${htwbApiRosterEnc(htwbApiRosterParameterString)}`;
+
+  const htwbApiRosterSigningKey =
+    `${htwbApiRosterEnc(
+      htwbApiRosterContext.env
+        .CHPP_CONSUMER_SECRET
+    )}&${htwbApiRosterEnc(htwbApiRosterAccessSecret)}`;
+
+  htwbApiRosterOauth.oauth_signature =
+    await htwbApiRosterHmacSha1(
+      htwbApiRosterSigningKey,
+      htwbApiRosterSignatureBase
+    );
+
+  const htwbApiRosterAuthorization =
+    "OAuth " +
+    Object.entries(htwbApiRosterOauth)
+      .sort(
+        (htwbApiRosterA, htwbApiRosterB) =>
+          htwbApiRosterA[0]
+            .localeCompare(
+              htwbApiRosterB[0]
+            )
+      )
+      .map(
+        ([
+          htwbApiRosterKey,
+          htwbApiRosterValue
+        ]) =>
+          `${htwbApiRosterEnc(htwbApiRosterKey)}="${htwbApiRosterEnc(htwbApiRosterValue)}"`
+      )
+      .join(", ");
+
+  const htwbApiRosterQueryString =
+    Object.entries(htwbApiRosterQuery)
+      .map(
+        ([
+          htwbApiRosterKey,
+          htwbApiRosterValue
+        ]) =>
+          `${htwbApiRosterEnc(htwbApiRosterKey)}=${htwbApiRosterEnc(htwbApiRosterValue)}`
+      )
+      .join("&");
+
+  const htwbApiRosterResponse =
+    await fetch(
+      `${htwbApiRosterEndpoint}?${htwbApiRosterQueryString}`,
+      {
+        method: "GET",
+        headers: {
+          Authorization:
+            htwbApiRosterAuthorization,
+          "User-Agent":
+            `HT Wiki Builder/${HTWB_VERSIONS.app}`
+        }
+      }
+    );
+
+  const htwbApiRosterXml =
+    await htwbApiRosterResponse.text();
+
+  if (!htwbApiRosterResponse.ok) {
+    throw htwbApiRosterMakeError(
+      `CHPP request failed with status ${htwbApiRosterResponse.status}`,
+      502
+    );
+  }
+
+  return htwbApiRosterXml;
+}
+
+
+/* =========================================================
+   TEAM OWNERSHIP
+   ========================================================= */
+
+function htwbApiRosterParseTeamDetails(
+  htwbApiRosterTeamDetailsXml,
+  htwbApiRosterRequestedTeamId
+) {
+  const htwbApiRosterUserXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterTeamDetailsXml,
+      "User"
+    );
+
+  const htwbApiRosterTeamXml =
+    htwbApiRosterXmlContainers(
+      htwbApiRosterTeamDetailsXml,
+      "Team"
+    ).find(
+      htwbApiRosterCandidateTeamXml =>
+        String(
+          htwbApiRosterXmlValue(
+            htwbApiRosterCandidateTeamXml,
+            "TeamID"
+          )
+        ) === String(htwbApiRosterRequestedTeamId)
+    ) || "";
+
+  if (!htwbApiRosterTeamXml) {
+    throw htwbApiRosterMakeError(
+      "Hattrick did not return that team.",
+      404
+    );
+  }
+
+  const htwbApiRosterTeamId =
+    htwbApiRosterXmlValue(
+      htwbApiRosterTeamXml,
+      "TeamID"
+    );
+
+  const htwbApiRosterTeamName =
+    htwbApiRosterXmlValue(
+      htwbApiRosterTeamXml,
+      "TeamName"
+    );
+
+  if (
+    String(htwbApiRosterTeamId) !==
+    String(htwbApiRosterRequestedTeamId)
+  ) {
+    throw htwbApiRosterMakeError(
+      "Hattrick returned a different team than requested."
+    );
+  }
+
+  const htwbApiRosterOwnerUserId =
+    htwbApiRosterXmlValue(
+      htwbApiRosterUserXml,
+      "UserID"
+    );
+
+  const htwbApiRosterRootBeforeUser =
+    htwbApiRosterTeamDetailsXml.split(
+      /<User(?:\s|>)/i
+    )[0];
+
+  const htwbApiRosterLoggedInUserId =
+    htwbApiRosterXmlValue(
+      htwbApiRosterRootBeforeUser,
+      "UserID"
+    );
+
+  const htwbApiRosterIsManagedTeam =
+    Boolean(
+      htwbApiRosterLoggedInUserId &&
+      htwbApiRosterOwnerUserId &&
+      String(htwbApiRosterLoggedInUserId) ===
+        String(htwbApiRosterOwnerUserId)
+    );
+
+  if (!htwbApiRosterIsManagedTeam) {
+    throw htwbApiRosterMakeError(
+      "Roster Evaluator can only use the logged-in manager's own team.",
+      403
+    );
+  }
+
+  const htwbApiRosterTrainerXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterTeamXml,
+      "Trainer"
+    );
+
+  return {
+    teamId:
+      htwbApiRosterTeamId,
+
+    teamName:
+      htwbApiRosterTeamName,
+
+    coachId:
+      htwbApiRosterXmlNumber(
+        htwbApiRosterTrainerXml,
+        "PlayerID"
+      )
+  };
+}
+
+
+/* =========================================================
+   PLAYERS
+   ========================================================= */
+
+function htwbApiRosterPlayerName(
+  htwbApiRosterPlayerXml
+) {
+  const htwbApiRosterPlayerName =
+    htwbApiRosterXmlValue(
+      htwbApiRosterPlayerXml,
+      "PlayerName"
+    );
+
+  if (htwbApiRosterPlayerName) {
+    return htwbApiRosterPlayerName;
+  }
+
+  const htwbApiRosterFirstName =
+    htwbApiRosterXmlValue(
+      htwbApiRosterPlayerXml,
+      "FirstName"
+    );
+
+  const htwbApiRosterNickName =
+    htwbApiRosterXmlValue(
+      htwbApiRosterPlayerXml,
+      "NickName"
+    );
+
+  const htwbApiRosterLastName =
+    htwbApiRosterXmlValue(
+      htwbApiRosterPlayerXml,
+      "LastName"
+    );
+
+  return [
+    htwbApiRosterFirstName,
+    htwbApiRosterNickName
+      ? `"${htwbApiRosterNickName}"`
+      : "",
+    htwbApiRosterLastName
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+}
+
+function htwbApiRosterIsNeverPlayedDate(
+  htwbApiRosterDate
+) {
+  const htwbApiRosterNormalizedDate =
+    String(htwbApiRosterDate || "").trim();
+
+  return (
+    /^1901-01-01(?:[ T].*)?$/i.test(
+      htwbApiRosterNormalizedDate
+    ) ||
+    /^0001-01-01(?:[ T].*)?$/i.test(
+      htwbApiRosterNormalizedDate
+    )
+  );
+}
+
+function htwbApiRosterParseLastMatch(
+  htwbApiRosterPlayerXml
+) {
+  const htwbApiRosterLastMatchKnown =
+    htwbApiRosterXmlHasTag(
+      htwbApiRosterPlayerXml,
+      "LastMatch"
+    );
+
+  if (!htwbApiRosterLastMatchKnown) {
     return {
-      playerId: xmlNumber(player, "PlayerID"),
-      name: playerName(player),
-      playerNumber: xmlNumber(player, "PlayerNumber"),
-      age: xmlNumber(player, "Age"),
-      ageDays: xmlNumber(player, "AgeDays"),
-      arrivalDate: xmlValue(player, "ArrivalDate"),
-      keeper: xmlNumber(player, "KeeperSkill"),
-      defending: xmlNumber(player, "DefenderSkill"),
-      playmaking: xmlNumber(player, "PlaymakerSkill"),
-      winger: xmlNumber(player, "WingerSkill"),
-      passing: xmlNumber(player, "PassingSkill"),
-      scoring: xmlNumber(player, "ScorerSkill"),
-      setPieces: xmlNumber(player, "SetPiecesSkill"),
-      lastMatchId: lastMatchId && lastMatchId > 0 ? lastMatchId : null,
-      lastMatchDate: lastMatchId && lastMatchId > 0 ? xmlValue(last, "MatchDate") : ""
+      known: false,
+      id: null,
+      date: ""
     };
-  });
+  }
+
+  const htwbApiRosterLastMatchXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterPlayerXml,
+      "LastMatch"
+    );
+
+  const htwbApiRosterLastMatchId =
+    htwbApiRosterXmlNumber(
+      htwbApiRosterLastMatchXml,
+      "MatchId"
+    ) ??
+    htwbApiRosterXmlNumber(
+      htwbApiRosterLastMatchXml,
+      "MatchID"
+    );
+
+  const htwbApiRosterLastMatchDate =
+    htwbApiRosterXmlValue(
+      htwbApiRosterLastMatchXml,
+      "Date"
+    );
+
+  const htwbApiRosterHasMatchId =
+    htwbApiRosterLastMatchId !== null &&
+    htwbApiRosterLastMatchId > 0;
+
+  const htwbApiRosterNeverPlayed =
+    !htwbApiRosterHasMatchId &&
+    (
+      !htwbApiRosterLastMatchDate ||
+      htwbApiRosterIsNeverPlayedDate(
+        htwbApiRosterLastMatchDate
+      )
+    );
+
+  if (htwbApiRosterNeverPlayed) {
+    return {
+      known: true,
+      id: null,
+      date: ""
+    };
+  }
+
+  if (
+    !htwbApiRosterHasMatchId ||
+    !htwbApiRosterLastMatchDate ||
+    htwbApiRosterIsNeverPlayedDate(
+      htwbApiRosterLastMatchDate
+    )
+  ) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  return {
+    known: true,
+    id: htwbApiRosterLastMatchId,
+    date: htwbApiRosterLastMatchDate
+  };
 }
 
-export async function onRequestGet(context) {
-  const teamId = new URL(context.request.url).searchParams.get("teamId") || "";
+function htwbApiRosterParsePlayers(
+  htwbApiRosterPlayersXml,
+  htwbApiRosterRequestedTeamId
+) {
+  const htwbApiRosterTeamXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterPlayersXml,
+      "Team"
+    );
+
+  if (!htwbApiRosterTeamXml) {
+    throw htwbApiRosterMakeError(
+      "Hattrick did not return the roster."
+    );
+  }
+
+  const htwbApiRosterReturnedTeamId =
+    htwbApiRosterXmlValue(
+      htwbApiRosterTeamXml,
+      "TeamID"
+    );
+
+  if (
+    String(htwbApiRosterReturnedTeamId) !==
+    String(htwbApiRosterRequestedTeamId)
+  ) {
+    throw htwbApiRosterMakeError(
+      "Hattrick returned the wrong roster."
+    );
+  }
+
+  const htwbApiRosterPlayerListXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterTeamXml,
+      "PlayerList"
+    );
+
+  const htwbApiRosterPlayerXmlList =
+    htwbApiRosterXmlContainers(
+      htwbApiRosterPlayerListXml,
+      "Player"
+    );
+
+  const htwbApiRosterPlayers =
+    htwbApiRosterPlayerXmlList.map(
+      htwbApiRosterPlayerXml => {
+        const htwbApiRosterLastMatch =
+          htwbApiRosterParseLastMatch(
+            htwbApiRosterPlayerXml
+          );
+
+        return {
+          playerId:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "PlayerID"
+            ),
+
+          name:
+            htwbApiRosterPlayerName(
+              htwbApiRosterPlayerXml
+            ),
+
+          number:
+            (() => {
+              const htwbApiRosterPlayerNumber =
+                htwbApiRosterXmlValue(
+                  htwbApiRosterPlayerXml,
+                  "PlayerNumber"
+                );
+
+              return (
+                htwbApiRosterPlayerNumber &&
+                htwbApiRosterPlayerNumber !==
+                  "100"
+              )
+                ? htwbApiRosterPlayerNumber
+                : "";
+            })(),
+
+          age:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "Age"
+            ),
+
+          ageDays:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "AgeDays"
+            ),
+
+          arrivalDate:
+            htwbApiRosterXmlValue(
+              htwbApiRosterPlayerXml,
+              "ArrivalDate"
+            ),
+
+          keeper:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "KeeperSkill"
+            ),
+
+          defending:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "DefenderSkill"
+            ),
+
+          playmaking:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "PlaymakerSkill"
+            ),
+
+          winger:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "WingerSkill"
+            ),
+
+          passing:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "PassingSkill"
+            ),
+
+          scoring:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "ScorerSkill"
+            ),
+
+          setPieces:
+            htwbApiRosterXmlNumber(
+              htwbApiRosterPlayerXml,
+              "SetPiecesSkill"
+            ),
+
+          lastMatchKnown:
+            htwbApiRosterLastMatch.known,
+
+          lastMatchId:
+            htwbApiRosterLastMatch.id,
+
+          lastMatchDate:
+            htwbApiRosterLastMatch.date
+        };
+      }
+    );
+
+  if (!htwbApiRosterPlayers.length) {
+    throw htwbApiRosterMakeError(
+      "No players were returned for this team."
+    );
+  }
+
+  const htwbApiRosterMissingRequiredData =
+    htwbApiRosterPlayers.some(
+      htwbApiRosterPlayer =>
+        htwbApiRosterPlayer.playerId === null ||
+        htwbApiRosterPlayer.age === null ||
+        htwbApiRosterPlayer.ageDays === null ||
+        !htwbApiRosterPlayer.arrivalDate ||
+        htwbApiRosterPlayer.keeper === null ||
+        htwbApiRosterPlayer.defending === null ||
+        htwbApiRosterPlayer.playmaking === null ||
+        htwbApiRosterPlayer.winger === null ||
+        htwbApiRosterPlayer.passing === null ||
+        htwbApiRosterPlayer.scoring === null ||
+        htwbApiRosterPlayer.setPieces === null
+    );
+
+  if (htwbApiRosterMissingRequiredData) {
+    throw htwbApiRosterMakeError(
+      "Hattrick did not return all age, arrival, and skill data needed for the usefulness calculation."
+    );
+  }
+
+  return {
+    fetchedDate:
+      htwbApiRosterXmlValue(
+        htwbApiRosterPlayersXml,
+        "FetchedDate"
+      ),
+
+    players:
+      htwbApiRosterPlayers
+  };
+}
+
+
+function htwbApiRosterParsePlayerDetailsLastMatch(
+  htwbApiRosterPlayerDetailsXml,
+  htwbApiRosterExpectedPlayerId
+) {
+  const htwbApiRosterPlayerXml =
+    htwbApiRosterXmlContainer(
+      htwbApiRosterPlayerDetailsXml,
+      "Player"
+    );
+
+  if (!htwbApiRosterPlayerXml) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  const htwbApiRosterReturnedPlayerId =
+    htwbApiRosterXmlNumber(
+      htwbApiRosterPlayerXml,
+      "PlayerID"
+    );
+
+  if (
+    htwbApiRosterReturnedPlayerId === null ||
+    String(htwbApiRosterReturnedPlayerId) !==
+      String(htwbApiRosterExpectedPlayerId)
+  ) {
+    return {
+      known: false,
+      id: null,
+      date: ""
+    };
+  }
+
+  return htwbApiRosterParseLastMatch(
+    htwbApiRosterPlayerXml
+  );
+}
+
+async function htwbApiRosterFillMissingLastMatches(
+  htwbApiRosterContext,
+  htwbApiRosterPlayers
+) {
+  const htwbApiRosterMissingPlayers =
+    htwbApiRosterPlayers.filter(
+      htwbApiRosterPlayer =>
+        !htwbApiRosterPlayer.lastMatchKnown
+    );
+
+  if (!htwbApiRosterMissingPlayers.length) {
+    return;
+  }
+
+  let htwbApiRosterNextPlayerIndex = 0;
+
+  async function htwbApiRosterLastMatchWorker() {
+    while (
+      htwbApiRosterNextPlayerIndex <
+      htwbApiRosterMissingPlayers.length
+    ) {
+      const htwbApiRosterPlayer =
+        htwbApiRosterMissingPlayers[
+          htwbApiRosterNextPlayerIndex
+        ];
+
+      htwbApiRosterNextPlayerIndex += 1;
+
+      try {
+        const htwbApiRosterPlayerDetailsXml =
+          await htwbApiRosterChppFetch(
+            htwbApiRosterContext,
+            {
+              file: "playerdetails",
+              version:
+                HTWB_CHPP_VERSIONS.playerdetails,
+              actionType: "view",
+              playerID:
+                String(
+                  htwbApiRosterPlayer.playerId
+                ),
+              includeMatchInfo: "true"
+            }
+          );
+
+        const htwbApiRosterLastMatch =
+          htwbApiRosterParsePlayerDetailsLastMatch(
+            htwbApiRosterPlayerDetailsXml,
+            htwbApiRosterPlayer.playerId
+          );
+
+        if (htwbApiRosterLastMatch.known) {
+          htwbApiRosterPlayer.lastMatchKnown =
+            true;
+          htwbApiRosterPlayer.lastMatchId =
+            htwbApiRosterLastMatch.id;
+          htwbApiRosterPlayer.lastMatchDate =
+            htwbApiRosterLastMatch.date;
+        }
+      } catch (htwbApiRosterError) {
+        console.warn(
+          `Could not load last-match details for player ${htwbApiRosterPlayer.playerId}:`,
+          htwbApiRosterError
+        );
+      }
+    }
+  }
+
+  const htwbApiRosterWorkerCount =
+    Math.min(
+      4,
+      htwbApiRosterMissingPlayers.length
+    );
+
+  await Promise.all(
+    Array.from(
+      { length: htwbApiRosterWorkerCount },
+      () => htwbApiRosterLastMatchWorker()
+    )
+  );
+
+  const htwbApiRosterStillMissing =
+    htwbApiRosterPlayers.filter(
+      htwbApiRosterPlayer =>
+        !htwbApiRosterPlayer.lastMatchKnown
+    );
+
+  if (htwbApiRosterStillMissing.length) {
+    throw htwbApiRosterMakeError(
+      "Hattrick did not return the last-match data needed for an accurate roster evaluation."
+    );
+  }
+}
+
+/* =========================================================
+   ENDPOINT
+   ========================================================= */
+
+export async function onRequestGet(
+  htwbApiRosterContext
+) {
+  const htwbApiRosterUrl =
+    new URL(
+      htwbApiRosterContext.request.url
+    );
+
+  const htwbApiRosterRequestedTeamId =
+    htwbApiRosterUrl.searchParams.get(
+      "teamId"
+    );
+
+  if (
+    !htwbApiRosterRequestedTeamId ||
+    !/^\d+$/.test(
+      htwbApiRosterRequestedTeamId
+    )
+  ) {
+    return Response.json(
+      {
+        error:
+          "A valid numeric TeamID is required."
+      },
+      {
+        status: 400,
+        headers: {
+          "Cache-Control":
+            "no-store"
+        }
+      }
+    );
+  }
+
   try {
-    const team = await requireOwnedTeam(context, teamId);
-    const playersXml = await chppFetch(context, { file: "players", version: "1.3", actionType: "view", teamID: teamId });
-    const players = parsePlayers(playersXml, teamId);
-    if (!players.length) throw new Error("No players were returned for this team.");
-    const missing = players.some(p => p.playerId === null || !p.name || p.age === null || p.ageDays === null || !p.arrivalDate || [p.keeper,p.defending,p.playmaking,p.winger,p.passing,p.scoring,p.setPieces].some(v => v === null));
-    if (missing) throw new Error("Hattrick did not return all data needed for the roster evaluation.");
-    return json({ teamId: team.teamId, teamName: team.teamName, coachId: team.coachId ? Number(team.coachId) : null, asOfDate: xmlValue(playersXml, "FetchedDate") || new Date().toISOString(), players });
-  } catch (error) {
-    return endpointError(error, "Could not load roster data from Hattrick.");
+    const htwbApiRosterTeamDetailsXml =
+      await htwbApiRosterChppFetch(
+        htwbApiRosterContext,
+        {
+          file: "teamdetails",
+          version: HTWB_CHPP_VERSIONS.teamdetails,
+          teamID:
+            htwbApiRosterRequestedTeamId
+        }
+      );
+
+    const htwbApiRosterTeam =
+      htwbApiRosterParseTeamDetails(
+        htwbApiRosterTeamDetailsXml,
+        htwbApiRosterRequestedTeamId
+      );
+
+    const htwbApiRosterPlayersXml =
+      await htwbApiRosterChppFetch(
+        htwbApiRosterContext,
+        {
+          file: "players",
+          version: HTWB_CHPP_VERSIONS.players,
+          actionType: "view",
+          teamID:
+            htwbApiRosterRequestedTeamId
+        }
+      );
+
+    const htwbApiRosterPlayerData =
+      htwbApiRosterParsePlayers(
+        htwbApiRosterPlayersXml,
+        htwbApiRosterRequestedTeamId
+      );
+
+    await htwbApiRosterFillMissingLastMatches(
+      htwbApiRosterContext,
+      htwbApiRosterPlayerData.players
+    );
+
+    return Response.json(
+      {
+        teamId:
+          htwbApiRosterTeam.teamId,
+
+        teamName:
+          htwbApiRosterTeam.teamName,
+
+        coachId:
+          htwbApiRosterTeam.coachId,
+
+        asOfDate:
+          htwbApiRosterPlayerData.fetchedDate ||
+          new Date().toISOString(),
+
+        players:
+          htwbApiRosterPlayerData.players
+      },
+      {
+        headers: {
+          "Cache-Control":
+            "no-store"
+        }
+      }
+    );
+  } catch (htwbApiRosterError) {
+    console.error(
+      "Roster evaluator API error:",
+      htwbApiRosterError
+    );
+
+    const htwbApiRosterStatus =
+      Number.isFinite(
+        htwbApiRosterError.status
+      )
+        ? htwbApiRosterError.status
+        : 502;
+
+    let htwbApiRosterMessage =
+      htwbApiRosterError.message ||
+      "Could not load roster data from Hattrick.";
+
+    if (htwbApiRosterStatus === 401) {
+      htwbApiRosterMessage =
+        "Not logged in";
+    }
+
+    return Response.json(
+      {
+        error:
+          htwbApiRosterMessage
+      },
+      {
+        status:
+          htwbApiRosterStatus,
+        headers: {
+          "Cache-Control":
+            "no-store"
+        }
+      }
+    );
   }
 }

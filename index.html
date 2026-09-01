@@ -1,22 +1,373 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>HT Wiki Builder</title><meta name="description" content="A free CHPP-powered assistant for building and maintaining HT Wiki content.">
-<link rel="icon" href="/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png"><link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles.css?v=0.2.0"></head><body>
-<header class="site-header"><div class="header-inner"><a class="brand" href="/" aria-label="HT Wiki Builder home"><span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span><span class="brand-name"><span class="brand-wiki">Wiki</span><span class="brand-builder">Builder</span></span></a><div class="header-status"><div id="user-status" class="user-status">Not connected</div><a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a><a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a></div></div></header>
-<main><section class="hero"><div class="hero-inner"><div class="hero-copy"><div class="eyebrow">CHPP Manager Assistant</div><h1>Build better <span>HT Wiki</span> pages.</h1><p class="hero-text">Turn authorized Hattrick data into useful analysis, structured information, and copy-ready HT Wiki markup.</p><div id="login-panel" class="login-panel"><a class="button button-primary" href="/auth/login">Log in with Hattrick</a><p class="login-note">HT Wiki Builder requests read-only access to your Hattrick data.</p></div><div id="connected-panel" class="connected-panel" hidden><div class="connected-label">Connected to Hattrick</div><div class="connected-team-identity"><img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden><div class="connected-team"><div class="connected-team-name" id="team-name">Loading team...</div><div class="connected-team-details"><span id="manager-name"></span><span id="team-id"></span></div></div></div></div></div>
-<div class="hero-card"><div class="hero-card-header"><span class="hero-card-title">HT Wiki Builder <span class="version-label" data-htwb-version="app"></span></span><span class="status-dot"></span></div><div class="hero-card-body"><div class="feature-row"><div class="feature-number">01</div><div><strong>Connect</strong><span>Authorize read-only CHPP access.</span></div></div><div class="feature-row"><div class="feature-number">02</div><div><strong>Build</strong><span>Turn your Hattrick data into useful tools and wiki markup.</span></div></div><div class="feature-row"><div class="feature-number">03</div><div><strong>Copy</strong><span>Use the generated output wherever you need it.</span></div></div></div></div></div></section>
-<section class="workspace"><div class="tool-section"><div class="section-heading"><div><div class="eyebrow">Create HT Wiki Content</div><h2>Wiki Builders</h2></div><p>Build structured HT Wiki pages from your authorized Hattrick data.</p></div><div class="tool-grid">
-<article class="tool-card"><div class="tool-card-topline"><div class="tool-card-number">01</div><span class="tool-card-badge tool-card-badge-live">Available</span></div><div class="tool-card-content"><h3>Team Page Builder</h3><div class="tool-version" data-htwb-version="team"></div><p>Create a full HT Wiki team article with every section that can be supported by your available CHPP data.</p></div><a class="tool-card-action" href="/team.html">Open builder</a></article>
-<article class="tool-card tool-card-coming-soon"><div class="tool-card-topline"><div class="tool-card-number">02</div><span class="tool-card-badge">Coming soon</span></div><div class="tool-card-content"><h3>Manager Page Builder</h3><p>Create an HT Wiki manager profile from Hattrick career and team information.</p></div><span class="tool-card-action disabled">Coming soon</span></article>
-<article class="tool-card tool-card-coming-soon"><div class="tool-card-topline"><div class="tool-card-number">03</div><span class="tool-card-badge">Coming soon</span></div><div class="tool-card-content"><h3>Team Season Page Builder</h3><p>Create a season-specific team page with competition results, squad information, and season statistics.</p></div><span class="tool-card-action disabled">Coming soon</span></article>
-<article class="tool-card tool-card-coming-soon"><div class="tool-card-topline"><div class="tool-card-number">04</div><span class="tool-card-badge">Coming soon</span></div><div class="tool-card-content"><h3>Player Page Builder</h3><p>Create an HT Wiki player article with identity, career, and available statistical information.</p></div><span class="tool-card-action disabled">Coming soon</span></article>
-</div></div>
-<div class="tool-section"><div class="section-heading"><div><div class="eyebrow">Plan and Analyze</div><h2>Manager Tools</h2></div><p>Use your Hattrick data to support day-to-day team management.</p></div><div class="tool-grid tool-grid-manager">
-<article class="tool-card"><div class="tool-card-topline"><div class="tool-card-number">01</div><span class="tool-card-badge tool-card-badge-live">Available</span></div><div class="tool-card-content"><h3>Lineup Planner</h3><div class="tool-version" data-htwb-version="lineup"></div><p>Load upcoming fixtures, select the match you want to plan, and analyze training priorities, formation experience, eligibility, and lineup options.</p></div><a class="tool-card-action" href="/lineup.html">Open planner</a></article>
-<article class="tool-card"><div class="tool-card-topline"><div class="tool-card-number">02</div><span class="tool-card-badge tool-card-badge-live">Available</span></div><div class="tool-card-content"><h3>Roster Evaluator</h3><div class="tool-version" data-htwb-version="roster"></div><p>Rank every player from least useful to most useful using current skills, development runway, and time unused.</p></div><a class="tool-card-action" href="/roster.html">Open evaluator</a></article>
-<article class="tool-card"><div class="tool-card-topline"><div class="tool-card-number">03</div><span class="tool-card-badge tool-card-badge-live">Available</span></div><div class="tool-card-content"><h3>Jersey Number Assigner</h3><div class="tool-version" data-htwb-version="jersey"></div><p>Load your roster and prepare jersey numbers for new players or a complete roster reset.</p></div><a class="tool-card-action" href="/jersey.html">Open assigner</a></article>
-<article class="tool-card tool-card-coming-soon"><div class="tool-card-topline"><div class="tool-card-number">04</div><span class="tool-card-badge">Coming soon</span></div><div class="tool-card-content"><h3>Season Awards</h3><p>Review season performance and recognize standout players across your squad with end-of-season awards.</p></div><span class="tool-card-action disabled">Coming soon</span></article>
-</div></div></section></main>
-<footer class="site-footer"><div class="footer-inner"><div><strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong><span>Free. Read-only. Built for the Hattrick community.</span></div><div class="footer-links"><a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a><a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a></div></div><div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div></footer>
-<script type="module" src="/versions.js?v=0.2.0"></script><script src="/app.js?v=0.2.0"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>HT Wiki Builder</title>
+
+  <meta
+    name="description"
+    content="A free CHPP-powered assistant for building and maintaining HT Wiki content."
+  >
+
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+  <link
+    href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet"
+  >
+
+  <link rel="stylesheet" href="/styles.css?v=0.1.1&amp;rev=logo-54-12">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark">
+          <img class="brand-logo" src="/ht-wiki-builder-logo.png" alt="">
+        </span>
+
+        <span class="brand-name">
+          <span class="brand-wiki">Wiki</span>
+          <span class="brand-builder">Builder</span>
+        </span>
+      </a>
+
+      <div class="header-status">
+        <div id="user-status" class="user-status">
+          Not connected
+        </div>
+
+        <a
+          id="header-login"
+          class="button button-small button-gold"
+          href="/auth/login"
+        >
+          Log in
+        </a>
+
+        <a
+          id="header-logout"
+          class="button button-small button-outline"
+          href="/auth/logout"
+          hidden
+        >
+          Log out
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-inner">
+        <div class="hero-copy">
+          <div class="eyebrow">CHPP Manager Assistant</div>
+
+          <h1>
+            Build better
+            <span>HT Wiki</span>
+            pages.
+          </h1>
+
+          <p class="hero-text">
+            Turn authorized Hattrick data into useful analysis,
+            structured information, and copy-ready HT Wiki markup.
+          </p>
+
+          <div id="login-panel" class="login-panel">
+            <a class="button button-primary" href="/auth/login">
+              Log in with Hattrick
+            </a>
+
+            <p class="login-note">
+              HT Wiki Builder requests read-only access to your
+              Hattrick data.
+            </p>
+          </div>
+
+          <div id="connected-panel" class="connected-panel" hidden>
+            <div class="connected-label">
+              Connected to Hattrick
+            </div>
+
+            <div class="connected-team-identity">
+              <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+              <div class="connected-team">
+                <div class="connected-team-name" id="team-name">
+                  Loading team...
+                </div>
+
+                <div class="connected-team-details">
+                  <span id="manager-name"></span>
+                  <span id="team-id"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hero-card">
+          <div class="hero-card-header">
+            <span class="hero-card-title">HT Wiki Builder <span class="version-label" data-htwb-version="app"></span></span>
+            <span class="status-dot"></span>
+          </div>
+
+          <div class="hero-card-body">
+            <div class="feature-row">
+              <div class="feature-number">01</div>
+              <div>
+                <strong>Connect</strong>
+                <span>Authorize read-only CHPP access.</span>
+              </div>
+            </div>
+
+            <div class="feature-row">
+              <div class="feature-number">02</div>
+              <div>
+                <strong>Build</strong>
+                <span>Turn your Hattrick data into useful tools and wiki markup.</span>
+              </div>
+            </div>
+
+            <div class="feature-row">
+              <div class="feature-number">03</div>
+              <div>
+                <strong>Copy</strong>
+                <span>Use the generated output wherever you need it.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="tool-section">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Create HT Wiki Content</div>
+            <h2>Wiki Builders</h2>
+          </div>
+
+          <p>
+            Build structured HT Wiki pages from your authorized Hattrick data.
+          </p>
+        </div>
+
+        <div class="tool-grid">
+          <article class="tool-card">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">01</div>
+              <span class="tool-card-badge tool-card-badge-live">Available</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Team Page Builder</h3>
+              <div class="tool-version" data-htwb-version="team"></div>
+
+              <p>
+                Create a full HT Wiki team article with every section that can
+                be supported by your available CHPP data.
+              </p>
+            </div>
+
+            <a class="tool-card-action" href="/team.html">
+              Open builder
+            </a>
+          </article>
+
+          <article class="tool-card tool-card-coming-soon">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">02</div>
+              <span class="tool-card-badge">Coming soon</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Manager Page Builder</h3>
+
+              <p>
+                Create an HT Wiki manager profile from Hattrick career and
+                team information.
+              </p>
+            </div>
+
+            <span class="tool-card-action disabled">Coming soon</span>
+          </article>
+
+          <article class="tool-card tool-card-coming-soon">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">03</div>
+              <span class="tool-card-badge">Coming soon</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Team Season Page Builder</h3>
+
+              <p>
+                Create a season-specific team page with competition results,
+                squad information, and season statistics.
+              </p>
+            </div>
+
+            <span class="tool-card-action disabled">Coming soon</span>
+          </article>
+
+          <article class="tool-card tool-card-coming-soon">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">04</div>
+              <span class="tool-card-badge">Coming soon</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Player Page Builder</h3>
+
+              <p>
+                Create an HT Wiki player article with identity, career, and
+                available statistical information.
+              </p>
+            </div>
+
+            <span class="tool-card-action disabled">Coming soon</span>
+          </article>
+        </div>
+      </div>
+
+      <div class="tool-section">
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow">Plan and Analyze</div>
+            <h2>Manager Tools</h2>
+          </div>
+
+          <p>
+            Use your Hattrick data to support day-to-day team management.
+          </p>
+        </div>
+
+        <div class="tool-grid tool-grid-manager">
+          <article class="tool-card">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">01</div>
+              <span class="tool-card-badge tool-card-badge-live">Available</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Lineup Planner</h3>
+              <div class="tool-version" data-htwb-version="lineup"></div>
+
+              <p>
+                Load upcoming fixtures, select the match you want to plan, and
+                analyze training priorities, formation experience, eligibility,
+                and lineup options.
+              </p>
+            </div>
+
+            <a class="tool-card-action" href="/lineup.html">
+              Open planner
+            </a>
+          </article>
+
+          <article class="tool-card">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">02</div>
+              <span class="tool-card-badge tool-card-badge-live">Available</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Roster Evaluator</h3>
+              <div class="tool-version" data-htwb-version="roster"></div>
+
+              <p>
+                Rank every player from least useful to most useful using
+                current skills, development runway, and time unused.
+              </p>
+            </div>
+
+            <a class="tool-card-action" href="/roster.html">
+              Open evaluator
+            </a>
+          </article>
+
+          <article class="tool-card tool-card-coming-soon">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">03</div>
+              <span class="tool-card-badge">Coming soon</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Jersey Number Assigner</h3>
+
+              <p>
+                Review your squad and assign jersey numbers using player roles,
+                positions, and your preferred numbering structure.
+              </p>
+            </div>
+
+            <span class="tool-card-action disabled">Coming soon</span>
+          </article>
+
+          <article class="tool-card tool-card-coming-soon">
+            <div class="tool-card-topline">
+              <div class="tool-card-number">04</div>
+              <span class="tool-card-badge">Coming soon</span>
+            </div>
+
+            <div class="tool-card-content">
+              <h3>Season Awards</h3>
+
+              <p>
+                Review season performance and recognize standout players across
+                your squad with end-of-season awards.
+              </p>
+            </div>
+
+            <span class="tool-card-action disabled">Coming soon</span>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div>
+        <strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong>
+        <span>Free. Read-only. Built for the Hattrick community.</span>
+      </div>
+
+      <div class="footer-links">
+        <a
+          href="https://www.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Hattrick
+        </a>
+
+        <a
+          href="https://wiki.hattrick.org/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          HT Wiki
+        </a>
+      </div>
+    </div>
+
+    <div class="footer-legal">
+      HT Wiki Builder is an independent Hattrick community application.
+    </div>
+  </footer>
+
+  <script type="module" src="/versions.js?v=0.2.1"></script>
+  <script src="/app.js?v=0.1.1"></script>
+</body>
+</html>
