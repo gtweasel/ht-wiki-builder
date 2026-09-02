@@ -4,7 +4,7 @@ export const HTWB_VERSIONS = Object.freeze({
   lineup: "0.2.1",
   roster: "0.2.1",
   jersey: "0.1.0",
-  manager: "0.2.0"
+  manager: "0.3.0"
 });
 
 function htwbApplyVersions() {

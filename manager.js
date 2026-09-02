@@ -1,6 +1,6 @@
 "use strict";
 
-const HTWB_MANAGER_VERSION = "0.2.0";
+const HTWB_MANAGER_VERSION = "0.3.0";
 const HTWB_MANAGER_BUILDER_URL = "https://ht-wiki-builder.pages.dev/";
 
 const htwbManagerLoadButton = document.getElementById("load-manager-data");
@@ -54,6 +54,72 @@ function htwbManagerFormatDate(value) {
   return `${day} ${months[month - 1]} ${year}`;
 }
 
+function htwbManagerStartDateTemplate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "";
+  return `{{Start date|${match[1]}|${match[2]}|${match[3]}|df=y}}`;
+}
+
+const HTWB_MANAGER_COUNTRY_PROFILES = Object.freeze({
+  "USA": { demonym: "American", category: "American Users", flag: "USA" },
+  "England": { demonym: "English", category: "English Users", flag: "England" },
+  "Northern Ireland": { demonym: "Northern Irish", category: "Northern Irish Users", flag: "Northern Ireland" },
+  "Ireland": { demonym: "Irish", category: "Irish Users", flag: "Ireland" },
+  "Scotland": { demonym: "Scottish", category: "Scottish Users", flag: "Scotland" },
+  "Cymru": { demonym: "Welsh", category: "", flag: "Cymru" },
+  "Al Iraq": { demonym: "Iraqi", category: "", flag: "IRQ" },
+  "Nippon": { demonym: "Japanese", category: "Japanese Users", flag: "Nippon" },
+  "Canada": { demonym: "Canadian", category: "Canadian Users", flag: "Canada" },
+  "Argentina": { demonym: "Argentine", category: "Argentine Users", flag: "Argentina" },
+  "Brasil": { demonym: "Brazilian", category: "Brazilian Users", flag: "Brasil" },
+  "France": { demonym: "French", category: "French Users", flag: "France" },
+  "Deutschland": { demonym: "German", category: "German Users", flag: "Deutschland" },
+  "España": { demonym: "Spanish", category: "Spanish Users", flag: "España" },
+  "Italia": { demonym: "Italian", category: "Italian Users", flag: "Italia" },
+  "Nederland": { demonym: "Dutch", category: "Dutch Users", flag: "Nederland" },
+  "Belgium": { demonym: "Belgian", category: "Belgian Users", flag: "Belgium" },
+  "Portugal": { demonym: "Portuguese", category: "Portuguese Users", flag: "Portugal" },
+  "Polska": { demonym: "Polish", category: "Polish Users", flag: "Polska" },
+  "Sverige": { demonym: "Swedish", category: "Swedish Users", flag: "Sverige" },
+  "Norge": { demonym: "Norwegian", category: "Norwegian Users", flag: "Norge" },
+  "Danmark": { demonym: "Danish", category: "Danish Users", flag: "Danmark" },
+  "Suomi": { demonym: "Finnish", category: "Finnish Users", flag: "Suomi" },
+  "Hellas": { demonym: "Greek", category: "Greek Users", flag: "Hellas" },
+  "Türkiye": { demonym: "Turkish", category: "Turkish Users", flag: "Türkiye" },
+  "México": { demonym: "Mexican", category: "Mexican Users", flag: "México" },
+  "South Africa": { demonym: "South African", category: "South African Users", flag: "South Africa" },
+  "Hanguk": { demonym: "South Korean", category: "South Korean Users", flag: "Hanguk" },
+  "China": { demonym: "Chinese", category: "Chinese Users", flag: "China" },
+  "India": { demonym: "Indian", category: "Indian Users", flag: "India" },
+  "Oceania": { demonym: "Oceanian", category: "Oceanian Users", flag: "Oceania" }
+});
+
+function htwbManagerCountryProfile(value) {
+  return HTWB_MANAGER_COUNTRY_PROFILES[String(value || "").trim()] || null;
+}
+
+function htwbManagerCountryFlag(value) {
+  const country = String(value || "").trim();
+  if (!country) return "";
+  return htwbManagerCountryProfile(country)?.flag || country;
+}
+
+function htwbManagerCountryIdentity(value) {
+  const country = htwbManagerEscapeWiki(value);
+  if (!country) return "";
+  const profile = htwbManagerCountryProfile(value);
+  return profile?.demonym
+    ? `[[${country}|${htwbManagerEscapeWiki(profile.demonym)}]]`
+    : `[[${country}]]`;
+}
+
+function htwbManagerPronouns(gender) {
+  const normalized = String(gender || "").trim().toLowerCase();
+  if (normalized === "male" || normalized === "man") return { subject: "He", possessive: "his" };
+  if (normalized === "female" || normalized === "woman") return { subject: "She", possessive: "her" };
+  return { subject: "They", possessive: "their" };
+}
+
 function htwbManagerActiveTeamId() {
   return String(window.HTWikiBuilder?.getSelectedTeamId?.() || "").trim();
 }
@@ -73,6 +139,17 @@ function htwbManagerSplitLines(value) {
     .filter(Boolean);
 }
 
+function htwbManagerParseFavoriteTeams(value) {
+  return htwbManagerSplitLines(value).map(line => {
+    const separator = line.indexOf("|");
+    if (separator < 0) return { country: "", team: line };
+    return {
+      country: line.slice(0, separator).trim(),
+      team: line.slice(separator + 1).trim()
+    };
+  }).filter(item => item.team);
+}
+
 function htwbManagerManualData() {
   const wikiUsername = String(htwbManagerWikiUsername?.value || "")
     .trim()
@@ -83,7 +160,7 @@ function htwbManagerManualData() {
     wikiUsername,
     realName: String(htwbManagerRealName?.value || "").trim(),
     gender: String(htwbManagerGender?.value || "").trim(),
-    favoriteTeams: htwbManagerSplitLines(htwbManagerFavoriteTeams?.value),
+    favoriteTeams: htwbManagerParseFavoriteTeams(htwbManagerFavoriteTeams?.value),
     officialRoles: htwbManagerSplitLines(htwbManagerOfficialRoles?.value)
   };
 }
@@ -98,13 +175,15 @@ function htwbManagerTeamLink(team, includeId = false) {
   if (!name) return "";
   const link = `[[${name}]]`;
   return includeId && team?.teamId
-    ? `${link} (${htwbManagerEscapeWiki(team.teamId)})`
+    ? `${link} {{Teamid|${htwbManagerEscapeWiki(team.teamId)}}}`
     : link;
 }
 
-function htwbManagerCountryLink(value) {
-  const country = htwbManagerEscapeWiki(value);
-  return country ? `[[${country}]]` : "";
+function htwbManagerSeriesLink(team) {
+  const series = htwbManagerEscapeWiki(team?.series);
+  const country = htwbManagerEscapeWiki(team?.country);
+  if (!series) return "";
+  return country ? `[[${series} (${country})|${series}]]` : series;
 }
 
 function htwbManagerInternationalText(data) {
@@ -129,21 +208,21 @@ function htwbManagerBuildInfobox(data) {
   const manual = htwbManagerManualData();
   const lines = ["{{Infobox/User"];
   const add = (key, value) => {
-    if (htwbManagerHasValue(value)) lines.push(`| ${key.padEnd(13, " ")} = ${value}`);
+    if (htwbManagerHasValue(value)) lines.push(` | ${key.padEnd(10, " ")} = ${value}`);
   };
 
   add("username", htwbManagerEscapeWiki(data.loginName));
   add("userid", htwbManagerEscapeWiki(data.userId));
+  add("face", manual.wikiUsername ? `[[Image:${htwbManagerEscapeWiki(manual.wikiUsername)}.png]]` : "");
   add("clubname", team ? htwbManagerEscapeWiki(team.teamName) : "");
   add("teamid", team ? htwbManagerEscapeWiki(team.teamId) : "");
-  add("face", manual.wikiUsername ? `[[File:${htwbManagerEscapeWiki(manual.wikiUsername)}.png]]` : "");
   add("realname", htwbManagerEscapeWiki(manual.realName));
   add("gender", htwbManagerEscapeWiki(manual.gender));
   add("language", htwbManagerEscapeWiki(data.language));
   add("region", team ? htwbManagerEscapeWiki(team.region) : "");
   add("country", htwbManagerEscapeWiki(data.country || team?.country));
-  add("joined", data.signupDate ? htwbManagerFormatDate(data.signupDate) : "");
-  add("favteam", manual.favoriteTeams.map(htwbManagerEscapeWiki).join("<br>"));
+  add("joined", htwbManagerStartDateTemplate(data.signupDate));
+  add("favteam", manual.favoriteTeams.map(item => htwbManagerEscapeWiki(item.team)).join("<br>"));
   add("official", manual.officialRoles.map(htwbManagerEscapeWiki).join("<br>"));
   add("international", htwbManagerInternationalText(data));
   lines.push("}}");
@@ -155,29 +234,37 @@ function htwbManagerBuildIntro(data) {
   const team = htwbManagerPrimaryTeam(data);
   const teams = Array.isArray(data?.teams) ? data.teams : [];
   const additionalCount = team ? Math.max(0, teams.length - 1) : teams.length;
+  const manual = htwbManagerManualData();
+  const pronouns = htwbManagerPronouns(manual.gender);
+  const country = data.country || team?.country || "";
+  const profile = htwbManagerCountryProfile(country);
 
-  let sentence = `'''${htwbManagerEscapeWiki(data.loginName)}'''`;
-  if (data.userId) sentence += ` (${htwbManagerEscapeWiki(data.userId)})`;
-  sentence += " is a Hattrick manager";
-  if (data.country || team?.country) {
-    sentence += ` from ${htwbManagerCountryLink(data.country || team.country)}`;
+  let firstSentence = `'''${htwbManagerEscapeWiki(data.loginName)}'''`;
+  if (data.userId) firstSentence += ` {{Userid|${htwbManagerEscapeWiki(data.userId)}}}`;
+  if (country) {
+    const identity = htwbManagerCountryIdentity(country);
+    const article = /^[aeiou]/i.test(profile?.demonym || country) ? "an" : "a";
+    firstSentence += ` is ${article} ${identity} Hattrick manager`;
+  } else {
+    firstSentence += " is a Hattrick manager";
   }
-  if (data.signupDate) {
-    sentence += ` who joined Hattrick on ${htwbManagerFormatDate(data.signupDate)}`;
-  }
+  firstSentence += ".";
+
+  const careerParts = [];
+  if (data.signupDate) careerParts.push(`joined Hattrick on ${htwbManagerFormatDate(data.signupDate)}`);
   if (team?.teamName) {
-    sentence += data.signupDate ? " and" : " who";
-    sentence += ` currently manages ${htwbManagerTeamLink(team)}`;
+    let teamText = `currently manages ${htwbManagerTeamLink(team)}`;
     if (additionalCount > 0) {
-      sentence += ` as the primary club, together with ${htwbManagerNumberWord(additionalCount)} additional club${additionalCount === 1 ? "" : "s"}`;
+      teamText += ` as ${pronouns.possessive} primary club, together with ${htwbManagerNumberWord(additionalCount)} additional club${additionalCount === 1 ? "" : "s"}`;
     }
+    careerParts.push(teamText);
   }
-  sentence += ".";
 
+  const careerSentence = careerParts.length ? `${pronouns.subject} ${careerParts.join(" and ")}.` : "";
   const international = htwbManagerInternationalText(data);
-  if (international) sentence += ` The manager currently serves as ${international}.`;
+  const internationalSentence = international ? `${pronouns.subject} currently serves as ${international}.` : "";
 
-  return [htwbManagerBuildInfobox(data), "", sentence].filter(Boolean).join("\n");
+  return [htwbManagerBuildInfobox(data), "", firstSentence, careerSentence, internationalSentence].filter(Boolean).join("\n");
 }
 
 function htwbManagerBuildClubs(data) {
@@ -185,15 +272,16 @@ function htwbManagerBuildClubs(data) {
   if (!teams.length) return "";
   teams.sort((a, b) => Number(Boolean(b.isPrimaryClub)) - Number(Boolean(a.isPrimaryClub)));
 
-  const lines = ["== Clubs ==", "", '{| class="wikitable"', "! Role !! Country !! Club !! Founded !! Series"];
+  const lines = ["== Clubs ==", "", '{| class="prettytable sortable"', "! Role", "! Country", "! Club", "! Founded", "! Series"];
   for (const team of teams) {
+    const flag = htwbManagerCountryFlag(team.country);
     lines.push(
       "|-",
       `| ${team.isPrimaryClub ? "Primary club" : "Additional club"}`,
-      `| ${htwbManagerCountryLink(team.country)}`,
+      `| ${flag ? `{{flag|${htwbManagerEscapeWiki(flag)}}}` : ""}`,
       `| ${htwbManagerTeamLink(team, true)}`,
       `| ${team.foundedDate ? htwbManagerFormatDate(team.foundedDate) : ""}`,
-      `| ${htwbManagerEscapeWiki(team.series)}`
+      `| ${htwbManagerSeriesLink(team)}`
     );
   }
   lines.push("|}");
@@ -206,7 +294,11 @@ function htwbManagerBuildFavoriteTeams() {
   return [
     "== Favorite soccer teams ==",
     "",
-    ...favorites.map(team => `* ${htwbManagerEscapeWiki(team)}`)
+    ...favorites.map(item => {
+      const team = htwbManagerEscapeWiki(item.team);
+      const country = htwbManagerEscapeWiki(item.country);
+      return country ? `* {{flagicon|${country}}} ${team}` : `* ${team}`;
+    })
   ].join("\n");
 }
 
@@ -229,7 +321,9 @@ function htwbManagerAchievementCategoryName(value) {
     3: "Matches",
     4: "Manager",
     5: "Special awards",
-    6: "Supporter"
+    6: "Supporter",
+    7: "Hattrick Arena",
+    8: "Hidden"
   };
   return categories[Number(value)] || "Other";
 }
@@ -248,12 +342,14 @@ function htwbManagerBuildAchievements(data) {
   const totalPoints = achievements.reduce((sum, item) => sum + (Number(item.points) || 0), 0);
   const grouped = new Map();
   for (const item of achievements) {
-    const category = Number(item.category) || 99;
+    const rawCategory = Number(item.category);
+    const category = rawCategory >= 1 && rawCategory <= 8 ? rawCategory : 99;
     if (!grouped.has(category)) grouped.set(category, []);
     grouped.get(category).push(item);
   }
 
-  const categories = [...grouped.keys()].sort((a, b) => a - b);
+  const categoryOrder = [1, 2, 3, 4, 5, 6, 7, 8, 99];
+  const categories = categoryOrder.filter(category => grouped.has(category));
   const lines = ["== Achievements ==", ""];
   if (data.maxAchievementPoints) {
     lines.push(`Hattrick achievements: ${totalPoints} / ${htwbManagerEscapeWiki(data.maxAchievementPoints)} points.`, "");
@@ -300,6 +396,15 @@ function htwbManagerBuildAchievements(data) {
 
   while (lines.length && lines[lines.length - 1] === "") lines.pop();
   return lines.join("\n");
+}
+
+function htwbManagerBuildUserCategory(data) {
+  const team = htwbManagerPrimaryTeam(data);
+  const country = data?.country || team?.country || "";
+  const category = htwbManagerCountryProfile(country)?.category || "";
+  if (!category) return "";
+  const sortKey = htwbManagerManualData().wikiUsername || data?.loginName || "";
+  return `[[Category:${htwbManagerEscapeWiki(category)}${sortKey ? `|${htwbManagerEscapeWiki(sortKey)}` : ""}]]`;
 }
 
 function htwbManagerBuildExternalLinks() {
@@ -431,10 +536,15 @@ function htwbManagerSetAllSections(checked) {
 
 function htwbManagerBuildSelectedArticle() {
   if (!htwbManagerLoadedData) return "";
-  return htwbManagerSelectedSections()
+  const selected = htwbManagerSelectedSections();
+  const parts = selected
     .map(definition => definition.build(htwbManagerLoadedData))
-    .filter(Boolean)
-    .join("\n\n");
+    .filter(Boolean);
+  if (selected.some(definition => definition.key === "intro")) {
+    const category = htwbManagerBuildUserCategory(htwbManagerLoadedData);
+    if (category) parts.push(category);
+  }
+  return parts.join("\n\n");
 }
 
 async function htwbManagerLoad() {
