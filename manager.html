@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Page Builder - HT Wiki Builder</title>
+  <meta name="description" content="Create an HT Wiki manager profile from authorized Hattrick data.">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span>
+        <span class="brand-name"><span class="brand-wiki">Wiki</span><span class="brand-builder">Builder</span></span>
+      </a>
+      <div class="header-status">
+        <div id="user-status" class="user-status">Not connected</div>
+        <a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a>
+        <a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-page-inner">
+      <div class="builder-heading">
+        <div>
+          <div class="eyebrow">Wiki Builders</div>
+          <div class="builder-title-line">
+            <h1>Manager Page Builder</h1>
+            <span class="page-version" data-htwb-version="manager">v0.1.0</span>
+          </div>
+        </div>
+        <a class="button button-outline-dark" href="/">Back to tools</a>
+      </div>
+
+      <div id="login-panel" class="builder-login">
+        <h2>Connect to Hattrick</h2>
+        <p>Log in to build an HT Wiki profile for your Hattrick manager account.</p>
+        <a class="button button-primary" href="/auth/login">Log in with Hattrick</a>
+      </div>
+
+      <div id="connected-panel" class="builder-account" hidden>
+        <div>
+          <span class="builder-account-label">Connected to Hattrick</span>
+          <div class="connected-team-identity">
+            <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+            <div>
+              <strong id="team-name">Loading team...</strong>
+              <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="builder-section">
+        <div class="builder-section-number">01</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Load Manager Data</h2>
+              <p>Load your manager profile, current teams, current international roles, and Hattrick achievements. If you manage more than one senior team, the active-team selector above determines which club appears in the profile infobox.</p>
+            </div>
+          </div>
+          <div class="builder-callout-grid">
+            <div class="builder-callout-item"><strong>Fresh on request</strong><span>Manager data is loaded only when you press the button.</span></div>
+            <div class="builder-callout-item"><strong>Public profile data only</strong><span>The builder does not return last-login, currency, or other manager-only account details.</span></div>
+            <div class="builder-callout-item"><strong>Your account only</strong><span>The endpoint builds the profile for the authenticated Hattrick manager.</span></div>
+          </div>
+          <div class="builder-actions">
+            <button id="load-manager-data" class="button button-primary" type="button" disabled>Load Manager Data</button>
+          </div>
+          <div id="manager-load-status" class="builder-status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+
+      <section id="manager-options-section" class="builder-section" hidden>
+        <div class="builder-section-number">02</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Choose Article Content</h2>
+              <p>Select the available sections to include. Sections without usable data remain visible but cannot be selected.</p>
+            </div>
+          </div>
+
+          <div class="team-section-picker">
+            <div class="team-section-picker-heading team-section-picker-toolbar">
+              <div>
+                <h3>Article sections</h3>
+                <p>Available sections start selected.</p>
+              </div>
+              <div class="team-section-picker-actions">
+                <button id="select-all-manager-sections" class="button button-small button-outline-dark" type="button">Select all available</button>
+                <button id="clear-all-manager-sections" class="button button-small button-outline-dark" type="button">Clear selections</button>
+              </div>
+            </div>
+            <div id="manager-section-options" class="team-section-option-list"></div>
+          </div>
+
+          <div class="team-create-article">
+            <button id="create-manager-article" class="button button-primary" type="button" disabled>Create Article</button>
+            <span id="manager-selection-status" class="team-selection-status" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="manager-output-section" class="builder-section" hidden>
+        <div class="builder-section-number">03</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Generated Article</h2>
+              <p>Review the selected manager-page markup, then copy it to HT Wiki.</p>
+            </div>
+          </div>
+          <textarea id="manager-wiki-output" class="wiki-output wiki-output-team-page" rows="36" spellcheck="false"></textarea>
+          <div class="builder-actions">
+            <button id="copy-manager-output" class="button button-primary" type="button">Copy Wiki Markup</button>
+            <span id="manager-copy-status" class="copy-status"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div><strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
+      <div class="footer-links">
+        <a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a>
+        <a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a>
+      </div>
+    </div>
+    <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
+  </footer>
+
+  <script type="module" src="/versions.js"></script>
+  <script src="/app.js"></script>
+  <script src="/manager.js?v=0.1.0"></script>
+</body>
+</html>

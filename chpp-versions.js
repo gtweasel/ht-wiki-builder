@@ -11,5 +11,6 @@ export const HTWB_CHPP_VERSIONS = Object.freeze({
   leaguedetails: "1.6",
   club: "1.5",
   economy: "1.4",
-  managercompendium: "1.7"
+  managercompendium: "1.7",
+  achievements: "1.2"
 });

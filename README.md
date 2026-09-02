@@ -12,6 +12,8 @@ Current versions:
 - Team Page Builder: `0.1.1`
 - Lineup Builder: `0.2.1`
 - Roster Evaluator: `0.2.1`
+- Jersey Number Assigner: `0.1.0`
+- Manager Page Builder: `0.1.0`
 
 Version numbers follow these rules:
 
@@ -34,10 +36,14 @@ The project uses file-scoped identifier prefixes so browser scripts and Cloudfla
 - `team.js`: `htwbTeam...` / `HTWB_TEAM_...`
 - `lineup.js`: `htwbLineup...` / `HTWB_LINEUP_...`
 - `roster.js`: `htwbRoster...` / `HTWB_ROSTER_...`
+- `jersey.js`: `htwbJersey...` / `HTWB_JERSEY_...`
+- `manager.js`: `htwbManager...` / `HTWB_MANAGER_...`
 - `functions/api/me.js`: `htwbApiMe...` / `HTWB_API_ME_...`
 - `functions/api/team.js`: `htwbApiTeam...` / `HTWB_API_TEAM_...`
 - `functions/api/lineup.js`: `htwbApiLineup...` / `HTWB_API_LINEUP_...`
 - `functions/api/roster.js`: `htwbApiRoster...` / `HTWB_API_ROSTER_...`
+- `functions/api/jersey.js`: `htwbApiJersey...` / `HTWB_API_JERSEY_...`
+- `functions/api/manager.js`: `htwbApiManager...` / `HTWB_API_MANAGER_...`
 - `functions/auth/login.js`: `htwbAuthLogin...` / `HTWB_AUTH_LOGIN_...`
 - `functions/auth/callback.js`: `htwbAuthCallback...` / `HTWB_AUTH_CALLBACK_...`
 - `functions/auth/logout.js`: `htwbAuthLogout...` / `HTWB_AUTH_LOGOUT_...`
@@ -52,9 +58,9 @@ All CHPP file-version numbers used by the application are centralized in `chpp-v
 
 | CHPP file | Version | Used by |
 | --- | ---: | --- |
-| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Lineup Builder, Roster Evaluator |
+| `teamdetails` | `3.9` | account/team ownership, Team Page Builder, Manager Page Builder, Lineup Builder, Roster Evaluator, Jersey Number Assigner |
 | `matches` | `2.9` | Lineup Builder |
-| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Evaluator |
+| `players` | `2.8` | Team Page Builder, Lineup Builder, Roster Evaluator, Jersey Number Assigner |
 | `playerdetails` | `3.2` | Roster Evaluator fallback for missing last-match data |
 | `training` | `2.2` | Lineup Builder |
 | `worlddetails` | `2.0` | Team Page Builder, Lineup Builder |
@@ -64,7 +70,8 @@ All CHPP file-version numbers used by the application are centralized in `chpp-v
 | `leaguedetails` | `1.6` | Team Page Builder |
 | `club` | `1.5` | Team Page Builder |
 | `economy` | `1.4` | Team Page Builder |
-| `managercompendium` | `1.7` | account/team discovery |
+| `managercompendium` | `1.7` | account/team discovery, Manager Page Builder |
+| `achievements` | `1.2` | Manager Page Builder |
 
 CHPP schema upgrades are treated as shared compatibility maintenance unless they change a tool's user-facing behavior. The Lineup Builder's move to `matches` v2.9 is a user-facing change because it adds the current match metadata needed to recognize Hattrick Arena fixtures.
 
@@ -207,14 +214,23 @@ The team API must return only data that is used for the public-facing wiki artic
 
 Historical club-record claims are generated only when `matchesarchive` is complete for the current manager's tenure. Archive requests are sequential and capped so a very long history degrades to a partial source status rather than producing unverified "all-time" claims.
 
+
+## Manager Page Builder
+
+Manager Page Builder v0.1.0 creates an HT Wiki manager profile only for the authenticated Hattrick account. It uses Manager Compendium v1.7 for the manager identity, current senior teams, country/language, youth-team information, and current national-team coach or assistant role. Team Details v3.9 is used only to obtain the signup date for the selected owned team, and Achievements v1.2 supplies awarded achievements and points.
+
+The builder follows the same section-selection model as the Team Page Builder: available sections start selected, unavailable sections remain visible but disabled, and the user creates one combined wiki-markup output from the selected sections. Supported output includes the manager infobox/introduction, current club management, current international management, achievements, and external links.
+
+The manager endpoint is read-only and ownership-bound. It does not accept another manager's UserID, and a requested TeamID must be one of the senior teams returned for the logged-in manager. Last-login, currency, and other unnecessary authenticated account details are not returned to the browser or published in generated markup.
+
 ## Homepage tool groups
 
 The main index separates the application into two product groups:
 
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
-- **Manager Tools:** Lineup Planner, Roster Evaluator.
+- **Manager Tools:** Lineup Planner, Roster Evaluator, Jersey Number Assigner, Season Awards.
 
-The Team Page Builder, Lineup Planner, and Roster Evaluator are active; the other Wiki Builder cards are presented as coming soon.
+The Team Page Builder, Manager Page Builder, Lineup Planner, Roster Evaluator, and Jersey Number Assigner are active. Team Season Page Builder, Player Page Builder, and Season Awards remain coming soon.
 
 
 ## Roster Evaluator
