@@ -13,7 +13,7 @@ Current versions:
 - Lineup Builder: `0.2.1`
 - Roster Evaluator: `0.2.1`
 - Jersey Number Assigner: `0.1.0`
-- Manager Page Builder: `0.3.0`
+- Manager Page Builder: `0.1.0`
 
 Version numbers follow these rules:
 
@@ -217,7 +217,7 @@ Historical club-record claims are generated only when `matchesarchive` is comple
 
 ## Manager Page Builder
 
-Manager Page Builder v0.3.0 creates an HT Wiki manager profile only for the authenticated Hattrick account. Manager Compendium v1.7 supplies the manager identity, language/country, owned senior teams, and current national-team coach or assistant roles. Team Details v3.9 is requested by the authenticated UserID so the builder can identify the primary club, distinguish additional clubs, obtain each club's founding date, and obtain the manager signup date. Achievements v1.2 supplies awarded achievements, points, multilevel status, current rank, and global award counts. The generated manager markup follows the established HT Wiki user-page format with Userid/Teamid templates, flag templates, Start date markup, primary/additional club roles, optional favorite-team flags, and a country user category when a known mapping is available. Achievement output recognizes Ranking, Team, Matches, Manager, Special awards, Supporter, Hattrick Arena, and Hidden categories; any genuinely unknown category IDs are merged into a single Other section.
+Manager Page Builder v0.1.0 creates an HT Wiki manager profile only for the authenticated Hattrick account. Manager Compendium v1.7 supplies the manager identity, language/country, owned senior teams, and current national-team coach or assistant roles. Team Details v3.9 is requested by the authenticated UserID so the builder can identify the primary club, distinguish additional clubs, obtain each club's founding date, and obtain the manager signup date. Achievements v1.2 supplies awarded achievements, points, multilevel status, current rank, and global award counts. The generated manager markup follows the established HT Wiki user-page format with Userid/Teamid templates, flag templates, Start date markup, primary/additional club roles, optional favorite-team flags, and a country user category when a known mapping is available. Achievement output recognizes Ranking, Team, Matches, Manager, Special awards, Supporter, Hattrick Arena, and Hidden categories; any genuinely unknown category IDs are merged into a single Other section.
 
 The profile form includes only optional details that CHPP does not reliably provide for the public wiki article: HT Wiki username, real name, gender, favorite soccer teams, and Hattrick official roles. The HT Wiki username generates the infobox image as `[[Image:HTWikiUsername.png]]`; it is not substituted for the Hattrick username. Favorite teams are entered one per line as `Country | Team` when a flag is wanted (or just the team name when no flag is needed); the country is used for `flagicon` in the section while only the team name is sent to the infobox. Official roles are entered one per line. Blank optional fields are omitted.
 

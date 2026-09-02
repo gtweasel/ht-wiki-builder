@@ -1,6 +1,6 @@
 "use strict";
 
-const HTWB_MANAGER_VERSION = "0.3.0";
+const HTWB_MANAGER_VERSION = "0.1.0";
 const HTWB_MANAGER_BUILDER_URL = "https://ht-wiki-builder.pages.dev/";
 
 const htwbManagerLoadButton = document.getElementById("load-manager-data");
@@ -403,7 +403,7 @@ function htwbManagerBuildUserCategory(data) {
   const country = data?.country || team?.country || "";
   const category = htwbManagerCountryProfile(country)?.category || "";
   if (!category) return "";
-  const sortKey = htwbManagerManualData().wikiUsername || data?.loginName || "";
+  const sortKey = data?.loginName || "";
   return `[[Category:${htwbManagerEscapeWiki(category)}${sortKey ? `|${htwbManagerEscapeWiki(sortKey)}` : ""}]]`;
 }
 
@@ -537,13 +537,12 @@ function htwbManagerSetAllSections(checked) {
 function htwbManagerBuildSelectedArticle() {
   if (!htwbManagerLoadedData) return "";
   const selected = htwbManagerSelectedSections();
-  const parts = selected
+  const parts = ["__NOTOC__"];
+  parts.push(...selected
     .map(definition => definition.build(htwbManagerLoadedData))
-    .filter(Boolean);
-  if (selected.some(definition => definition.key === "intro")) {
-    const category = htwbManagerBuildUserCategory(htwbManagerLoadedData);
-    if (category) parts.push(category);
-  }
+    .filter(Boolean));
+  const category = htwbManagerBuildUserCategory(htwbManagerLoadedData);
+  if (category) parts.push(category);
   return parts.join("\n\n");
 }
 
