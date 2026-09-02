@@ -13,7 +13,7 @@ Current versions:
 - Lineup Builder: `0.2.1`
 - Roster Evaluator: `0.2.1`
 - Jersey Number Assigner: `0.1.0`
-- Manager Page Builder: `0.1.0`
+- Manager Page Builder: `0.2.0`
 
 Version numbers follow these rules:
 
@@ -217,11 +217,17 @@ Historical club-record claims are generated only when `matchesarchive` is comple
 
 ## Manager Page Builder
 
-Manager Page Builder v0.1.0 creates an HT Wiki manager profile only for the authenticated Hattrick account. It uses Manager Compendium v1.7 for the manager identity, current senior teams, country/language, youth-team information, and current national-team coach or assistant role. Team Details v3.9 is used only to obtain the signup date for the selected owned team, and Achievements v1.2 supplies awarded achievements and points.
+Manager Page Builder v0.2.0 creates an HT Wiki manager profile only for the authenticated Hattrick account. Manager Compendium v1.7 supplies the manager identity, language/country, owned senior teams, and current national-team coach or assistant roles. Team Details v3.9 is requested by the authenticated UserID so the builder can identify the primary club, distinguish additional clubs, obtain each club's founding date, and obtain the manager signup date. Achievements v1.2 supplies awarded achievements, points, multilevel status, current rank, and global award counts.
 
-The builder follows the same section-selection model as the Team Page Builder: available sections start selected, unavailable sections remain visible but disabled, and the user creates one combined wiki-markup output from the selected sections. Supported output includes the manager infobox/introduction, current club management, current international management, achievements, and external links.
+The profile form includes only optional details that CHPP does not reliably provide for the public wiki article: HT Wiki username, real name, gender, favorite soccer teams, and Hattrick official roles. The HT Wiki username generates the infobox image as `[[File:HTWikiUsername.png]]`; it is not substituted for the Hattrick username. Favorite teams and official roles are entered one per line. Blank optional fields are omitted.
 
-The manager endpoint is read-only and ownership-bound. It does not accept another manager's UserID, and a requested TeamID must be one of the senior teams returned for the logged-in manager. Last-login, currency, and other unnecessary authenticated account details are not returned to the browser or published in generated markup.
+The generated club table follows the manager-page format `Role | Country | Club | Founded | Series`. The actual CHPP primary club is labeled `Primary club`; every other owned senior team is labeled `Additional club`. Team IDs remain beside the linked club name rather than occupying a separate column.
+
+Achievements are grouped by Hattrick category instead of appearing in one long flat table. The section begins with a category summary, followed by one table per populated category. Each achievement row uses a blank header for its icon column and then `Achievement | Rank | Points | Awarded`. When both AchievementTypeID and Rank are available, the icon is generated from the existing HT Wiki convention `[[File:Ach_<AchievementTypeID>_<Rank>.png|32px]]`. The rank comes directly from CHPP, where rank 1 is the best available rank for that achievement.
+
+The builder follows the same section-selection model as the Team Page Builder: available sections start selected, unavailable sections remain visible but disabled, and the user creates one combined wiki-markup output from the selected sections. Supported output includes the manager infobox/introduction, clubs, optional favorite soccer teams, current international management, grouped achievements, and external links.
+
+The manager endpoint remains read-only and ownership-bound. It does not accept another manager's UserID, and any requested TeamID must be one of the senior teams returned for the logged-in manager. Last-login, currency, personal-name fields, and other unnecessary authenticated account details are not returned to the browser or published automatically.
 
 ## Homepage tool groups
 

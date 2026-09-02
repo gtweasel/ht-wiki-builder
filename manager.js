@@ -1,6 +1,6 @@
 "use strict";
 
-const HTWB_MANAGER_VERSION = "0.1.0";
+const HTWB_MANAGER_VERSION = "0.2.0";
 const HTWB_MANAGER_BUILDER_URL = "https://ht-wiki-builder.pages.dev/";
 
 const htwbManagerLoadButton = document.getElementById("load-manager-data");
@@ -15,14 +15,19 @@ const htwbManagerOutputSection = document.getElementById("manager-output-section
 const htwbManagerOutput = document.getElementById("manager-wiki-output");
 const htwbManagerCopyButton = document.getElementById("copy-manager-output");
 const htwbManagerCopyStatus = document.getElementById("manager-copy-status");
+const htwbManagerWikiUsername = document.getElementById("manager-wiki-username");
+const htwbManagerRealName = document.getElementById("manager-real-name");
+const htwbManagerGender = document.getElementById("manager-gender");
+const htwbManagerFavoriteTeams = document.getElementById("manager-favorite-teams");
+const htwbManagerOfficialRoles = document.getElementById("manager-official-roles");
 
 let htwbManagerLoadedData = null;
 let htwbManagerLoading = false;
 
 function htwbManagerApplyFallbackVersion() {
-  for (const htwbManagerElement of document.querySelectorAll('[data-htwb-version="manager"]')) {
-    if (!String(htwbManagerElement.textContent || "").trim()) {
-      htwbManagerElement.textContent = `v${HTWB_MANAGER_VERSION}`;
+  for (const element of document.querySelectorAll('[data-htwb-version="manager"]')) {
+    if (!String(element.textContent || "").trim()) {
+      element.textContent = `v${HTWB_MANAGER_VERSION}`;
     }
   }
 }
@@ -57,14 +62,49 @@ function htwbManagerSetStatus(message, kind = "") {
   if (!htwbManagerLoadStatus) return;
   htwbManagerLoadStatus.hidden = false;
   htwbManagerLoadStatus.textContent = message;
-  htwbManagerLoadStatus.classList.remove("error", "success");
-  if (kind) htwbManagerLoadStatus.classList.add(kind);
+  htwbManagerLoadStatus.classList.remove("builder-status-error", "builder-status-success");
+  if (kind) htwbManagerLoadStatus.classList.add(`builder-status-${kind}`);
 }
 
-function htwbManagerTeamLink(team) {
+function htwbManagerSplitLines(value) {
+  return String(value || "")
+    .split(/\r?\n/)
+    .map(item => item.trim())
+    .filter(Boolean);
+}
+
+function htwbManagerManualData() {
+  const wikiUsername = String(htwbManagerWikiUsername?.value || "")
+    .trim()
+    .replace(/^User\s*:/i, "")
+    .replace(/[\[\]{}|<>]/g, "")
+    .trim();
+  return {
+    wikiUsername,
+    realName: String(htwbManagerRealName?.value || "").trim(),
+    gender: String(htwbManagerGender?.value || "").trim(),
+    favoriteTeams: htwbManagerSplitLines(htwbManagerFavoriteTeams?.value),
+    officialRoles: htwbManagerSplitLines(htwbManagerOfficialRoles?.value)
+  };
+}
+
+function htwbManagerPrimaryTeam(data) {
+  const teams = Array.isArray(data?.teams) ? data.teams : [];
+  return data?.primaryTeam || teams.find(team => team.isPrimaryClub) || teams[0] || null;
+}
+
+function htwbManagerTeamLink(team, includeId = false) {
   const name = htwbManagerEscapeWiki(team?.teamName);
   if (!name) return "";
-  return `[[${name}]]`;
+  const link = `[[${name}]]`;
+  return includeId && team?.teamId
+    ? `${link} (${htwbManagerEscapeWiki(team.teamId)})`
+    : link;
+}
+
+function htwbManagerCountryLink(value) {
+  const country = htwbManagerEscapeWiki(value);
+  return country ? `[[${country}]]` : "";
 }
 
 function htwbManagerInternationalText(data) {
@@ -78,21 +118,33 @@ function htwbManagerInternationalText(data) {
   return roles.join("; ");
 }
 
+function htwbManagerNumberWord(value) {
+  const words = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"];
+  return value >= 0 && value < words.length ? words[value] : String(value);
+}
+
 function htwbManagerBuildInfobox(data) {
   if (!data?.loginName) return "";
-  const team = data.selectedTeam || data.teams?.[0] || null;
+  const team = htwbManagerPrimaryTeam(data);
+  const manual = htwbManagerManualData();
   const lines = ["{{Infobox/User"];
   const add = (key, value) => {
     if (htwbManagerHasValue(value)) lines.push(`| ${key.padEnd(13, " ")} = ${value}`);
   };
+
   add("username", htwbManagerEscapeWiki(data.loginName));
   add("userid", htwbManagerEscapeWiki(data.userId));
   add("clubname", team ? htwbManagerEscapeWiki(team.teamName) : "");
   add("teamid", team ? htwbManagerEscapeWiki(team.teamId) : "");
+  add("face", manual.wikiUsername ? `[[File:${htwbManagerEscapeWiki(manual.wikiUsername)}.png]]` : "");
+  add("realname", htwbManagerEscapeWiki(manual.realName));
+  add("gender", htwbManagerEscapeWiki(manual.gender));
   add("language", htwbManagerEscapeWiki(data.language));
   add("region", team ? htwbManagerEscapeWiki(team.region) : "");
   add("country", htwbManagerEscapeWiki(data.country || team?.country));
   add("joined", data.signupDate ? htwbManagerFormatDate(data.signupDate) : "");
+  add("favteam", manual.favoriteTeams.map(htwbManagerEscapeWiki).join("<br>"));
+  add("official", manual.officialRoles.map(htwbManagerEscapeWiki).join("<br>"));
   add("international", htwbManagerInternationalText(data));
   lines.push("}}");
   return lines.join("\n");
@@ -100,36 +152,62 @@ function htwbManagerBuildInfobox(data) {
 
 function htwbManagerBuildIntro(data) {
   if (!data?.loginName) return "";
-  const team = data.selectedTeam || data.teams?.[0] || null;
-  const parts = [`'''${htwbManagerEscapeWiki(data.loginName)}''' is a Hattrick manager`];
-  if (data.signupDate) parts.push(` who joined Hattrick on ${htwbManagerFormatDate(data.signupDate)}`);
-  if (team?.teamName) parts.push(` and currently manages ${htwbManagerTeamLink(team)}`);
+  const team = htwbManagerPrimaryTeam(data);
+  const teams = Array.isArray(data?.teams) ? data.teams : [];
+  const additionalCount = team ? Math.max(0, teams.length - 1) : teams.length;
+
+  let sentence = `'''${htwbManagerEscapeWiki(data.loginName)}'''`;
+  if (data.userId) sentence += ` (${htwbManagerEscapeWiki(data.userId)})`;
+  sentence += " is a Hattrick manager";
+  if (data.country || team?.country) {
+    sentence += ` from ${htwbManagerCountryLink(data.country || team.country)}`;
+  }
+  if (data.signupDate) {
+    sentence += ` who joined Hattrick on ${htwbManagerFormatDate(data.signupDate)}`;
+  }
+  if (team?.teamName) {
+    sentence += data.signupDate ? " and" : " who";
+    sentence += ` currently manages ${htwbManagerTeamLink(team)}`;
+    if (additionalCount > 0) {
+      sentence += ` as the primary club, together with ${htwbManagerNumberWord(additionalCount)} additional club${additionalCount === 1 ? "" : "s"}`;
+    }
+  }
+  sentence += ".";
+
   const international = htwbManagerInternationalText(data);
-  let sentence = parts.join("") + ".";
   if (international) sentence += ` The manager currently serves as ${international}.`;
+
   return [htwbManagerBuildInfobox(data), "", sentence].filter(Boolean).join("\n");
 }
 
 function htwbManagerBuildClubs(data) {
-  const teams = Array.isArray(data?.teams) ? data.teams : [];
+  const teams = Array.isArray(data?.teams) ? [...data.teams] : [];
   if (!teams.length) return "";
-  const lines = ["== Club management ==", "", '{| class="wikitable"', "! Club !! TeamID !! Country !! Region !! Series !! Youth academy"];
+  teams.sort((a, b) => Number(Boolean(b.isPrimaryClub)) - Number(Boolean(a.isPrimaryClub)));
+
+  const lines = ["== Clubs ==", "", '{| class="wikitable"', "! Role !! Country !! Club !! Founded !! Series"];
   for (const team of teams) {
-    const youth = team.youthTeam?.name
-      ? `${htwbManagerEscapeWiki(team.youthTeam.name)}${team.youthTeam.id ? ` (${htwbManagerEscapeWiki(team.youthTeam.id)})` : ""}`
-      : "";
     lines.push(
       "|-",
-      `| ${htwbManagerTeamLink(team)}`,
-      `| ${htwbManagerEscapeWiki(team.teamId)}`,
-      `| ${htwbManagerEscapeWiki(team.country)}`,
-      `| ${htwbManagerEscapeWiki(team.region)}`,
-      `| ${htwbManagerEscapeWiki(team.series)}`,
-      `| ${youth}`
+      `| ${team.isPrimaryClub ? "Primary club" : "Additional club"}`,
+      `| ${htwbManagerCountryLink(team.country)}`,
+      `| ${htwbManagerTeamLink(team, true)}`,
+      `| ${team.foundedDate ? htwbManagerFormatDate(team.foundedDate) : ""}`,
+      `| ${htwbManagerEscapeWiki(team.series)}`
     );
   }
   lines.push("|}");
   return lines.join("\n");
+}
+
+function htwbManagerBuildFavoriteTeams() {
+  const favorites = htwbManagerManualData().favoriteTeams;
+  if (!favorites.length) return "";
+  return [
+    "== Favorite soccer teams ==",
+    "",
+    ...favorites.map(team => `* ${htwbManagerEscapeWiki(team)}`)
+  ].join("\n");
 }
 
 function htwbManagerBuildInternational(data) {
@@ -156,25 +234,71 @@ function htwbManagerAchievementCategoryName(value) {
   return categories[Number(value)] || "Other";
 }
 
+function htwbManagerAchievementIcon(item) {
+  const id = String(item?.id || "").trim();
+  const rank = Number(item?.rank);
+  if (!id || !Number.isFinite(rank) || rank < 1) return "";
+  return `[[File:Ach_${htwbManagerEscapeWiki(id)}_${rank}.png|32px]]`;
+}
+
 function htwbManagerBuildAchievements(data) {
   const achievements = Array.isArray(data?.achievements) ? data.achievements : [];
   if (!achievements.length) return "";
-  const points = achievements.reduce((sum, item) => sum + (Number(item.points) || 0), 0);
+
+  const totalPoints = achievements.reduce((sum, item) => sum + (Number(item.points) || 0), 0);
+  const grouped = new Map();
+  for (const item of achievements) {
+    const category = Number(item.category) || 99;
+    if (!grouped.has(category)) grouped.set(category, []);
+    grouped.get(category).push(item);
+  }
+
+  const categories = [...grouped.keys()].sort((a, b) => a - b);
   const lines = ["== Achievements ==", ""];
   if (data.maxAchievementPoints) {
-    lines.push(`Hattrick achievements: ${points} / ${htwbManagerEscapeWiki(data.maxAchievementPoints)} points.`, "");
+    lines.push(`Hattrick achievements: ${totalPoints} / ${htwbManagerEscapeWiki(data.maxAchievementPoints)} points.`, "");
+  } else {
+    lines.push(`Hattrick achievement points: ${totalPoints}.`, "");
   }
-  lines.push('{| class="wikitable sortable"', "! Category !! Achievement !! Awarded !! Points");
-  for (const item of achievements) {
+
+  lines.push('{| class="wikitable"', "! Category !! Earned !! Points");
+  for (const category of categories) {
+    const items = grouped.get(category) || [];
+    const points = items.reduce((sum, item) => sum + (Number(item.points) || 0), 0);
     lines.push(
       "|-",
-      `| ${htwbManagerAchievementCategoryName(item.category)}`,
-      `| ${htwbManagerEscapeWiki(item.title)}`,
-      `| ${item.eventDate ? htwbManagerFormatDate(item.eventDate) : ""}`,
-      `| ${htwbManagerEscapeWiki(item.points)}`
+      `| ${htwbManagerAchievementCategoryName(category)}`,
+      `| ${items.length}`,
+      `| ${points}`
     );
   }
-  lines.push("|}");
+  lines.push(
+    "|-",
+    `! Total !! ${achievements.length} !! ${totalPoints}`,
+    "|}",
+    ""
+  );
+
+  for (const category of categories) {
+    const items = [...(grouped.get(category) || [])].sort((a, b) =>
+      String(b.eventDate || "").localeCompare(String(a.eventDate || ""))
+    );
+    lines.push(`=== ${htwbManagerAchievementCategoryName(category)} ===`, "", '{| class="wikitable sortable"', "! !! Achievement !! Rank !! Points !! Awarded");
+    for (const item of items) {
+      const rank = Number(item.rank);
+      lines.push(
+        "|-",
+        `| ${htwbManagerAchievementIcon(item)}`,
+        `| ${htwbManagerEscapeWiki(item.title)}`,
+        `| ${Number.isFinite(rank) && rank > 0 ? rank : ""}`,
+        `| ${htwbManagerEscapeWiki(item.points)}`,
+        `| ${item.eventDate ? htwbManagerFormatDate(item.eventDate) : ""}`
+      );
+    }
+    lines.push("|}", "");
+  }
+
+  while (lines.length && lines[lines.length - 1] === "") lines.pop();
   return lines.join("\n");
 }
 
@@ -190,16 +314,23 @@ const HTWB_MANAGER_SECTIONS = [
   {
     key: "intro",
     label: "Intro and manager infobox",
-    description: "Hattrick username, UserID, current club, country, language, join date, and current international role when available.",
+    description: "Hattrick identity and primary club from CHPP, plus any optional profile details entered above.",
     unavailable: "No manager profile data available",
     build: htwbManagerBuildIntro
   },
   {
     key: "clubs",
-    label: "Club management",
-    description: "Current senior teams and available country, region, series, and youth-academy information.",
+    label: "Clubs",
+    description: "Primary and additional senior clubs with country, founding date, and current series.",
     unavailable: "No managed senior teams available",
     build: htwbManagerBuildClubs
+  },
+  {
+    key: "favorite-teams",
+    label: "Favorite soccer teams",
+    description: "The optional favorite-team list entered above.",
+    unavailable: "Add at least one favorite soccer team above to enable this section",
+    build: htwbManagerBuildFavoriteTeams
   },
   {
     key: "international",
@@ -211,7 +342,7 @@ const HTWB_MANAGER_SECTIONS = [
   {
     key: "achievements",
     label: "Achievements",
-    description: "Awarded Hattrick achievements with category, award date, and points.",
+    description: "Achievements grouped by category with wiki icons, current rank, points, and award date.",
     unavailable: "No achievement data available",
     build: htwbManagerBuildAchievements
   },
@@ -251,8 +382,16 @@ function htwbManagerSyncSelections() {
   if (htwbManagerOutputSection) htwbManagerOutputSection.hidden = true;
 }
 
-function htwbManagerRenderSections() {
+function htwbManagerRenderSections(preserveSelections = false) {
   if (!htwbManagerSectionOptions || !htwbManagerLoadedData) return;
+  const previous = new Map();
+  if (preserveSelections) {
+    for (const definition of HTWB_MANAGER_SECTIONS) {
+      const checkbox = htwbManagerSectionCheckbox(definition.key);
+      if (checkbox) previous.set(definition.key, checkbox.checked);
+    }
+  }
+
   htwbManagerSectionOptions.innerHTML = "";
   for (const definition of HTWB_MANAGER_SECTIONS) {
     const available = htwbManagerSectionAvailable(definition);
@@ -264,7 +403,7 @@ function htwbManagerRenderSections() {
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = available;
+    checkbox.checked = available && (previous.has(definition.key) ? previous.get(definition.key) : true);
     checkbox.disabled = !available;
     checkbox.dataset.managerSectionKey = definition.key;
 
@@ -312,7 +451,7 @@ async function htwbManagerLoad() {
     if (!response.ok) throw new Error(data.error || `Server returned ${response.status}`);
     if (String(htwbManagerActiveTeamId()) !== String(teamId)) return;
     htwbManagerLoadedData = data;
-    htwbManagerRenderSections();
+    htwbManagerRenderSections(false);
     htwbManagerOptionsSection.hidden = false;
     htwbManagerOutputSection.hidden = true;
     htwbManagerSetStatus(`Manager data loaded for ${data.loginName}.`, "success");
@@ -349,6 +488,11 @@ async function htwbManagerCopy() {
   }
 }
 
+function htwbManagerManualChanged() {
+  if (!htwbManagerLoadedData) return;
+  htwbManagerRenderSections(true);
+}
+
 function htwbManagerResetForTeam() {
   htwbManagerLoadedData = null;
   if (htwbManagerOptionsSection) htwbManagerOptionsSection.hidden = true;
@@ -363,6 +507,9 @@ htwbManagerClearAll?.addEventListener("click", () => htwbManagerSetAllSections(f
 htwbManagerSectionOptions?.addEventListener("change", htwbManagerSyncSelections);
 htwbManagerCreateArticle?.addEventListener("click", htwbManagerCreate);
 htwbManagerCopyButton?.addEventListener("click", htwbManagerCopy);
+for (const input of [htwbManagerWikiUsername, htwbManagerRealName, htwbManagerGender, htwbManagerFavoriteTeams, htwbManagerOfficialRoles]) {
+  input?.addEventListener("input", htwbManagerManualChanged);
+}
 window.addEventListener("htwb:team-selected", htwbManagerResetForTeam);
 
 function htwbManagerInitialize() {

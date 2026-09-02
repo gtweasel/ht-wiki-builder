@@ -84,6 +84,13 @@ function htwbApiManagerNumber(value) {
   return Number.isFinite(number) ? number : null;
 }
 
+function htwbApiManagerBool(value) {
+  const normalized = String(value ?? "").trim().toLowerCase();
+  if (["true", "1", "yes"].includes(normalized)) return true;
+  if (["false", "0", "no"].includes(normalized)) return false;
+  return null;
+}
+
 function htwbApiManagerMakeError(message, status = 502) {
   const error = new Error(message);
   error.status = status;
@@ -159,7 +166,8 @@ function htwbApiManagerParseTeam(teamXml) {
     genderId: htwbApiManagerXmlValueAny(teamXml, ["GenderID", "GenderId"]),
     league: htwbApiManagerXmlValueAny(leagueXml, ["LeagueName", "Name"]),
     season: htwbApiManagerXmlValue(leagueXml, "Season"),
-    country: htwbApiManagerXmlValueAny(countryXml, ["CountryName", "Name"]),
+    country: htwbApiManagerXmlValueAny(countryXml, ["CountryName", "Name"]) ||
+      htwbApiManagerXmlValueAny(leagueXml, ["LeagueName", "Name"]),
     region: htwbApiManagerXmlValueAny(regionXml, ["RegionName", "Name"]),
     series: htwbApiManagerXmlValueAny(seriesXml, ["LeagueLevelUnitName", "Name"]),
     seriesLevel: htwbApiManagerXmlValueAny(seriesXml, ["LeagueLevel", "Level"]),
@@ -168,7 +176,9 @@ function htwbApiManagerParseTeam(teamXml) {
           id: htwbApiManagerXmlValueAny(youthXml, ["YouthTeamId", "YouthTeamID"]),
           name: htwbApiManagerXmlValue(youthXml, "YouthTeamName")
         }
-      : null
+      : null,
+    isPrimaryClub: false,
+    foundedDate: ""
   };
 }
 
@@ -203,9 +213,41 @@ function htwbApiManagerParseManagerCompendium(xml) {
   };
 }
 
-function htwbApiManagerParseSignupDate(teamDetailsXml) {
-  const userXml = htwbApiManagerXmlContainer(teamDetailsXml, "User");
-  return htwbApiManagerXmlValue(userXml, "SignupDate");
+function htwbApiManagerParseTeamDetails(xml) {
+  const userXml = htwbApiManagerXmlContainer(xml, "User");
+  const teamsContainer = htwbApiManagerXmlContainer(xml, "Teams");
+  const teams = htwbApiManagerXmlContainers(teamsContainer, "Team")
+    .map(teamXml => ({
+      teamId: htwbApiManagerXmlValueAny(teamXml, ["TeamID", "TeamId"]),
+      teamName: htwbApiManagerXmlValue(teamXml, "TeamName"),
+      isPrimaryClub: htwbApiManagerBool(htwbApiManagerXmlValue(teamXml, "IsPrimaryClub")),
+      foundedDate: htwbApiManagerXmlValue(teamXml, "FoundedDate")
+    }))
+    .filter(team => team.teamId);
+
+  return {
+    signupDate: htwbApiManagerXmlValue(userXml, "SignupDate"),
+    teams
+  };
+}
+
+function htwbApiManagerMergeTeams(managerTeams, detailTeams) {
+  const detailsById = new Map(
+    detailTeams.map(team => [String(team.teamId), team])
+  );
+  const merged = managerTeams.map(team => {
+    const detail = detailsById.get(String(team.teamId));
+    return {
+      ...team,
+      isPrimaryClub: detail?.isPrimaryClub === true,
+      foundedDate: detail?.foundedDate || ""
+    };
+  });
+
+  if (merged.length && !merged.some(team => team.isPrimaryClub)) {
+    merged[0] = { ...merged[0], isPrimaryClub: true };
+  }
+  return merged;
 }
 
 function htwbApiManagerParseAchievements(xml) {
@@ -216,14 +258,17 @@ function htwbApiManagerParseAchievements(xml) {
       title: htwbApiManagerXmlValue(itemXml, "AchievementTitle"),
       category: htwbApiManagerNumber(htwbApiManagerXmlValue(itemXml, "CategoryID")),
       eventDate: htwbApiManagerXmlValue(itemXml, "EventDate"),
-      points: htwbApiManagerNumber(htwbApiManagerXmlValue(itemXml, "Points")) || 0
+      points: htwbApiManagerNumber(htwbApiManagerXmlValue(itemXml, "Points")) || 0,
+      multilevel: htwbApiManagerBool(htwbApiManagerXmlValue(itemXml, "Multilevel")) === true,
+      rank: htwbApiManagerNumber(htwbApiManagerXmlValue(itemXml, "Rank")),
+      numberOfEvents: htwbApiManagerNumber(htwbApiManagerXmlValue(itemXml, "NumberOfEvents"))
     }))
     .filter(item => item.title);
 
   achievements.sort((a, b) => {
     const categoryDifference = (a.category || 99) - (b.category || 99);
     if (categoryDifference) return categoryDifference;
-    return String(a.eventDate || "").localeCompare(String(b.eventDate || ""));
+    return String(b.eventDate || "").localeCompare(String(a.eventDate || ""));
   });
 
   return {
@@ -247,28 +292,31 @@ export async function onRequestGet(context) {
       throw htwbApiManagerMakeError("Manager profile data was not available from CHPP.", 502);
     }
 
-    const selectedTeam = requestedTeamId
-      ? manager.teams.find(team => String(team.teamId) === requestedTeamId)
-      : manager.teams[0] || null;
-
-    if (requestedTeamId && !selectedTeam) {
+    if (requestedTeamId && !manager.teams.some(team => String(team.teamId) === requestedTeamId)) {
       throw htwbApiManagerMakeError("That team is not managed by the logged-in user.", 403);
     }
 
     let signupDate = "";
-    if (selectedTeam?.teamId) {
-      try {
-        const teamDetailsXml = await htwbApiManagerChppFetch(context, {
-          file: "teamdetails",
-          version: HTWB_CHPP_VERSIONS.teamdetails,
-          actionType: "view",
-          teamID: selectedTeam.teamId
-        });
-        signupDate = htwbApiManagerParseSignupDate(teamDetailsXml);
-      } catch (error) {
-        console.warn("Manager Page Builder: signup date unavailable", error);
-      }
+    let teams = manager.teams;
+    try {
+      const teamDetailsXml = await htwbApiManagerChppFetch(context, {
+        file: "teamdetails",
+        version: HTWB_CHPP_VERSIONS.teamdetails,
+        actionType: "view",
+        userID: manager.userId
+      });
+      const teamDetails = htwbApiManagerParseTeamDetails(teamDetailsXml);
+      signupDate = teamDetails.signupDate;
+      teams = htwbApiManagerMergeTeams(manager.teams, teamDetails.teams);
+    } catch (error) {
+      console.warn("Manager Page Builder: team details unavailable", error);
+      teams = htwbApiManagerMergeTeams(manager.teams, []);
     }
+
+    const primaryTeam = teams.find(team => team.isPrimaryClub) || teams[0] || null;
+    const selectedTeam = requestedTeamId
+      ? teams.find(team => String(team.teamId) === requestedTeamId) || null
+      : primaryTeam;
 
     let achievementData = { maxPoints: null, achievements: [] };
     try {
@@ -288,8 +336,9 @@ export async function onRequestGet(context) {
         language: manager.language,
         country: manager.country,
         signupDate,
-        selectedTeam: selectedTeam || null,
-        teams: manager.teams,
+        primaryTeam,
+        selectedTeam,
+        teams,
         international: manager.international,
         maxAchievementPoints: achievementData.maxPoints,
         achievements: achievementData.achievements

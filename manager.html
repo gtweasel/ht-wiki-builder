@@ -35,7 +35,7 @@
           <div class="eyebrow">Wiki Builders</div>
           <div class="builder-title-line">
             <h1>Manager Page Builder</h1>
-            <span class="page-version" data-htwb-version="manager">v0.1.0</span>
+            <span class="page-version" data-htwb-version="manager">v0.2.0</span>
           </div>
         </div>
         <a class="button button-outline-dark" href="/">Back to tools</a>
@@ -66,7 +66,7 @@
           <div class="builder-section-heading">
             <div>
               <h2>Load Manager Data</h2>
-              <p>Load your manager profile, current teams, current international roles, and Hattrick achievements. If you manage more than one senior team, the active-team selector above determines which club appears in the profile infobox.</p>
+              <p>Load your manager profile, primary and additional clubs, current international roles, and Hattrick achievements. CHPP identifies the primary club and supplies each club's founding date when available.</p>
             </div>
           </div>
           <div class="builder-callout-grid">
@@ -86,8 +86,55 @@
         <div class="builder-section-content">
           <div class="builder-section-heading">
             <div>
-              <h2>Choose Article Content</h2>
-              <p>Select the available sections to include. Sections without usable data remain visible but cannot be selected.</p>
+              <h2>Complete the Profile</h2>
+              <p>Add any optional information CHPP does not provide, then choose the sections to include in the generated article.</p>
+            </div>
+          </div>
+
+          <div class="team-section-picker">
+            <div class="team-section-picker-heading">
+              <h3>Optional profile details</h3>
+              <p>Leave any field blank to omit it from the article. HT Wiki username is used only for the manager image filename.</p>
+            </div>
+
+            <div class="team-section-suboptions">
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-wiki-username">
+                  <span>HT Wiki username <small>(optional)</small></span>
+                  <input id="manager-wiki-username" class="team-wiki-input" type="text" autocomplete="off" placeholder="ExampleManager">
+                </label>
+                <small class="team-option-help">Generates the infobox image as <code>File:HTWikiUsername.png</code>.</small>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-real-name">
+                  <span>Real name <small>(optional)</small></span>
+                  <input id="manager-real-name" class="team-wiki-input" type="text" autocomplete="off">
+                </label>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-gender">
+                  <span>Gender <small>(optional)</small></span>
+                  <input id="manager-gender" class="team-wiki-input" type="text" autocomplete="off">
+                </label>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-official-roles">
+                  <span>Hattrick official role(s) <small>(optional)</small></span>
+                  <textarea id="manager-official-roles" class="team-wiki-input" rows="3" spellcheck="false" placeholder="One role per line"></textarea>
+                </label>
+                <small class="team-option-help">Examples include GM, LA, Mod, and CHPP.</small>
+              </div>
+
+              <div class="team-inline-option wiki-field-large">
+                <label class="team-wiki-user-label" for="manager-favorite-teams">
+                  <span>Favorite soccer teams <small>(optional)</small></span>
+                  <textarea id="manager-favorite-teams" class="team-wiki-input" rows="5" spellcheck="false" placeholder="One team per line"></textarea>
+                </label>
+                <small class="team-option-help">Each line is used in the infobox and, when selected, the Favorite soccer teams section.</small>
+              </div>
             </div>
           </div>
 
@@ -142,8 +189,8 @@
     <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
   </footer>
 
-  <script type="module" src="/versions.js"></script>
+  <script type="module" src="/versions.js?manager=0.2.0"></script>
   <script src="/app.js"></script>
-  <script src="/manager.js?v=0.1.0"></script>
+  <script src="/manager.js?v=0.2.0"></script>
 </body>
 </html>
