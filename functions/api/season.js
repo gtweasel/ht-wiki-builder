@@ -149,9 +149,39 @@ function htwbApiSeasonNumber(value, fallback = 0) {
   return Number.isFinite(number) ? number : fallback;
 }
 
-function htwbApiSeasonIsoDate(value) {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})/);
-  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+function htwbApiSeasonNormalizeDateTime(value, defaultTime) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
+  if (!match) return "";
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hour = Number(match[4] ?? defaultTime.slice(0, 2));
+  const minute = Number(match[5] ?? defaultTime.slice(3, 5));
+  const second = Number(match[6] ?? defaultTime.slice(6, 8));
+  const date = new Date(Date.UTC(year, month - 1, day, hour, minute, second));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day ||
+    date.getUTCHours() !== hour ||
+    date.getUTCMinutes() !== minute ||
+    date.getUTCSeconds() !== second
+  ) return "";
+  const time = [hour, minute, second].map(part => String(part).padStart(2, "0")).join(":");
+  return `${match[1]}-${match[2]}-${match[3]} ${time}`;
+}
+
+function htwbApiSeasonDateMs(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (!match) return Number.NaN;
+  return Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4] || 0),
+    Number(match[5] || 0),
+    Number(match[6] || 0)
+  );
 }
 
 function htwbApiSeasonName(xml) {
@@ -431,15 +461,28 @@ async function htwbApiSeasonModeWorld(context, teamId, leagueId) {
 
 async function htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate) {
   await htwbApiSeasonOwnedTeam(context, teamId);
+  const firstMs = htwbApiSeasonDateMs(firstDate);
+  const lastMs = htwbApiSeasonDateMs(lastDate);
+  if (!Number.isFinite(firstMs) || !Number.isFinite(lastMs) || firstMs > lastMs) {
+    const error = new Error("The Season Builder archive date range is invalid.");
+    error.status = 400;
+    throw error;
+  }
+
   const xml = await htwbApiSeasonChpp(context, {
     file: "matchesarchive",
     version: HTWB_API_SEASON_VERSIONS.matchesarchive,
     actionType: "view",
     teamID: teamId,
-    FirstMatchDate: `${firstDate} 00:00:00`,
-    LastMatchDate: `${lastDate} 23:59:59`
+    FirstMatchDate: firstDate,
+    LastMatchDate: lastDate
   });
-  return { matches: htwbApiSeasonParseArchive(xml) };
+
+  const matches = htwbApiSeasonParseArchive(xml).filter(match => {
+    const matchMs = htwbApiSeasonDateMs(match.date);
+    return Number.isFinite(matchMs) && matchMs >= firstMs && matchMs <= lastMs;
+  });
+  return { matches };
 }
 
 async function htwbApiSeasonModeFixtures(context, teamId, seriesId, season) {
@@ -522,8 +565,8 @@ export async function onRequestGet(context) {
       if (!/^\d+$/.test(leagueId)) return htwbApiSeasonJson({ error: "A valid LeagueID is required." }, 400);
       data = await htwbApiSeasonModeWorld(context, teamId, leagueId);
     } else if (mode === "archive") {
-      const firstDate = htwbApiSeasonIsoDate(url.searchParams.get("firstDate"));
-      const lastDate = htwbApiSeasonIsoDate(url.searchParams.get("lastDate"));
+      const firstDate = htwbApiSeasonNormalizeDateTime(url.searchParams.get("firstDate"), "00:00:00");
+      const lastDate = htwbApiSeasonNormalizeDateTime(url.searchParams.get("lastDate"), "23:59:59");
       if (!firstDate || !lastDate) return htwbApiSeasonJson({ error: "A valid archive date range is required." }, 400);
       data = await htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate);
     } else if (mode === "fixtures") {

@@ -236,7 +236,12 @@ The main index separates the application into two product groups:
 - **Wiki Builders:** Team Page Builder, Team Season Builder, Manager Page Builder, Player Page Builder.
 - **Manager Tools:** Lineup Planner, Roster Evaluator, Jersey Number Assigner, Season Awards.
 
-The Team Page Builder, Manager Page Builder, Lineup Planner, Roster Evaluator, and Jersey Number Assigner are active. Team Season Page Builder, Player Page Builder, and Season Awards remain coming soon.
+The Team Page Builder, Team Season Page Builder, Manager Page Builder, Lineup Planner, Roster Evaluator, and Jersey Number Assigner are active. Player Page Builder and Season Awards remain coming soon.
+
+### Team Season Page Builder
+
+Team Season Page Builder v0.1.1 loads season data on demand from CHPP. It derives the team country’s local season number from `worldDetails`, anchors the calendar to League Round 1 from the current `leagueFixtures`, and moves historical season windows in exact 112-day increments. Seasons that ended before the team existed are omitted; a first partial season starts match loading at the team’s CHPP founded/activation date. The builder keeps league, national cup, other cups, eligible friendlies, league-only player statistics, and optional Season Awards separated according to the season-page rules.
+
 
 
 ## Roster Evaluator
