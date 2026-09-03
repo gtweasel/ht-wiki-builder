@@ -240,7 +240,7 @@ The Team Page Builder, Team Season Page Builder, Manager Page Builder, Lineup Pl
 
 ### Team Season Page Builder
 
-Team Season Page Builder v0.1.2 loads season data on demand from CHPP. It derives the team country’s local season number from `worldDetails`, anchors the calendar to League Round 1 from the current `leagueFixtures`, and moves historical season windows in exact 112-day increments. Seasons that ended before the team existed are omitted; a first partial season starts match loading at the team’s CHPP founded/activation date. The builder keeps league, national cup, other cups, eligible friendlies, league-only player statistics, and optional Season Awards separated according to the season-page rules.
+Team Season Page Builder v0.1.3 loads season data on demand from CHPP. It derives the team country’s local season number from `worldDetails`, anchors the calendar to League Round 1 from the current `leagueFixtures`, and moves historical season windows in exact 112-day increments. Seasons that ended before the team existed are omitted; a first partial season starts match loading at the team’s CHPP founded/activation date. The builder keeps league, national cup, other cups, eligible friendlies, league-only player statistics, and optional Season Awards separated according to the season-page rules.
 
 
 

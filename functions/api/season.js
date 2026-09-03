@@ -582,8 +582,11 @@ export async function onRequestGet(context) {
     } else if (mode === "archive") {
       const firstDate = htwbApiSeasonNormalizeDate(url.searchParams.get("firstDate"));
       const lastDate = htwbApiSeasonNormalizeDate(url.searchParams.get("lastDate"));
-      const cutoffDateTime = htwbApiSeasonNormalizeDateTime(url.searchParams.get("cutoffDateTime"), "00:00:00");
-      if (!firstDate || !lastDate || !cutoffDateTime) return htwbApiSeasonJson({ error: "A valid archive date range is required." }, 400);
+      const cutoffParam = url.searchParams.get("cutoffDateTime");
+      const cutoffDateTime = cutoffParam
+        ? htwbApiSeasonNormalizeDateTime(cutoffParam, "00:00:00")
+        : "";
+      if (!firstDate || !lastDate) return htwbApiSeasonJson({ error: "A valid archive date range is required." }, 400);
       data = await htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate, cutoffDateTime);
     } else if (mode === "fixtures") {
       const seriesId = url.searchParams.get("seriesId") || "";
