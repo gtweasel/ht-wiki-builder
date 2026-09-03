@@ -101,7 +101,7 @@ async function htwbApiSeasonChpp(context, query) {
   const xml = await response.text();
 
   if (!response.ok) {
-    const error = new Error(`CHPP request failed with status ${response.status}`);
+    const error = new Error(`CHPP ${query.file || "request"} failed with status ${response.status}`);
     error.status = 502;
     throw error;
   }
@@ -169,6 +169,18 @@ function htwbApiSeasonNormalizeDateTime(value, defaultTime) {
   ) return "";
   const time = [hour, minute, second].map(part => String(part).padStart(2, "0")).join(":");
   return `${match[1]}-${match[2]}-${match[3]} ${time}`;
+}
+
+function htwbApiSeasonNormalizeDate(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return "";
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  if (
+    date.getUTCFullYear() !== Number(match[1]) ||
+    date.getUTCMonth() !== Number(match[2]) - 1 ||
+    date.getUTCDate() !== Number(match[3])
+  ) return "";
+  return `${match[1]}-${match[2]}-${match[3]}`;
 }
 
 function htwbApiSeasonDateMs(value) {
@@ -459,16 +471,19 @@ async function htwbApiSeasonModeWorld(context, teamId, leagueId) {
   return league;
 }
 
-async function htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate) {
+async function htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate, cutoffDateTime) {
   await htwbApiSeasonOwnedTeam(context, teamId);
-  const firstMs = htwbApiSeasonDateMs(firstDate);
-  const lastMs = htwbApiSeasonDateMs(lastDate);
+  const firstMs = htwbApiSeasonDateMs(cutoffDateTime || `${firstDate} 00:00:00`);
+  const lastMs = htwbApiSeasonDateMs(`${lastDate} 23:59:59`);
   if (!Number.isFinite(firstMs) || !Number.isFinite(lastMs) || firstMs > lastMs) {
     const error = new Error("The Season Builder archive date range is invalid.");
     error.status = 400;
     throw error;
   }
 
+  // CHPP documents FirstMatchDate/LastMatchDate as Date values. Keep the
+  // authenticated request date-only, then enforce the exact activation
+  // timestamp and season boundary again on the returned matches.
   const xml = await htwbApiSeasonChpp(context, {
     file: "matchesarchive",
     version: HTWB_API_SEASON_VERSIONS.matchesarchive,
@@ -565,10 +580,11 @@ export async function onRequestGet(context) {
       if (!/^\d+$/.test(leagueId)) return htwbApiSeasonJson({ error: "A valid LeagueID is required." }, 400);
       data = await htwbApiSeasonModeWorld(context, teamId, leagueId);
     } else if (mode === "archive") {
-      const firstDate = htwbApiSeasonNormalizeDateTime(url.searchParams.get("firstDate"), "00:00:00");
-      const lastDate = htwbApiSeasonNormalizeDateTime(url.searchParams.get("lastDate"), "23:59:59");
-      if (!firstDate || !lastDate) return htwbApiSeasonJson({ error: "A valid archive date range is required." }, 400);
-      data = await htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate);
+      const firstDate = htwbApiSeasonNormalizeDate(url.searchParams.get("firstDate"));
+      const lastDate = htwbApiSeasonNormalizeDate(url.searchParams.get("lastDate"));
+      const cutoffDateTime = htwbApiSeasonNormalizeDateTime(url.searchParams.get("cutoffDateTime"), "00:00:00");
+      if (!firstDate || !lastDate || !cutoffDateTime) return htwbApiSeasonJson({ error: "A valid archive date range is required." }, 400);
+      data = await htwbApiSeasonModeArchive(context, teamId, firstDate, lastDate, cutoffDateTime);
     } else if (mode === "fixtures") {
       const seriesId = url.searchParams.get("seriesId") || "";
       const season = url.searchParams.get("season") || "";

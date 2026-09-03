@@ -309,8 +309,9 @@ async function htwbSeasonLoadArchive(teamId, season, seasonWindow) {
   const archive = await htwbSeasonApi({
     mode: "archive",
     teamId,
-    firstDate: htwbSeasonApiDateTime(firstMatchDate),
-    lastDate: htwbSeasonApiDateTime(seasonEnd, true)
+    firstDate: htwbSeasonIsoDate(firstMatchDate),
+    lastDate: htwbSeasonIsoDate(seasonEnd),
+    cutoffDateTime: htwbSeasonApiDateTime(firstMatchDate)
   });
 
   htwbSeasonSetStatus(`Processing Season ${season} match archive`);
