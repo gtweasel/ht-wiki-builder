@@ -1,18 +1,308 @@
 "use strict";
-const htwbAppUserStatus=document.getElementById("user-status"),htwbAppHeaderLogin=document.getElementById("header-login"),htwbAppHeaderLogout=document.getElementById("header-logout"),htwbAppLoginPanel=document.getElementById("login-panel"),htwbAppConnectedPanel=document.getElementById("connected-panel"),htwbAppTeamName=document.getElementById("team-name"),htwbAppManagerName=document.getElementById("manager-name"),htwbAppTeamId=document.getElementById("team-id"),htwbAppTeamLogo=document.getElementById("team-logo");
-const HTWB_APP_TEAM_STORAGE_KEY="htwb_selected_team_id";let htwbAppAccountData=null,htwbAppSelectedTeam=null;
-function htwbAppSafeLogoUrl(value){const raw=String(value||"").trim();if(!raw)return "";try{const u=new URL(raw,window.location.origin);return u.protocol==="https:"||u.protocol==="http:"?u.href:"";}catch{return "";}}
-function htwbAppRenderTeamLogo(team){if(!htwbAppTeamLogo)return;htwbAppTeamLogo.hidden=true;htwbAppTeamLogo.removeAttribute("src");htwbAppTeamLogo.alt="";const url=htwbAppSafeLogoUrl(team?.logoUrl);if(!url)return;htwbAppTeamLogo.src=url;htwbAppTeamLogo.alt=team?.teamName?`${team.teamName} logo`:"Team logo";htwbAppTeamLogo.hidden=false;}
-function htwbAppShowLoggedOut(){htwbAppAccountData=null;htwbAppSelectedTeam=null;if(htwbAppUserStatus)htwbAppUserStatus.textContent="Not connected";htwbAppRenderTeamLogo(null);if(htwbAppHeaderLogin)htwbAppHeaderLogin.hidden=false;if(htwbAppHeaderLogout)htwbAppHeaderLogout.hidden=true;if(htwbAppLoginPanel)htwbAppLoginPanel.hidden=false;if(htwbAppConnectedPanel)htwbAppConnectedPanel.hidden=true;}
-function htwbAppGetSavedTeamId(){try{return localStorage.getItem(HTWB_APP_TEAM_STORAGE_KEY)||"";}catch{return "";}}
-function htwbAppSaveTeamId(id){try{if(id)localStorage.setItem(HTWB_APP_TEAM_STORAGE_KEY,id);}catch{}}
-function htwbAppFindTeam(id){return htwbAppAccountData?.teams?.find(t=>String(t.teamId)===String(id))||null;}
-function htwbAppChooseInitialTeam(data){const teams=Array.isArray(data.teams)?data.teams:[];if(!teams.length)return null;return htwbAppFindTeam(htwbAppGetSavedTeamId())||htwbAppFindTeam(data.teamId)||teams[0];}
-function htwbAppRenderSelectedTeam(team){if(!team){if(htwbAppTeamName)htwbAppTeamName.textContent="No managed team found";if(htwbAppTeamId)htwbAppTeamId.textContent="";if(htwbAppUserStatus)htwbAppUserStatus.textContent="Connected";htwbAppRenderTeamLogo(null);return;}htwbAppSelectedTeam=team;htwbAppSaveTeamId(team.teamId);window.dispatchEvent(new CustomEvent("htwb:team-selected",{detail:{teamId:team.teamId,teamName:team.teamName,logoUrl:team.logoUrl||""}}));if(htwbAppTeamName)htwbAppTeamName.textContent=team.teamName||"Hattrick team";htwbAppRenderTeamLogo(team);if(htwbAppTeamId)htwbAppTeamId.textContent=team.teamId?`TeamID: ${team.teamId}`:"";if(htwbAppUserStatus)htwbAppUserStatus.textContent=team.teamName||"Connected";}
-function htwbAppRemoveTeamSelector(){document.getElementById("team-selector-wrapper")?.remove();}
-function htwbAppCreateTeamSelector(teams){htwbAppRemoveTeamSelector();if(!Array.isArray(teams)||teams.length<=1||!htwbAppConnectedPanel)return;const w=document.createElement("div");w.id="team-selector-wrapper";w.className="team-selector-wrapper";const l=document.createElement("label");l.htmlFor="team-selector";l.textContent="Active team";const s=document.createElement("select");s.id="team-selector";s.className="team-selector";for(const team of teams){const o=document.createElement("option");o.value=team.teamId;o.textContent=`${team.teamName} - TeamID ${team.teamId}`;o.selected=String(team.teamId)===String(htwbAppSelectedTeam?.teamId);s.appendChild(o);}s.addEventListener("change",e=>{const t=htwbAppFindTeam(e.target.value);if(t)htwbAppRenderSelectedTeam(t);});w.append(l,s);htwbAppConnectedPanel.appendChild(w);}
-function htwbAppShowLoggedIn(data){htwbAppAccountData=data;if(htwbAppHeaderLogin)htwbAppHeaderLogin.hidden=true;if(htwbAppHeaderLogout)htwbAppHeaderLogout.hidden=false;if(htwbAppLoginPanel)htwbAppLoginPanel.hidden=true;if(htwbAppConnectedPanel)htwbAppConnectedPanel.hidden=false;if(htwbAppManagerName)htwbAppManagerName.textContent=data.managerName?`Manager: ${data.managerName}`:"";htwbAppSelectedTeam=htwbAppChooseInitialTeam(data);htwbAppRenderSelectedTeam(htwbAppSelectedTeam);htwbAppCreateTeamSelector(data.teams);}
-async function htwbAppLoadUser(){try{const r=await fetch("/api/me",{headers:{Accept:"application/json"}});if(r.status===401){htwbAppShowLoggedOut();return;}if(!r.ok)throw new Error(`Server returned ${r.status}`);htwbAppShowLoggedIn(await r.json());if(window.location.search.includes("login=success"))window.history.replaceState({},document.title,"/");}catch(e){console.error("Could not load Hattrick account:",e);htwbAppShowLoggedOut();}}
-window.HTWikiBuilder={getSelectedTeamId(){return htwbAppSelectedTeam?.teamId||"";},getSelectedTeam(){return htwbAppSelectedTeam;},getManagedTeams(){return Array.isArray(htwbAppAccountData?.teams)?htwbAppAccountData.teams:[];}};
-if(htwbAppTeamLogo)htwbAppTeamLogo.addEventListener("error",()=>{htwbAppTeamLogo.hidden=true;htwbAppTeamLogo.removeAttribute("src");htwbAppTeamLogo.alt="";});
+
+const htwbAppUserStatus = document.getElementById("user-status");
+const htwbAppHeaderLogin = document.getElementById("header-login");
+const htwbAppHeaderLogout = document.getElementById("header-logout");
+
+const htwbAppLoginPanel = document.getElementById("login-panel");
+const htwbAppConnectedPanel = document.getElementById("connected-panel");
+
+const htwbAppTeamName = document.getElementById("team-name");
+const htwbAppManagerName = document.getElementById("manager-name");
+const htwbAppTeamId = document.getElementById("team-id");
+const htwbAppTeamLogo = document.getElementById("team-logo");
+
+const HTWB_APP_TEAM_STORAGE_KEY = "htwb_selected_team_id";
+
+let htwbAppAccountData = null;
+let htwbAppSelectedTeam = null;
+
+function htwbAppSafeLogoUrl(htwbAppValue) {
+  const htwbAppRawValue = String(htwbAppValue || "").trim();
+
+  if (!htwbAppRawValue) {
+    return "";
+  }
+
+  try {
+    const htwbAppUrl = new URL(htwbAppRawValue, window.location.origin);
+
+    if (htwbAppUrl.protocol !== "https:" && htwbAppUrl.protocol !== "http:") {
+      return "";
+    }
+
+    return htwbAppUrl.href;
+  } catch {
+    return "";
+  }
+}
+
+function htwbAppRenderTeamLogo(htwbAppTeam) {
+  if (!htwbAppTeamLogo) {
+    return;
+  }
+
+  htwbAppTeamLogo.hidden = true;
+  htwbAppTeamLogo.removeAttribute("src");
+  htwbAppTeamLogo.alt = "";
+
+  const htwbAppLogoUrl = htwbAppSafeLogoUrl(htwbAppTeam?.logoUrl);
+
+  if (!htwbAppLogoUrl) {
+    return;
+  }
+
+  htwbAppTeamLogo.src = htwbAppLogoUrl;
+  htwbAppTeamLogo.alt = htwbAppTeam?.teamName
+    ? `${htwbAppTeam.teamName} logo`
+    : "Team logo";
+  htwbAppTeamLogo.hidden = false;
+}
+
+function htwbAppShowLoggedOut() {
+  htwbAppAccountData = null;
+  htwbAppSelectedTeam = null;
+
+  htwbAppUserStatus.textContent = "Not connected";
+  htwbAppRenderTeamLogo(null);
+
+  htwbAppHeaderLogin.hidden = false;
+  htwbAppHeaderLogout.hidden = true;
+
+  htwbAppLoginPanel.hidden = false;
+  htwbAppConnectedPanel.hidden = true;
+}
+
+function htwbAppGetSavedTeamId() {
+  return localStorage.getItem(HTWB_APP_TEAM_STORAGE_KEY) || "";
+}
+
+function htwbAppSaveTeamId(htwbAppId) {
+  if (htwbAppId) {
+    localStorage.setItem(HTWB_APP_TEAM_STORAGE_KEY, htwbAppId);
+  }
+}
+
+function htwbAppFindTeam(htwbAppId) {
+  if (!htwbAppAccountData || !Array.isArray(htwbAppAccountData.teams)) {
+    return null;
+  }
+
+  return htwbAppAccountData.teams.find(
+    htwbAppTeam => String(htwbAppTeam.teamId) === String(htwbAppId)
+  ) || null;
+}
+
+function htwbAppChooseInitialTeam(htwbAppData) {
+  const htwbAppTeams = Array.isArray(htwbAppData.teams)
+    ? htwbAppData.teams
+    : [];
+
+  if (!htwbAppTeams.length) {
+    return null;
+  }
+
+  const htwbAppSavedTeam = htwbAppFindTeam(htwbAppGetSavedTeamId());
+
+  if (htwbAppSavedTeam) {
+    return htwbAppSavedTeam;
+  }
+
+  if (htwbAppData.teamId) {
+    const htwbAppDefaultTeam = htwbAppFindTeam(htwbAppData.teamId);
+
+    if (htwbAppDefaultTeam) {
+      return htwbAppDefaultTeam;
+    }
+  }
+
+  return htwbAppTeams[0];
+}
+
+function htwbAppRenderSelectedTeam(htwbAppTeam) {
+  if (!htwbAppTeam) {
+    htwbAppTeamName.textContent = "No managed team found";
+    htwbAppTeamId.textContent = "";
+    htwbAppUserStatus.textContent = "Connected";
+    htwbAppRenderTeamLogo(null);
+    return;
+  }
+
+  htwbAppSelectedTeam = htwbAppTeam;
+  htwbAppSaveTeamId(htwbAppTeam.teamId);
+
+  window.dispatchEvent(
+    new CustomEvent("htwb:team-selected", {
+      detail: {
+        teamId: htwbAppTeam.teamId,
+        teamName: htwbAppTeam.teamName,
+        logoUrl: htwbAppTeam.logoUrl || ""
+      }
+    })
+  );
+
+  htwbAppTeamName.textContent =
+    htwbAppTeam.teamName || "Hattrick team";
+
+  htwbAppRenderTeamLogo(htwbAppTeam);
+
+  htwbAppTeamId.textContent =
+    htwbAppTeam.teamId
+      ? `TeamID: ${htwbAppTeam.teamId}`
+      : "";
+
+  htwbAppUserStatus.textContent =
+    htwbAppTeam.teamName || "Connected";
+}
+
+function htwbAppRemoveTeamSelector() {
+  const htwbAppExisting =
+    document.getElementById("team-selector-wrapper");
+
+  if (htwbAppExisting) {
+    htwbAppExisting.remove();
+  }
+}
+
+function htwbAppCreateTeamSelector(htwbAppTeams) {
+  htwbAppRemoveTeamSelector();
+
+  if (!Array.isArray(htwbAppTeams) || htwbAppTeams.length <= 1) {
+    return;
+  }
+
+  const htwbAppWrapper = document.createElement("div");
+  htwbAppWrapper.id = "team-selector-wrapper";
+  htwbAppWrapper.className = "team-selector-wrapper";
+
+  const htwbAppLabel = document.createElement("label");
+  htwbAppLabel.htmlFor = "team-selector";
+  htwbAppLabel.textContent = "Active team";
+
+  const htwbAppSelect = document.createElement("select");
+  htwbAppSelect.id = "team-selector";
+  htwbAppSelect.className = "team-selector";
+
+  for (const htwbAppTeam of htwbAppTeams) {
+    const htwbAppOption = document.createElement("option");
+
+    htwbAppOption.value = htwbAppTeam.teamId;
+    htwbAppOption.textContent =
+      `${htwbAppTeam.teamName} - TeamID ${htwbAppTeam.teamId}`;
+
+    if (
+      htwbAppSelectedTeam &&
+      String(htwbAppTeam.teamId) ===
+        String(htwbAppSelectedTeam.teamId)
+    ) {
+      htwbAppOption.selected = true;
+    }
+
+    htwbAppSelect.appendChild(htwbAppOption);
+  }
+
+  htwbAppSelect.addEventListener("change", htwbAppEvent => {
+    const htwbAppTeam = htwbAppFindTeam(htwbAppEvent.target.value);
+
+    if (htwbAppTeam) {
+      htwbAppRenderSelectedTeam(htwbAppTeam);
+    }
+  });
+
+  htwbAppWrapper.appendChild(htwbAppLabel);
+  htwbAppWrapper.appendChild(htwbAppSelect);
+
+  htwbAppConnectedPanel.appendChild(htwbAppWrapper);
+}
+
+function htwbAppShowLoggedIn(htwbAppData) {
+  htwbAppAccountData = htwbAppData;
+
+  htwbAppHeaderLogin.hidden = true;
+  htwbAppHeaderLogout.hidden = false;
+
+  htwbAppLoginPanel.hidden = true;
+  htwbAppConnectedPanel.hidden = false;
+
+  htwbAppManagerName.textContent =
+    htwbAppData.managerName
+      ? `Manager: ${htwbAppData.managerName}`
+      : "";
+
+  htwbAppSelectedTeam = htwbAppChooseInitialTeam(htwbAppData);
+
+  htwbAppRenderSelectedTeam(htwbAppSelectedTeam);
+  htwbAppCreateTeamSelector(htwbAppData.teams);
+}
+
+async function htwbAppLoadUser() {
+  try {
+    const htwbAppResponse = await fetch("/api/me", {
+      method: "GET",
+      headers: {
+        Accept: "application/json"
+      }
+    });
+
+    if (htwbAppResponse.status === 401) {
+      htwbAppShowLoggedOut();
+      return;
+    }
+
+    if (!htwbAppResponse.ok) {
+      throw new Error(
+        `Server returned ${htwbAppResponse.status}`
+      );
+    }
+
+    const htwbAppData = await htwbAppResponse.json();
+
+    htwbAppShowLoggedIn(htwbAppData);
+
+    if (
+      window.location.search.includes("login=success")
+    ) {
+      window.history.replaceState(
+        {},
+        document.title,
+        "/"
+      );
+    }
+  } catch (htwbAppError) {
+    console.error(
+      "Could not load Hattrick account:",
+      htwbAppError
+    );
+
+    htwbAppShowLoggedOut();
+  }
+}
+
+window.HTWikiBuilder = {
+  getSelectedTeamId() {
+    return htwbAppSelectedTeam
+      ? htwbAppSelectedTeam.teamId
+      : "";
+  },
+
+  getSelectedTeam() {
+    return htwbAppSelectedTeam;
+  },
+
+  getManagedTeams() {
+    return htwbAppAccountData &&
+      Array.isArray(htwbAppAccountData.teams)
+      ? htwbAppAccountData.teams
+      : [];
+  }
+};
+
+if (htwbAppTeamLogo) {
+  htwbAppTeamLogo.addEventListener("error", () => {
+    htwbAppTeamLogo.hidden = true;
+    htwbAppTeamLogo.removeAttribute("src");
+    htwbAppTeamLogo.alt = "";
+  });
+}
+
 htwbAppLoadUser();

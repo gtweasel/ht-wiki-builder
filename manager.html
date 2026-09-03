@@ -1,6 +1,196 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Manager Page Builder - HT Wiki Builder</title><link rel="icon" href="/favicon.ico"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"><link rel="stylesheet" href="/styles.css?v=0.2.1"></head><body>
-<header class="site-header"><div class="header-inner"><a class="brand" href="/"><span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span><span class="brand-name"><span class="brand-wiki">Wiki</span> <span class="brand-builder">Builder</span></span></a><div class="header-status"><div id="user-status" class="user-status">Not connected</div><a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a><a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a></div></div></header>
-<main class="builder-page"><div class="builder-page-inner"><div class="builder-heading"><div><div class="eyebrow">Wiki Builders</div><div class="builder-title-line"><h1>Manager Page Builder</h1><span class="page-version" data-htwb-version="manager"></span></div></div><a class="button button-outline-dark" href="/">Back to tools</a></div><div id="login-panel" class="builder-login"><h2>Connect to Hattrick</h2><p>Log in to build an HT Wiki profile for your Hattrick manager account.</p><a class="button button-primary" href="/auth/login">Log in with Hattrick</a></div><div id="connected-panel" class="builder-account" hidden><div><span class="builder-account-label">Connected to Hattrick</span><div class="connected-team-identity"><img id="team-logo" class="connected-team-logo" alt="" hidden><div><strong id="team-name">Loading team...</strong><div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div></div></div></div></div>
-<section class="builder-section"><div class="builder-section-number">01</div><div class="builder-section-content"><div class="builder-section-heading"><div><h2>Load Manager Data</h2><p>Load your manager profile, primary and additional clubs, current international roles, and Hattrick achievements.</p></div></div><div class="builder-notice"><strong>Fresh on request.</strong> Manager data is loaded only when you press the button. Public profile data only; your account only.</div><div id="manager-status" class="builder-status">Ready to load manager data.</div><div class="builder-actions"><button id="manager-load" class="button button-primary">Load Manager Data</button></div></div></section>
-<section id="manager-options" class="builder-section" hidden><div class="builder-section-number">02</div><div class="builder-section-content"><div class="builder-section-heading"><div><h2>Complete the Profile</h2><p>Add optional information CHPP does not provide, then choose the sections to include.</p></div></div><h3>Optional profile details</h3><div class="form-grid"><div class="form-control"><label>HT Wiki username (optional)</label><input id="manager-wiki-user" placeholder="ExampleManager"><span class="help-text">Used only for the manager image filename.</span></div><div class="form-control"><label>Real name (optional)</label><input id="manager-real-name"></div><div class="form-control"><label>Gender (optional)</label><input id="manager-gender"></div><div class="form-control"><label>Hattrick official role(s) (optional)</label><input id="manager-roles" placeholder="GM, LA, Mod, CHPP"></div><div class="form-control form-control-wide"><label>Favorite soccer teams (optional)</label><textarea id="manager-favorites" rows="5" placeholder="USA | Nashville SC&#10;Tottenham Hotspur"></textarea><span class="help-text">One team per line. Use Country | Team to add a flag in the section; the infobox uses the team name only.</span></div></div><h3 style="margin-top:24px">Article sections</h3><div id="manager-sections" class="team-section-options"></div><div class="builder-actions"><button id="manager-select-all" class="button button-outline-dark">Select all available</button><button id="manager-clear" class="button button-outline-dark">Clear selections</button><button id="manager-create" class="button button-primary">Create Article</button></div></div></section>
-<section id="manager-output-section" class="builder-section" hidden><div class="builder-section-number">03</div><div class="builder-section-content"><div class="builder-section-heading"><div><h2>Generated Article</h2><p>Review the selected manager-page markup, then copy it to HT Wiki.</p></div></div><textarea id="manager-output" class="wiki-output"></textarea><div class="builder-actions"><button id="manager-copy" class="button button-primary">Copy Wiki Markup</button><span id="manager-copy-status" class="copy-status"></span></div></div></section></div></main><footer class="site-footer"><div class="footer-inner"><div><strong>HT Wiki Builder</strong><span>Free. Read-only. Built for the Hattrick community.</span></div><div class="footer-links"><a href="https://www.hattrick.org/" target="_blank">Hattrick</a><a href="https://wiki.hattrick.org/" target="_blank">HT Wiki</a></div></div><div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div></footer><script type="module" src="/versions.js"></script><script src="/app.js"></script><script src="/manager.js?v=0.1.0"></script></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manager Page Builder - HT Wiki Builder</title>
+  <meta name="description" content="Create an HT Wiki manager profile from authorized Hattrick data.">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span>
+        <span class="brand-name"><span class="brand-wiki">Wiki</span><span class="brand-builder">Builder</span></span>
+      </a>
+      <div class="header-status">
+        <div id="user-status" class="user-status">Not connected</div>
+        <a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a>
+        <a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-page-inner">
+      <div class="builder-heading">
+        <div>
+          <div class="eyebrow">Wiki Builders</div>
+          <div class="builder-title-line">
+            <h1>Manager Page Builder</h1>
+            <span class="page-version" data-htwb-version="manager">v0.1.0</span>
+          </div>
+        </div>
+        <a class="button button-outline-dark" href="/">Back to tools</a>
+      </div>
+
+      <div id="login-panel" class="builder-login">
+        <h2>Connect to Hattrick</h2>
+        <p>Log in to build an HT Wiki profile for your Hattrick manager account.</p>
+        <a class="button button-primary" href="/auth/login">Log in with Hattrick</a>
+      </div>
+
+      <div id="connected-panel" class="builder-account" hidden>
+        <div>
+          <span class="builder-account-label">Connected to Hattrick</span>
+          <div class="connected-team-identity">
+            <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+            <div>
+              <strong id="team-name">Loading team...</strong>
+              <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="builder-section">
+        <div class="builder-section-number">01</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Load Manager Data</h2>
+              <p>Load your manager profile, primary and additional clubs, current international roles, and Hattrick achievements. CHPP identifies the primary club and supplies each club's founding date when available.</p>
+            </div>
+          </div>
+          <div class="builder-callout-grid">
+            <div class="builder-callout-item"><strong>Fresh on request</strong><span>Manager data is loaded only when you press the button.</span></div>
+            <div class="builder-callout-item"><strong>Public profile data only</strong><span>The builder does not return last-login, currency, or other manager-only account details.</span></div>
+            <div class="builder-callout-item"><strong>Your account only</strong><span>The endpoint builds the profile for the authenticated Hattrick manager.</span></div>
+          </div>
+          <div class="builder-actions">
+            <button id="load-manager-data" class="button button-primary" type="button" disabled>Load Manager Data</button>
+          </div>
+          <div id="manager-load-status" class="builder-status" aria-live="polite" hidden></div>
+        </div>
+      </section>
+
+      <section id="manager-options-section" class="builder-section" hidden>
+        <div class="builder-section-number">02</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Complete the Profile</h2>
+              <p>Add any optional information CHPP does not provide, then choose the sections to include in the generated article.</p>
+            </div>
+          </div>
+
+          <div class="team-section-picker">
+            <div class="team-section-picker-heading">
+              <h3>Optional profile details</h3>
+              <p>Leave any field blank to omit it from the article. HT Wiki username is used only for the manager image filename.</p>
+            </div>
+
+            <div class="team-section-suboptions">
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-wiki-username">
+                  <span>HT Wiki username <small>(optional)</small></span>
+                  <input id="manager-wiki-username" class="team-wiki-input" type="text" autocomplete="off" placeholder="ExampleManager">
+                </label>
+                <small class="team-option-help">Generates the infobox image as <code>File:HTWikiUsername.png</code>.</small>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-real-name">
+                  <span>Real name <small>(optional)</small></span>
+                  <input id="manager-real-name" class="team-wiki-input" type="text" autocomplete="off">
+                </label>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-gender">
+                  <span>Gender <small>(optional)</small></span>
+                  <input id="manager-gender" class="team-wiki-input" type="text" autocomplete="off">
+                </label>
+              </div>
+
+              <div class="team-inline-option">
+                <label class="team-wiki-user-label" for="manager-official-roles">
+                  <span>Hattrick official role(s) <small>(optional)</small></span>
+                  <textarea id="manager-official-roles" class="team-wiki-input" rows="3" spellcheck="false" placeholder="One role per line"></textarea>
+                </label>
+                <small class="team-option-help">Examples include GM, LA, Mod, and CHPP.</small>
+              </div>
+
+              <div class="team-inline-option wiki-field-large">
+                <label class="team-wiki-user-label" for="manager-favorite-teams">
+                  <span>Favorite soccer teams <small>(optional)</small></span>
+                  <textarea id="manager-favorite-teams" class="team-wiki-input" rows="5" spellcheck="false" placeholder="England | AFC Wimbledon&#10;USA | Nashville SC"></textarea>
+                </label>
+                <small class="team-option-help">Enter one team per line. Use Country | Team to add a flag in the Favorite soccer teams section; the infobox uses the team name only.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="team-section-picker">
+            <div class="team-section-picker-heading team-section-picker-toolbar">
+              <div>
+                <h3>Article sections</h3>
+                <p>Available sections start selected.</p>
+              </div>
+              <div class="team-section-picker-actions">
+                <button id="select-all-manager-sections" class="button button-small button-outline-dark" type="button">Select all available</button>
+                <button id="clear-all-manager-sections" class="button button-small button-outline-dark" type="button">Clear selections</button>
+              </div>
+            </div>
+            <div id="manager-section-options" class="team-section-option-list"></div>
+          </div>
+
+          <div class="team-create-article">
+            <button id="create-manager-article" class="button button-primary" type="button" disabled>Create Article</button>
+            <span id="manager-selection-status" class="team-selection-status" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="manager-output-section" class="builder-section" hidden>
+        <div class="builder-section-number">03</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Generated Article</h2>
+              <p>Review the selected manager-page markup, then copy it to HT Wiki.</p>
+            </div>
+          </div>
+          <textarea id="manager-wiki-output" class="wiki-output wiki-output-team-page" rows="36" spellcheck="false"></textarea>
+          <div class="builder-actions">
+            <button id="copy-manager-output" class="button button-primary" type="button">Copy Wiki Markup</button>
+            <span id="manager-copy-status" class="copy-status"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div><strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
+      <div class="footer-links">
+        <a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a>
+        <a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a>
+      </div>
+    </div>
+    <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
+  </footer>
+
+  <script type="module" src="/versions.js?manager=0.1.0"></script>
+  <script src="/app.js"></script>
+  <script src="/manager.js?v=0.1.0"></script>
+</body>
+</html>
