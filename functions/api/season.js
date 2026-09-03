@@ -214,10 +214,14 @@ function htwbApiSeasonTeamDetails(teamXml) {
   const league = htwbApiSeasonContainer(team, "League");
   const country = htwbApiSeasonContainer(team, "Country");
   const user = htwbApiSeasonContainer(teamXml, "User");
+  const activationDate = htwbApiSeasonValue(user, "ActivationDate");
   return {
     teamId: htwbApiSeasonValue(team, "TeamID"),
     teamName: htwbApiSeasonValue(team, "TeamName"),
-    foundedDate: htwbApiSeasonValue(team, "FoundedDate"),
+    // CHPP teamDetails exposes the date the user gained control of the team as
+    // User/ActivationDate.  That is the earliest date this managed team should
+    // contribute matches to a generated season page.
+    foundedDate: activationDate,
     arenaId: htwbApiSeasonValue(arena, "ArenaID"),
     arenaName: htwbApiSeasonValue(arena, "ArenaName"),
     leagueId: htwbApiSeasonValue(league, "LeagueID"),
@@ -225,7 +229,7 @@ function htwbApiSeasonTeamDetails(teamXml) {
     countryId: htwbApiSeasonValue(country, "CountryID"),
     countryName: htwbApiSeasonValue(country, "CountryName"),
     managerName: htwbApiSeasonValue(user, "Loginname") || htwbApiSeasonValue(user, "LoginName"),
-    activationDate: htwbApiSeasonValue(user, "ActivationDate")
+    activationDate
   };
 }
 

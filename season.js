@@ -19,6 +19,8 @@ const htwbSeasonCopyStatus = document.getElementById("season-copy-status");
 let htwbSeasonSelectedTeamId = "";
 let htwbSeasonTeam = null;
 let htwbSeasonWorld = null;
+let htwbSeasonCalendar = null;
+let htwbSeasonWindows = new Map();
 let htwbSeasonLoading = false;
 
 const HTWB_SEASON_DAY_MS = 86400000;
@@ -56,6 +58,8 @@ function htwbSeasonResetForTeam(teamId) {
   htwbSeasonSelectedTeamId = htwbSeasonValidTeamId(teamId) ? String(teamId) : "";
   htwbSeasonTeam = null;
   htwbSeasonWorld = null;
+  htwbSeasonCalendar = null;
+  htwbSeasonWindows = new Map();
   if (htwbSeasonSelectSection) htwbSeasonSelectSection.hidden = true;
   if (htwbSeasonOptionsSection) htwbSeasonOptionsSection.hidden = true;
   if (htwbSeasonOutputSection) htwbSeasonOutputSection.hidden = true;
@@ -95,6 +99,12 @@ function htwbSeasonIsoDate(date) {
 
 function htwbSeasonAddDays(date, days) {
   return new Date(date.getTime() + days * HTWB_SEASON_DAY_MS);
+}
+
+function htwbSeasonDateOnly(value) {
+  const date = value instanceof Date ? value : htwbSeasonParseDate(value);
+  if (!date) return null;
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 }
 
 function htwbSeasonFormatDate(value) {
@@ -164,23 +174,60 @@ function htwbSeasonSelectedSections() {
   );
 }
 
+function htwbSeasonBuildCalendar(currentFixtures) {
+  const currentSeason = htwbSeasonNumber(htwbSeasonWorld?.currentSeason);
+  if (!currentSeason) throw new Error("The selected country's current Hattrick season could not be determined.");
+  const roundOne = (currentFixtures?.matches || [])
+    .filter(match => Number(match.round) === 1 && htwbSeasonParseDate(match.date))
+    .sort((a, b) => htwbSeasonParseDate(a.date).getTime() - htwbSeasonParseDate(b.date).getTime())[0];
+  const firstLeagueDate = htwbSeasonDateOnly(roundOne?.date);
+  if (!firstLeagueDate) throw new Error(`Season ${currentSeason} Round 1 could not be found for the selected country's calendar.`);
+  const currentStart = htwbSeasonAddDays(firstLeagueDate, -7);
+  return { currentSeason, currentStart };
+}
+
+function htwbSeasonWindowFor(season) {
+  if (!htwbSeasonCalendar) return null;
+  const seasonNumber = Number(season);
+  if (!Number.isInteger(seasonNumber) || seasonNumber < 1 || seasonNumber > htwbSeasonCalendar.currentSeason) return null;
+  const offset = (htwbSeasonCalendar.currentSeason - seasonNumber) * HTWB_SEASON_LENGTH_DAYS;
+  const start = htwbSeasonAddDays(htwbSeasonCalendar.currentStart, -offset);
+  const nextStart = htwbSeasonAddDays(start, HTWB_SEASON_LENGTH_DAYS);
+  const end = htwbSeasonAddDays(nextStart, -1);
+  const founded = htwbSeasonParseDate(htwbSeasonTeam?.foundedDate || htwbSeasonTeam?.activationDate);
+  const effectiveStart = founded && founded > start ? founded : start;
+  return {
+    season: seasonNumber,
+    start,
+    end,
+    nextStart,
+    founded,
+    effectiveStart,
+    partial: Boolean(founded && founded > start && founded < nextStart)
+  };
+}
+
 function htwbSeasonPopulateSeasons() {
-  const currentSeason = htwbSeasonNumber(htwbSeasonWorld?.currentSeason || htwbSeasonTeam?.currentSeason);
-  if (!currentSeason) throw new Error("The current Hattrick season could not be determined.");
-  const founded = htwbSeasonParseDate(htwbSeasonTeam?.foundedDate);
-  const now = new Date();
-  let oldest = Math.max(1, currentSeason - 20);
-  if (founded) {
-    const elapsed = Math.max(0, Math.ceil((now.getTime() - founded.getTime()) / HTWB_SEASON_DAY_MS));
-    oldest = Math.max(1, currentSeason - Math.ceil(elapsed / HTWB_SEASON_LENGTH_DAYS) - 1);
-  }
+  const currentSeason = htwbSeasonNumber(htwbSeasonCalendar?.currentSeason);
+  if (!currentSeason) throw new Error("The selected country's Hattrick season calendar could not be determined.");
+  const founded = htwbSeasonParseDate(htwbSeasonTeam?.foundedDate || htwbSeasonTeam?.activationDate);
+  if (!founded) throw new Error("The team activation date could not be determined, so available seasons cannot be limited safely.");
   htwbSeasonSelect.innerHTML = "";
-  for (let season = currentSeason; season >= oldest; season -= 1) {
+  htwbSeasonWindows = new Map();
+  for (let season = currentSeason; season >= 1; season -= 1) {
+    const window = htwbSeasonWindowFor(season);
+    if (!window) continue;
+    if (window.nextStart <= founded) break;
+    htwbSeasonWindows.set(season, window);
     const option = document.createElement("option");
     option.value = String(season);
-    option.textContent = `Season ${season}${season === currentSeason ? " (current)" : ""}`;
+    const range = `${htwbSeasonFormatDate(window.start)} – ${htwbSeasonFormatDate(window.end)}`;
+    const partial = window.partial ? ` (partial from ${htwbSeasonFormatDate(founded)})` : "";
+    const current = season === currentSeason ? " (current)" : "";
+    option.textContent = `Season ${season} — ${range}${current}${partial}`;
     htwbSeasonSelect.appendChild(option);
   }
+  if (!htwbSeasonSelect.options.length) throw new Error("No selectable seasons were found after the team activation date.");
 }
 
 async function htwbSeasonLoadTeam() {
@@ -199,10 +246,19 @@ async function htwbSeasonLoadTeam() {
     htwbSeasonWorld = await htwbSeasonApi({ mode: "world", teamId, leagueId: team.leagueId });
     if (String(htwbSeasonGetSelectedTeamId()) !== String(teamId)) return;
 
+    const currentSeason = htwbSeasonNumber(htwbSeasonWorld?.currentSeason);
+    if (!currentSeason || !team.seriesId) throw new Error("The current country season or series could not be determined.");
+    htwbSeasonSetStatus(`Loading ${htwbSeasonWorld.englishName || htwbSeasonWorld.leagueName || team.leagueName} Season ${currentSeason} calendar`);
+    const currentFixtures = await htwbSeasonApi({
+      mode: "fixtures", teamId, seriesId: team.seriesId, season: currentSeason
+    });
+    if (String(htwbSeasonGetSelectedTeamId()) !== String(teamId)) return;
+    htwbSeasonCalendar = htwbSeasonBuildCalendar(currentFixtures);
+
     htwbSeasonPopulateSeasons();
     htwbSeasonSelectSection.hidden = false;
     htwbSeasonOptionsSection.hidden = false;
-    htwbSeasonSetStatus(`Team loaded. Select a season for ${team.teamName}.`, "success");
+    htwbSeasonSetStatus(`Team loaded. Seasons use the ${htwbSeasonWorld.englishName || htwbSeasonWorld.leagueName || team.leagueName} calendar and start no earlier than ${htwbSeasonFormatDate(team.foundedDate || team.activationDate)}.`, "success");
   } catch (error) {
     console.error("Season Builder load error:", error);
     htwbSeasonSetStatus(error.message || "Unable to load team data.", "error");
@@ -210,20 +266,6 @@ async function htwbSeasonLoadTeam() {
     htwbSeasonLoading = false;
     htwbSeasonLoadButton.disabled = !htwbSeasonGetSelectedTeamId();
   }
-}
-
-function htwbSeasonEstimatedFirstLeagueDate(season) {
-  const currentSeason = htwbSeasonNumber(htwbSeasonWorld?.currentSeason || htwbSeasonTeam?.currentSeason);
-  const matchRound = Math.max(0, Math.min(14, htwbSeasonNumber(htwbSeasonWorld?.matchRound)));
-  const nextSeriesDate = htwbSeasonParseDate(htwbSeasonWorld?.seriesMatchDate);
-  let currentFirst;
-  if (nextSeriesDate) {
-    currentFirst = htwbSeasonAddDays(nextSeriesDate, -7 * matchRound);
-  } else {
-    const today = new Date();
-    currentFirst = htwbSeasonAddDays(today, -7 * Math.max(0, matchRound - 1));
-  }
-  return htwbSeasonAddDays(currentFirst, -(currentSeason - Number(season)) * HTWB_SEASON_LENGTH_DAYS);
 }
 
 function htwbSeasonUniqueMatches(matches) {
@@ -234,27 +276,33 @@ function htwbSeasonUniqueMatches(matches) {
   return [...map.values()].sort((a, b) => (htwbSeasonParseDate(a.date)?.getTime() || 0) - (htwbSeasonParseDate(b.date)?.getTime() || 0));
 }
 
-async function htwbSeasonLoadArchive(teamId, season) {
-  const firstEstimate = htwbSeasonEstimatedFirstLeagueDate(season);
-  const archiveStart = htwbSeasonAddDays(firstEstimate, -14);
-  const archiveMid = htwbSeasonAddDays(firstEstimate, 49);
-  const archiveEnd = htwbSeasonAddDays(firstEstimate, 112);
+async function htwbSeasonLoadArchive(teamId, season, window) {
+  if (!window) throw new Error(`Season ${season} does not have a valid country-season date window.`);
+  const archiveStart = htwbSeasonDateOnly(window.effectiveStart);
+  const archiveEnd = window.end;
+  const archiveMid = htwbSeasonAddDays(archiveStart, Math.min(55, Math.max(0, Math.floor((archiveEnd - archiveStart) / HTWB_SEASON_DAY_MS / 2))));
 
-  htwbSeasonSetStatus(`Finding Season ${season} matches — early season`);
+  htwbSeasonSetStatus(`Loading Season ${season} matches — ${htwbSeasonFormatDate(archiveStart)} through ${htwbSeasonFormatDate(archiveMid)}`);
   const early = await htwbSeasonApi({
     mode: "archive", teamId,
     firstDate: htwbSeasonIsoDate(archiveStart),
     lastDate: htwbSeasonIsoDate(archiveMid)
   });
+  let late = { matches: [] };
+  if (archiveMid < archiveEnd) {
+    const lateStart = htwbSeasonAddDays(archiveMid, 1);
+    htwbSeasonSetStatus(`Loading Season ${season} matches — ${htwbSeasonFormatDate(lateStart)} through ${htwbSeasonFormatDate(archiveEnd)}`);
+    late = await htwbSeasonApi({
+      mode: "archive", teamId,
+      firstDate: htwbSeasonIsoDate(lateStart),
+      lastDate: htwbSeasonIsoDate(archiveEnd)
+    });
+  }
 
-  htwbSeasonSetStatus(`Finding Season ${season} matches — late season`);
-  const late = await htwbSeasonApi({
-    mode: "archive", teamId,
-    firstDate: htwbSeasonIsoDate(htwbSeasonAddDays(archiveMid, 1)),
-    lastDate: htwbSeasonIsoDate(archiveEnd)
+  return htwbSeasonUniqueMatches([...(early.matches || []), ...(late.matches || [])]).filter(match => {
+    const date = htwbSeasonParseDate(match.date);
+    return date && date >= window.effectiveStart && date < window.nextStart;
   });
-
-  return htwbSeasonUniqueMatches([...(early.matches || []), ...(late.matches || [])]);
 }
 
 function htwbSeasonLeagueContextCandidates(archive, targetDate) {
@@ -271,9 +319,9 @@ function htwbSeasonLeagueContextCandidates(archive, targetDate) {
   }).sort((a, b) => b.count - a.count || a.distance - b.distance);
 }
 
-async function htwbSeasonFindLeagueFixtures(teamId, season, archive) {
-  const estimate = htwbSeasonEstimatedFirstLeagueDate(season);
-  const candidates = htwbSeasonLeagueContextCandidates(archive, estimate);
+async function htwbSeasonFindLeagueFixtures(teamId, season, archive, window) {
+  const firstLeagueDate = htwbSeasonAddDays(window.start, 7);
+  const candidates = htwbSeasonLeagueContextCandidates(archive, firstLeagueDate);
   if (!candidates.length) throw new Error(`No league matches were found for Season ${season}.`);
 
   for (let index = 0; index < candidates.length; index += 1) {
@@ -283,9 +331,11 @@ async function htwbSeasonFindLeagueFixtures(teamId, season, archive) {
       const fixtureData = await htwbSeasonApi({
         mode: "fixtures", teamId, seriesId: candidate.seriesId, season
       });
-      const teamMatches = (fixtureData.matches || []).filter(match =>
-        String(match.homeTeamId) === String(teamId) || String(match.awayTeamId) === String(teamId)
-      );
+      const teamMatches = (fixtureData.matches || []).filter(match => {
+        if (String(match.homeTeamId) !== String(teamId) && String(match.awayTeamId) !== String(teamId)) return false;
+        const date = htwbSeasonParseDate(match.date);
+        return date && date >= window.effectiveStart && date < window.nextStart;
+      });
       if (teamMatches.length) return { ...fixtureData, teamMatches };
     } catch (error) {
       console.error("Season Builder fixture candidate failed:", candidate.seriesId, error);
@@ -1136,6 +1186,7 @@ async function htwbSeasonGenerate() {
   if (htwbSeasonLoading || !htwbSeasonTeam || !htwbSeasonWorld) return;
   const teamId = htwbSeasonGetSelectedTeamId();
   const season = htwbSeasonNumber(htwbSeasonSelect.value);
+  const seasonWindow = htwbSeasonWindows.get(season) || htwbSeasonWindowFor(season);
   const sections = htwbSeasonSelectedSections();
   if (!sections.size) {
     htwbSeasonSetStatus("Select at least one page section.", "error");
@@ -1149,8 +1200,9 @@ async function htwbSeasonGenerate() {
   htwbSeasonCopyStatus.textContent = "";
 
   try {
-    const archive = await htwbSeasonLoadArchive(teamId, season);
-    const fixtureData = await htwbSeasonFindLeagueFixtures(teamId, season, archive);
+    if (!seasonWindow) throw new Error("The selected season is outside the team's available country-season calendar.");
+    const archive = await htwbSeasonLoadArchive(teamId, season, seasonWindow);
+    const fixtureData = await htwbSeasonFindLeagueFixtures(teamId, season, archive, seasonWindow);
     const loadPlan = htwbSeasonBuildMatchLoadList(archive, fixtureData, sections);
     const matchResults = await htwbSeasonLoadMatchData(teamId, loadPlan, sections);
 
