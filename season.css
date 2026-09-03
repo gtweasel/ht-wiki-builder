@@ -1,0 +1,15 @@
+.season-status { display: flex; align-items: center; gap: 0; min-height: 2.75rem; }
+.season-status-motion { display: inline-block; min-width: 1.8rem; }
+.season-status-motion::after { content: ""; animation: htwb-season-dots 1.1s steps(4, end) infinite; }
+@keyframes htwb-season-dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
+@media (prefers-reduced-motion: reduce) { .season-status-motion::after { animation: none; content: "…"; } }
+.season-fields { max-width: 28rem; }
+.season-section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.85rem; }
+.season-section-option { display: flex; align-items: flex-start; gap: 0.8rem; padding: 1rem; border: 1px solid var(--border, #d9d9d9); border-radius: 10px; cursor: pointer; }
+.season-section-option input { margin-top: 0.22rem; width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
+.season-section-option span { display: grid; gap: 0.25rem; min-width: 0; }
+.season-section-option small { line-height: 1.45; opacity: 0.75; }
+.season-section-option:has(input:checked) { border-color: var(--gold-dark); }
+.season-option-actions { flex-wrap: wrap; }
+#season-output { min-height: 36rem; }
+@media (max-width: 720px) { .season-section-grid { grid-template-columns: 1fr; } }

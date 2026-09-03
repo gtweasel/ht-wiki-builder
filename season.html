@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Team Season Page Builder | HT Wiki Builder</title>
+  <meta name="description" content="Build an HT Wiki team season page from authorized Hattrick match data.">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/season.css?v=0.1.0">
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="/" aria-label="HT Wiki Builder home">
+        <span class="brand-mark"><img class="brand-logo" src="/ht-wiki-builder-logo.png" alt=""></span>
+        <span class="brand-name"><span class="brand-wiki">Wiki</span><span class="brand-builder">Builder</span></span>
+      </a>
+      <div class="header-status">
+        <div id="user-status" class="user-status">Not connected</div>
+        <a id="header-login" class="button button-small button-gold" href="/auth/login">Log in</a>
+        <a id="header-logout" class="button button-small button-outline" href="/auth/logout" hidden>Log out</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="builder-page">
+    <div class="builder-page-inner">
+      <div class="builder-heading">
+        <div>
+          <div class="eyebrow">Wiki Builders</div>
+          <div class="builder-title-line">
+            <h1>Team Season Page Builder</h1>
+            <span class="page-version">v0.1.0</span>
+          </div>
+        </div>
+        <a class="button button-outline-dark" href="/">Back to tools</a>
+      </div>
+
+      <div id="login-panel" class="builder-login">
+        <h2>Connect to Hattrick</h2>
+        <p>Log in to build a season page for one of your managed teams.</p>
+        <a class="button button-primary" href="/auth/login">Log in with Hattrick</a>
+      </div>
+
+      <div id="connected-panel" class="builder-account" hidden>
+        <div>
+          <span class="builder-account-label">Connected to Hattrick</span>
+          <div class="connected-team-identity">
+            <img id="team-logo" class="connected-team-logo" alt="" referrerpolicy="no-referrer" hidden>
+            <div>
+              <strong id="team-name">Loading team...</strong>
+              <div class="builder-account-details"><span id="manager-name"></span><span id="team-id"></span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <section class="builder-section">
+        <div class="builder-section-number">01</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Load Team</h2>
+              <p>Load the selected team's season information. Nothing is stored in a database; the builder requests fresh CHPP data when you use it.</p>
+            </div>
+          </div>
+          <div class="builder-actions">
+            <button id="season-load-team" class="button button-primary" type="button" disabled>Load Team</button>
+          </div>
+          <div id="season-status" class="builder-status season-status" aria-live="polite" hidden>
+            <span id="season-status-text"></span><span id="season-status-motion" class="season-status-motion" aria-hidden="true"></span>
+          </div>
+        </div>
+      </section>
+
+      <section id="season-select-section" class="builder-section" hidden>
+        <div class="builder-section-number">02</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Select Season</h2>
+              <p>Choose the Hattrick season you want to build. The selected season's match data is loaded only when you generate the page.</p>
+            </div>
+          </div>
+          <div class="season-fields">
+            <div class="form-control">
+              <label for="season-select">Season</label>
+              <select id="season-select" class="team-selector"></select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="season-options-section" class="builder-section" hidden>
+        <div class="builder-section-number">03</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Choose Page Content</h2>
+              <p>Select the sections to include. Available sections start selected.</p>
+            </div>
+          </div>
+          <div class="season-section-grid" id="season-section-grid">
+            <label class="season-section-option"><input type="checkbox" value="intro" checked><span><strong>Infobox &amp; introduction</strong><small>Season identity, competition results, attendance records and opening paragraph.</small></span></label>
+            <label class="season-section-option"><input type="checkbox" value="summary" checked><span><strong>Season summary</strong><small>Automatically summarizes the regular-season record, scoring leaders and cup runs.</small></span></label>
+            <label class="season-section-option"><input type="checkbox" value="competitions" checked><span><strong>Competitions</strong><small>League summary plus league and cup match boxes.</small></span></label>
+            <label class="season-section-option"><input type="checkbox" value="records" checked><span><strong>Season records</strong><small>Largest results, streaks, home/away records and attendance.</small></span></label>
+            <label class="season-section-option"><input type="checkbox" value="stats" checked><span><strong>Player statistics</strong><small>League-only appearances, minutes and conservative extended match-event statistics.</small></span></label>
+            <label class="season-section-option"><input type="checkbox" value="awards" checked><span><strong>Season awards</strong><small>Golden Boot and the six no-repeat player-of-the-year awards.</small></span></label>
+          </div>
+          <div class="builder-actions season-option-actions">
+            <button id="season-select-all" class="button button-outline-dark" type="button">Select all</button>
+            <button id="season-clear-all" class="button button-outline-dark" type="button">Clear all</button>
+            <button id="season-generate" class="button button-primary" type="button">Generate Wiki Markup</button>
+          </div>
+        </div>
+      </section>
+
+      <section id="season-output-section" class="builder-section" hidden>
+        <div class="builder-section-number">04</div>
+        <div class="builder-section-content">
+          <div class="builder-section-heading">
+            <div>
+              <h2>Generated Wiki Markup</h2>
+              <p>Review the generated page before publishing it to HT Wiki. Extended event statistics are deliberately conservative when CHPP does not identify a chance with certainty.</p>
+            </div>
+          </div>
+          <textarea id="season-output" class="wiki-output" spellcheck="false" aria-label="Generated team season wiki markup"></textarea>
+          <div class="builder-actions">
+            <button id="season-copy" class="button button-primary" type="button">Copy Wiki Markup</button>
+            <span id="season-copy-status" class="copy-status" aria-live="polite"></span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <div><strong>HT Wiki Builder <span class="footer-version" data-htwb-version="app"></span></strong><span>Free. Read-only. Built for the Hattrick community.</span></div>
+      <div class="footer-links"><a href="https://www.hattrick.org/" target="_blank" rel="noopener noreferrer">Hattrick</a><a href="https://wiki.hattrick.org/" target="_blank" rel="noopener noreferrer">HT Wiki</a></div>
+    </div>
+    <div class="footer-legal">HT Wiki Builder is an independent Hattrick community application.</div>
+  </footer>
+
+  <script type="module" src="/versions.js"></script>
+  <script src="/app.js"></script>
+  <script src="/season.js?v=0.1.0"></script>
+</body>
+</html>
